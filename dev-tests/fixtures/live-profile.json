@@ -1,0 +1,67 @@
+{
+ "firstName": "Jordan",
+ "lastName": "Rivera",
+ "email": "jordan.rivera@example.com",
+ "phone": "(555) 010-0142",
+ "city": "Springfield",
+ "state": "IL",
+ "location": "Springfield, IL",
+ "linkedin": "https://www.linkedin.com/in/jordan-rivera-example",
+ "github": "https://github.com/jordan-rivera-example",
+ "workAuthorizedUS": "Yes",
+ "needsSponsorship": "No",
+ "over18": "Yes",
+ "currentEmployer": "Northwind Analytics",
+ "currentTitle": "Data Engineer",
+ "yearsExperience": "6",
+ "eeo": {
+  "gender": "Decline to self-identify"
+ },
+ "salaryExpectation": "150000",
+ "summary": "Data engineer with 6 years of experience building reliable batch and streaming pipelines.",
+ "workHistory": [
+  {
+   "company": "Northwind Analytics",
+   "title": "Data Engineer",
+   "start": "Mar 2021",
+   "end": "Present",
+   "location": "Springfield, IL",
+   "bullets": [
+    "Built batch and streaming pipelines in Python and SQL that feed 40 internal dashboards",
+    "Modeled analytics data with dbt and PostgreSQL for Looker dashboards",
+    "Partnered with product managers on experiment analysis"
+   ]
+  },
+  {
+   "company": "Contoso Retail",
+   "title": "Software Developer",
+   "start": "Jul 2018",
+   "end": "Feb 2021",
+   "bullets": [
+    "Automated reports with Airflow and Spark"
+   ]
+  }
+ ],
+ "educationList": [
+  {
+   "school": "State University",
+   "degree": "B.S.",
+   "field": "Computer Science",
+   "start": "2014",
+   "end": "2018"
+  }
+ ],
+ "skills": [
+  "Python",
+  "SQL",
+  "Airflow",
+  "Spark",
+  "dbt",
+  "PostgreSQL",
+  "Looker",
+  "AWS",
+  "Docker",
+  "Git"
+ ],
+ "resumeText": "Jordan Rivera\nData Engineer, Northwind Analytics (Mar 2021 – Present)\n• Built batch and streaming pipelines in Python and SQL that feed 40 internal dashboards\n• Modeled analytics data with dbt and PostgreSQL for Looker dashboards\n• Partnered with product managers on experiment analysis\nSoftware Developer, Contoso Retail (Jul 2018 – Feb 2021)\n• Automated reports with Airflow and Spark\nSkills: Python, SQL, Airflow, Spark, dbt, PostgreSQL, Looker, AWS, Docker, Git\nEducation: B.S. Computer Science, State University"
+}

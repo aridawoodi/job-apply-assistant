@@ -21,10 +21,10 @@ const check = (cond, msg) => { console.log((cond ? '  PASS ' : '  FAIL ') + msg)
     // 112: first submit is rejected (validation), second one succeeds
     if (req.method() === 'POST' && u.pathname === '/mockco/jobs/112') return counters[k] === 1 ? route.fulfill({ status: 422, contentType: 'application/json', body: '{"errors":["email"]}' }) : route.fulfill({ status: 200, body: '{}' });
     if (req.method() === 'GET' && u.pathname === '/mockco/jobs/113') return html(M('gh-classic.html'));
-    if (req.method() === 'POST' && u.pathname === '/mockco/jobs/113') return route.fulfill({ status: 302, headers: { location: '/mockco/jobs/113/confirmation' }, body: '' });
+    if (req.method() === 'POST' && u.pathname === '/mockco/jobs/113') return route.fulfill({ status: 200, contentType: 'text/html', body: "<script>location.replace('/mockco/jobs/113/confirmation')</script>" });
     if (u.pathname === '/mockco/jobs/113/confirmation') return html(M('gh-confirm.html'));
     if (req.method() === 'GET' && u.pathname === '/mockco/aaaa-1111/apply') return html(M('lever-apply.html'));
-    if (req.method() === 'POST' && u.pathname === '/mockco/aaaa-1111/apply') return route.fulfill({ status: 302, headers: { location: '/mockco/aaaa-1111/thanks' }, body: '' });
+    if (req.method() === 'POST' && u.pathname === '/mockco/aaaa-1111/apply') return route.fulfill({ status: 200, contentType: 'text/html', body: "<script>location.replace('/mockco/aaaa-1111/thanks')</script>" });
     if (u.pathname === '/mockco/aaaa-1111/thanks') return html(M('lever-thanks.html'));
     if (u.pathname === '/mockco/bbbb-2222/application') return html(M('ashby-app.html'));
     if (u.pathname === '/api/non-user-graphql') return route.fulfill({ status: 200, contentType: 'application/json', body: '{"data":{}}' });
@@ -53,6 +53,8 @@ const check = (cond, msg) => { console.log((cond ? '  PASS ' : '  FAIL ') + msg)
   };
   const badge = async page => sw.evaluate(async url => { const [t] = await chrome.tabs.query({ url }); return t ? chrome.action.getBadgeText({ tabId: t.id }) : null; }, page.url().split('?')[0] + '*');
   const toast = page => page.evaluate(() => { const h = document.getElementById('jaa-toast-host'); return h ? h.shadowRoot.querySelector('.t').innerText : ''; });
+  // v0.5: a confirmed submit opens the "Application tracked ✓" modal (notes + reminder) instead of the toast
+  const confirmedUi = page => page.waitForFunction(() => { const m = document.getElementById('jaa-tracked-host'); const t = document.getElementById('jaa-toast-host'); return (m && /Application tracked/.test(m.shadowRoot.querySelector('.m').innerText) && 'modal: Application tracked ✓') || (t && /confirmed/i.test(t.shadowRoot.querySelector('.t').innerText) && 'toast'); }, null, { timeout: 8000 }).then(h => h.jsonValue()).catch(() => '');
 
   console.log('\nA) Greenhouse SPA: Fill, then Alex submits immediately -> confirmation text');
   const a = await ctx.newPage();
@@ -67,7 +69,7 @@ const check = (cond, msg) => { console.log((cond ? '  PASS ' : '  FAIL ') + msg)
   check(await a.evaluate(() => window.__submits === undefined ? 'page replaced' : window.__submits) !== 0, 'Alex\'s submit was not blocked by the autofill guard');
   check(r.status === 'Applied' && r.submittedAt && r.confirmedAt, `status=${r.status} submittedAt=${r.submittedAt} confirmedAt=${r.confirmedAt}`);
   check(r.firstFilled === '2026-10-18T15:00:00.000Z', 'old v0.1 row migrated in place (firstFilled kept, key added): ' + r.key);
-  check(/confirmed/i.test(await toast(a)), 'toast: ' + JSON.stringify(await toast(a)));
+  { const ui = await confirmedUi(a); check(!!ui, 'confirmation shown: ' + ui); }
   check(await badge(a) === '✓', 'toolbar badge ✓ (got ' + JSON.stringify(await badge(a)) + ')');
 
   console.log('\nB) Greenhouse SPA: server validation error -> Error - not sent, then fixed resubmit -> Applied');
@@ -95,7 +97,7 @@ const check = (cond, msg) => { console.log((cond ? '  PASS ' : '  FAIL ') + msg)
   r = await waitStatus('lever:mockco:aaaa-1111', 'Applied');
   check(r && r.status === 'Applied' && r.submittedAt && r.confirmedAt, `status=${r && r.status} title="${r && r.title}" company="${r && r.company}"`);
   check(r && r.title === 'Lever Role', 'title kept from the apply page, not the thanks page');
-  check(/confirmed/i.test(await toast(c)), 'toast on /thanks: ' + JSON.stringify(await toast(c)));
+  { const ui = await confirmedUi(c); check(!!ui, 'confirmation shown on /thanks: ' + ui); }
 
   console.log('\nD) Ashby: Submit with required fields empty (browser blocks) -> Error; then real submit -> success text');
   const d = await ctx.newPage();
@@ -128,7 +130,7 @@ const check = (cond, msg) => { console.log((cond ? '  PASS ' : '  FAIL ') + msg)
   await o.goto(`chrome-extension://${extId}/options/options.html#tracker`);
   await o.waitForTimeout(500);
   const heads = await o.locator('table.apps th').allInnerTexts();
-  check(heads.includes('Submitted') && heads.includes('Confirmed'), 'options columns: ' + heads.join(' | '));
+  check(heads.includes('Stage') && heads.includes('Submission'), 'options columns: ' + heads.filter(Boolean).slice(-4).join(' | '));
   const [dl] = await Promise.all([o.waitForEvent('download'), o.click('#csv')]);
   await dl.saveAs('/workspace/jaa-tests/tracker-v2.csv');
   const csv = fs.readFileSync('/workspace/jaa-tests/tracker-v2.csv', 'utf8');
