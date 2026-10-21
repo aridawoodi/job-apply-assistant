@@ -22,7 +22,12 @@ WHAT IT DOES
 • Chats with you about the rest, one question at a time, with tap-to-answer buttons. It drafts the "Why do you want to work here?" answers in your own voice.
 • Tailors your resume to each job: type "tailor my resume for this job". It suggests rewording and reordering using only what's already in your resume. Invented employers, titles, dates, numbers or tools are blocked automatically, and you approve every change. Download Word, PDF or both, named "First Last - Company - Job Title", and attach it to the application with one click.
 • Your rules for tailoring, like "Keep to 2 pages", "Use US spelling" or "Don't change job titles".
-• Tracks your applications: when you press Submit, the tracker updates to Submitted, then Applied when the site confirms. Export to CSV.
+• Writes cover letters from your resume and the job. They are fact-checked the same way. Put the letter in the text box, or download a PDF or Word file and attach it.
+• Shows your resume match for each job: the keywords you cover and the ones that are missing.
+• Refine any long answer with one click: shorter, more technical, more enthusiastic, or your own instruction. 👍 / 👎 teach it your taste, stored on your computer.
+• Your profile, one click to copy, on any website.
+• Tracks your applications when you press Submit, even if you filled the form yourself. Stages from Saved to Offer, notes, follow-up reminders, saved jobs, search and CSV export.
+• A 2-minute practice tour with a made-up person shows you everything before you apply for real.
 • Never presses Submit, Next or Apply. You review and submit yourself.
 
 EASY SETUP, NO TERMINAL
@@ -70,5 +75,5 @@ https://github.com/YOUR-GITHUB-USERNAME/job-apply-assistant
 
 ## Images (store-assets/)
 - Small promo tile 440x280: `store-assets/promo-tile-440x280.png`
-- Screenshots 1280x800: `store-assets/screenshot-1-fill.png` … `screenshot-5-*.png`
+- Screenshots 1280x800: `store-assets/screenshot-1-fill.png` … `screenshot-5-*.png` (v0.5: fill + checklists, resume match, cover letter, tour, tracker; fake data only, made by `scripts/make-store-assets.js` from `dev-tests/screenshots/v5/`)
 - Store icon 128x128: `icons/icon128.png`

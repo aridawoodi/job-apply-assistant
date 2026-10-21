@@ -8,7 +8,11 @@ data never leaves your computer.
 - 💬 **Chats with you** about anything it couldn't fill, one question at a time, and drafts the "Why us?" answers in your voice.
 - 📄 **Tailors your resume** for each job: rewords and reorders what's already in your resume (it never invents
   anything) and you approve each change. Exports Word and PDF, named `First Last - Company - Job Title`.
-- 📋 **Tracks your applications** automatically when you press Submit.
+- ✉️ **Writes cover letters** from your resume and the job, fact-checked, as text, PDF or Word.
+- 🎯 **Shows your resume match** for each job: which keywords you cover and which are missing.
+- ✨ **Refine any long answer** with one click: shorter, more technical, more enthusiastic, or your own words.
+- 📇 **Your profile, one click to copy**, on any site, even ones it doesn't fill.
+- 📋 **Tracks your applications** when you press Submit, even if you didn't use Fill, with stages, notes and reminders.
 - 🛑 **Never presses Submit, Next or Apply.** You stay in control: it fills, you review, you submit.
 
 > Screenshots: [store-assets/](store-assets/)
@@ -26,6 +30,26 @@ data never leaves your computer.
    practice application.
 
 That's it. Open a job application and click the purple **⚡ Fill application** button.
+New here? The setup page offers a **2-minute practice tour** with a made-up person. You can run it again
+anytime from the popup or Settings → Behaviour.
+
+### What you'll see
+- **Toolbar icon:** colored on job pages it supports, gray elsewhere. Hover it to see what it found.
+- **The panel** has five tabs. **Assistant** shows live fill progress and Required/Optional checklists.
+  **Resume** has the match score, *Improve my match* and the cover letter. **Profile** is click-to-copy.
+  **Tracker** has the stage, notes and reminder for this job. **Report** is for problems and site requests.
+- **On job postings** a small match card shows how well your resume fits. You can dismiss it or turn it off
+  in Settings.
+- **Settings → Fields** turns individual fields or whole groups off, for example all EEO questions.
+  **Settings → Behaviour** has the application email, auto-open, the match card, the Refine toolbar,
+  tracking without Fill and more.
+
+### Cover letters
+On an application, open **Resume → ✍️ Write a cover letter with my resume** (or *Write it from my resume* on a cover-letter
+question). The local AI drafts the letter. Anything it can't back up from your resume is blocked:
+numbers and tools you don't have. Terms that only appear in the job description are flagged. Approve the
+letter, then put it in the text box or export a PDF or Word file named
+`First Last - Company - Job Title - Cover Letter` and attach it.
 
 ### Tailor your resume for a job
 On a job application, open the assistant chat and type **"tailor my resume for this job"** (or click
@@ -45,7 +69,7 @@ original but not identical. Uploading the Word version gives the best result.
   the setup suggests a larger model that writes better.
 
 ### Privacy in one paragraph
-Everything (profile, resume, answers, tracker) is stored only in your browser on your computer. The AI
+Everything (profile, resume, answers, tracker, cover letters, feedback) is stored only in your browser on your computer. No account. The AI
 runs in Ollama on your computer. The extension makes no other network requests: no analytics, no
 servers, no remote code. Equal-opportunity answers and salary are never sent to the AI.
 Details: [PRIVACY.md](PRIVACY.md).
@@ -91,15 +115,20 @@ background.js            service worker: Ollama calls, Origin rule, model downlo
 lib/defaults.js          default settings, profile schema, storage loader (shared)
 lib/resume.js            PDF/DOCX parsing (local), regex facts, model-output validation, profile mapping
 lib/tailor.js            tailoring prompt, fact validation, rules, file names
+lib/cover.js             cover-letter prompt, fact checks, file name
+lib/match.js             resume ↔ job keyword match (local)
 lib/docx.js              in-place DOCX editing + DOCX template builder
 lib/pdfout.js            PDF builder (jsPDF)
 lib/importer.js          resume import + confirm checklist (setup wizard and Settings)
 lib/pageutil.js          helpers for extension pages; lib/pages.css shared styles
 lib/vendor/              pdf.js, JSZip, jsPDF (with licenses)
-content/                 content scripts: field detection, site adapters, chat panel, multi-step, learning, tracking
+content/                 content scripts: field detection, site adapters, chat panel + tabs (panel.js), refine toolbar,
+                         match card, multi-step, learning, tracking
 onboarding/              first-run setup wizard
 tailor/                  tailor-my-resume page (diff / approve / export / attach)
-practice/                practice application (fake job, nothing is sent)
+cover/                   cover-letter page (draft / fact check / approve / fill or attach)
+privacy/                 bundled privacy page
+practice/                practice application + guided tour (demo person, nothing is sent or saved)
 options/  popup/         settings page and toolbar popup
 store/                   Chrome Web Store listing text, permission justifications
 store-assets/            store tile and screenshots (fake data)
@@ -112,10 +141,19 @@ dev-tests/               Playwright end-to-end tests, mocks, fixtures (not shipp
 cd dev-tests && npm i playwright && npx playwright install chromium
 node unit-v4.js                              # pure helpers, no browser
 node e2e-v4.js                               # setup wizard, Origin rule, model pull, resume import, tailoring (mock Ollama)
+node e2e-v5.js                               # v0.5: tour, icon, progress, refine, tabs, match, cover letters, tracking, settings (ONLY=match,cover,...)
+node e2e-live-v5.js                          # live Greenhouse/Lever/Ashby, fill only (non-GET requests aborted) + performance numbers
 OLLAMA_URL=http://127.0.0.1:11434 node e2e-real-ollama.js   # against a real Ollama + model
 ```
 Older suites (`e2e-v3.js`, `e2e-steps.js`, `e2e-ai.js`, `e2e-submit.js`, `test-mocks.js`) are described
 in `dev-tests/README.md`. All test data is made up.
+
+### Performance
+Content scripts are plain JS (no framework). Heavy libraries (pdf.js, JSZip, jsPDF) load only when a page
+needs them. Observers are debounced, and the match card waits until the browser is idle.
+`dev-tests/e2e-live-v5.js` measures the extension's own CPU time on live pages (CDP sampling profiler,
+`chrome-extension://` frames) and compares page metrics with and without the extension. Results for
+v0.5.0 are in the CHANGELOG release notes and `dev-tests/perf-v5.json`.
 
 ### Build the store zip
 ```bash

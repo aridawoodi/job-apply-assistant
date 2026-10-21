@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.5.0 (2026-10-21): guided, faster, more helpful
+Everything still runs on your computer: no account, no telemetry, no servers.
+
+- **Practice tour.** A 10-step tour with coach marks on the practice application, using a made-up
+  person (Sam Sample). It covers pinning the icon, Fill, live progress, saved answers, Refine, resume match,
+  tailoring, review and pressing Submit yourself. Nothing from the tour is saved to your profile, answers
+  or tracker. You can run it again from Settings and from the popup.
+- **Toolbar icon status.** The icon is colored on supported job pages and gray everywhere else, and its
+  tooltip says what was found ("Greenhouse · application form found").
+- **Live fill progress and checklists.** You see "Scanning page… N fields found" and per-field ticks while
+  it fills, then *Required x of y* and *Optional x of y* checklists that jump to each field.
+- **Refine with AI** under long text answers: Shorter, More technical, More enthusiastic, or your own
+  instruction; Regenerate and Undo. 👍 / 👎 feedback is stored locally and shapes future drafts.
+- **Panel tabs:** Assistant, Resume, Profile, Tracker, Report.
+  - **Job card** (company, title, location, salary, posted date) with ☆ Save job.
+  - **Resume match**: a keyword score worked out locally, with matched and missing keywords. On job
+    postings a small card shows it too (dismiss it, or turn it off for the site). AI keyword extraction
+    is optional and can only add keywords that appear in the job description.
+  - **Profile**: click to copy any detail (contact, links, experience descriptions, education, skills,
+    saved answers). It works on any site: on unsupported sites the popup's *My profile* opens it.
+  - **Tracker**: the stage stepper, notes and reminder for the current job.
+  - **Report a problem**: a diagnostics checklist, then a prefilled GitHub new-issue link. You see a
+    preview of exactly what goes into it. It holds no personal data and nothing is sent automatically.
+- **Cover letters** from your resume and the job description, written by your local AI and fact-checked:
+  numbers and tools that aren't in your resume are blocked, and terms found only in the job description
+  are flagged. You approve the letter, then put it in the text box or export a PDF/DOCX named
+  `First Last - Company - Job Title - Cover Letter` and attach it to the upload field.
+- **Tracking without Fill.** Applications you submit yourself are tracked on all supported sites. After a
+  confirmed submit, an *Application tracked ✓* dialog lets you add notes and a follow-up date. You can turn
+  this off with *Track applications I submit without using Fill*.
+- **Tracker upgrade:** stages (Saved → Applied → Screen → Interview → Offer / Rejected) with dates, notes,
+  reminders (shown in the tracker, no notifications), bookmarks, search and stage/saved/due filters, and
+  more CSV columns.
+- **Settings:**
+  - **Fields** is a toggle tree for every field and group, for example turning off all EEO fields.
+  - **Behaviour** has: application email (a separate email for applications), open the panel automatically
+    or manually, show the match card, AI keywords, the Refine toolbar, auto-fill next steps, track without
+    Fill, and show "What's new".
+- **Privacy card** in the panel, plus a bundled privacy page (`privacy/privacy.html`).
+- **What's new** banner in the popup after an update.
+- **Performance:** pdf.js, JSZip and jsPDF load only when needed (Options, setup and the tailor page no
+  longer load them up front). Page observers are debounced. The match card is computed when the browser is
+  idle, about 1 s after load. Injection cost was measured on live pages (see the README).
+- **Data migration to v5:** existing tracker rows get stages, and new settings get defaults. Nothing is
+  removed.
+- Fixes: LinkedIn pages outside `/jobs/` count as unsupported. Practice pages can't write to the real
+  tracker, answers or feedback.
+
 ## 0.4.0 (2026-10-19): public release
 For everyone, on Mac and Windows, with no terminal.
 

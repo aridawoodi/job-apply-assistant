@@ -1,5 +1,38 @@
 # Roadmap & known limitations
 
+## Done in v0.5.0
+- Practice tour (10 coach marks, demo person, nothing saved), colored or gray toolbar icon with a tooltip,
+  live fill progress and Required/Optional checklists, Refine-with-AI toolbar with 👍/👎, panel tabs (job
+  card, resume match, profile copy, tracker, report a problem), resume match card on postings, cover
+  letters (fact-checked, PDF/DOCX, fill or attach), tracking without Fill plus the "Application tracked ✓"
+  dialog, tracker stages/notes/reminders/bookmarks/filters/CSV, per-field toggles and Behaviour settings,
+  privacy card and page, What's new, lazy vendor libraries, debounced observers.
+
+## Known limitations (v0.5.0)
+- **Resume match** is keyword coverage, not a hiring prediction. The keyword list is a built-in
+  vocabulary of skills and tools plus capitalized terms from the job description. Soft skills and unusual
+  tool names can be missed. AI keywords (optional) can only add terms that appear in the job description.
+- **Cover-letter fact checks** are heuristics. They block numbers and tool or skill terms that aren't in
+  your resume, and flag terms found only in the job description. Claims about motivation or company facts
+  can't be verified, so read the letter before you approve it. The PDF uses a clean template, not your
+  resume's layout.
+- **Tracking without Fill** works where the site shows a recognizable confirmation (text, or a
+  /thanks or /confirmation URL). Some custom career sites won't be detected. You can change the stage by
+  hand.
+- **Reminders** are shown in the tracker and the panel only. There are no system notifications (that
+  would need an extra permission).
+- **Profile on unsupported sites** needs a click on the toolbar popup (*My profile*), which grants access
+  to that one tab. The page isn't read until you do.
+- **Report a problem** opens a GitHub issue form in your browser. You need a GitHub account, and the
+  repository URL in `lib/defaults.js` (`YOUR-GITHUB-USERNAME`) has to be set before publishing.
+- **Refine toolbar** appears only under larger text boxes (at least 200×48 px, or 3+ rows), and not inside
+  the extension's own panels.
+- **The tour** shows how to pin the icon with an illustration. Chrome doesn't let extensions pin
+  themselves.
+- **Live-site testing** was fill-only. No real application was submitted, so the "confirmed" detection on
+  real Greenhouse, Lever and Ashby confirmation pages is checked only against mocks that copy their
+  wording and URLs.
+
 ## Done in v0.4.0
 - Public, cross-platform release prep: setup wizard (Ollama download/detect, Origin rule, model pull),
   resume import (PDF/DOCX, local), tailored resumes (validated, DOCX in place, PDF, library, attach),
@@ -40,8 +73,9 @@
 - Multi-step / multi-page sessions with auto-fill of next steps; basic Workday; LinkedIn Easy Apply fill-only.
 
 ## Next
+- Optional notifications for tracker reminders (opt-in `notifications` permission).
+- Resume match: years-of-experience and seniority checks; a user-editable keyword list.
 - Edge Add-ons and Firefox (MV3) packages; optional host permission prompt for other ATS sites.
-- Cover letters from the master resume + job description, with the same fact checks.
 - OCR fallback for scanned PDF resumes (local, e.g. Tesseract WASM bundled).
 - **Workday, beyond basic:** "My Experience" repeat blocks (work history / education "Add"), date
   pickers (`dateSectionMonth/Year`), multi-select prompts (`multiselectInputContainer`, e.g. skills,
