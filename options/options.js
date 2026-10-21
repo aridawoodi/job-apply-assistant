@@ -187,28 +187,94 @@ async function renderLibrary() {
 }
 
 const fmt = d => d ? new Date(d).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+const sendBg = msg => new Promise(res => chrome.runtime.sendMessage(msg, r => { void chrome.runtime.lastError; res(r || {}); }));
+const today = () => new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
+function appMatches(a) {
+  const q = ($('appSearch').value || '').trim().toLowerCase();
+  const st = $('appStage').value;
+  if (st && (a.stage || 'saved') !== st) return false;
+  if ($('appSaved').checked && !a.bookmarked) return false;
+  if ($('appDue').checked && !(a.reminderAt && a.reminderAt <= today())) return false;
+  if (q && ![a.company, a.title, a.site, a.notes, a.location].join(' ').toLowerCase().includes(q)) return false;
+  return true;
+}
 function renderApps() {
   const tb = $('appRows');
+  const sel = $('appStage');
+  if (sel.options.length < 2) JAA.STAGES.forEach(([k, l]) => sel.appendChild(new Option(l, k)));
   tb.innerHTML = '';
-  if (!state.applications.length) { tb.innerHTML = '<tr><td colspan="9" class="muted">Nothing yet. Fill or submit an application and it shows up here.</td></tr>'; return; }
-  state.applications.forEach((a, i) => {
+  if (!state.applications.length) { tb.innerHTML = '<tr><td colspan="6" class="muted">Nothing yet. Fill, submit or ☆ save a job and it shows up here.</td></tr>'; $('appCount').textContent = ''; return; }
+  const list = state.applications.map((a, i) => [a, i]).filter(([a]) => appMatches(a));
+  const due = state.applications.filter(a => a.reminderAt && a.reminderAt <= today()).length;
+  $('appCount').textContent = `${list.length} of ${state.applications.length} shown${due ? ` · ⏰ ${due} reminder${due > 1 ? 's' : ''} due` : ''}`;
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="6" class="muted">No matches for this filter.</td></tr>'; return; }
+  list.forEach(([a, i]) => {
     const tr = document.createElement('tr');
-    const statuses = JAA.ALL_STATUSES.includes(a.status) ? JAA.ALL_STATUSES : JAA.ALL_STATUSES.concat([a.status]);
+    if (a.reminderAt && a.reminderAt <= today()) tr.className = 'due';
+    const cur = a.stage || 'saved';
+    const order = JAA.STAGES.map(x => x[0]);
+    const ci = order.indexOf(cur);
+    const steps = JAA.STAGES.map(([k, l], n) => `<button type="button" data-stage="${k}" data-i="${i}" class="${k === cur ? 'cur' : (cur !== 'rejected' && k !== 'rejected' && n < ci ? 'past' : '')}${k === 'rejected' ? ' rej' : ''}" title="${esc(l)}${a.stageDates && a.stageDates[k] ? ' · ' + esc(fmtDay(a.stageDates[k])) : ''}">${esc(l)}</button>`).join('');
+    const dates = JAA.STAGES.filter(([k]) => a.stageDates && a.stageDates[k]).map(([k, l]) => `${esc(l)} ${esc(fmtDay(a.stageDates[k]))}`).join(' → ');
     const cls = a.status === 'Applied' ? 'st-ok' : a.status === 'Error - not sent' ? 'st-err' : a.status === 'Submitted' ? 'st-wait' : '';
-    tr.innerHTML = `<td>${esc(fmt(a.date))}</td><td>${esc(a.company)}</td><td><a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.title || a.url)}</a></td><td>${esc(a.site)}</td>
-      <td class="muted">${a.filled != null ? `${a.filled || 0} / ${a.ai || 0} AI / ${a.todo || 0} open` : 'not filled'}</td>
-      <td><select data-i="${i}" class="${cls}">${statuses.map(s => `<option${s === a.status ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select>${a.lastError && a.status === 'Error - not sent' ? `<div class="bad small" title="${esc(a.lastError)}">${esc(a.lastError.slice(0, 80))}</div>` : ''}</td>
-      <td>${esc(fmt(a.submittedAt))}</td><td>${esc(fmt(a.confirmedAt))}</td>
+    const meta = [a.site, a.location, a.salary].filter(Boolean).map(esc).join(' · ');
+    tr.innerHTML = `<td><button type="button" class="star${a.bookmarked ? ' on' : ''}" data-star="${i}" title="${a.bookmarked ? 'Saved job' : 'Save job'}">${a.bookmarked ? '★' : '☆'}</button></td>
+      <td><b>${esc(a.company)}</b><div><a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.title || a.url)}</a></div><div class="muted small">${meta}${a.via === 'tracked' ? ' · tracked without Fill' : ''}</div><div class="muted small">Last activity ${esc(fmt(a.date))}</div></td>
+      <td><div class="stepper">${steps}</div><div class="stdates">${dates}</div></td>
+      <td><textarea data-notes="${i}" placeholder="Notes">${esc(a.notes || '')}</textarea><input type="date" data-rem="${i}" value="${esc(a.reminderAt || '')}" title="Reminder date"></td>
+      <td><span class="pill-st ${cls}">${esc(a.status || '')}</span>${a.lastError && a.status === 'Error - not sent' ? `<div class="bad small" title="${esc(a.lastError)}">${esc(a.lastError.slice(0, 80))}</div>` : ''}
+        <div class="muted small">${a.filled != null ? `${a.filled || 0} filled / ${a.ai || 0} AI / ${a.todo || 0} open` : 'not filled here'}</div>
+        ${a.submittedAt ? `<div class="muted small">Submitted ${esc(fmt(a.submittedAt))}</div>` : ''}${a.confirmedAt ? `<div class="muted small">Confirmed ${esc(fmt(a.confirmedAt))}</div>` : ''}</td>
       <td><button class="x" data-del="${i}" title="Remove">×</button></td>`;
     tb.appendChild(tr);
   });
-  tb.querySelectorAll('select').forEach(s => s.onchange = async () => {
-    const a = state.applications[+s.dataset.i];
-    a.status = s.value;
-    (a.history = a.history || []).push({ at: new Date().toISOString(), event: 'manual', detail: s.value });
-    await chrome.storage.local.set({ applications: state.applications });
-  });
+  const keyOf = i => ({ key: state.applications[+i].key, url: state.applications[+i].url });
+  tb.querySelectorAll('[data-stage]').forEach(b => b.onclick = async () => { await sendBg({ type: 'tracker:update', entry: keyOf(b.dataset.i), patch: { stage: b.dataset.stage } }); });
+  tb.querySelectorAll('[data-notes]').forEach(t => t.onchange = async () => { await sendBg({ type: 'tracker:update', entry: keyOf(t.dataset.notes), patch: { notes: t.value } }); });
+  tb.querySelectorAll('[data-rem]').forEach(t => t.onchange = async () => { await sendBg({ type: 'tracker:update', entry: keyOf(t.dataset.rem), patch: { reminderAt: t.value } }); });
+  tb.querySelectorAll('[data-star]').forEach(b => b.onclick = async () => { const a = state.applications[+b.dataset.star]; await sendBg({ type: 'tracker:bookmark', entry: { key: a.key, url: a.url }, on: !a.bookmarked }); });
   tb.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { state.applications.splice(+b.dataset.del, 1); await chrome.storage.local.set({ applications: state.applications }); renderApps(); });
+}
+
+/* ---------- v0.5: Fields to fill (toggle tree) + Behaviour (instant save) ---------- */
+async function saveSetting(k, v) {
+  state.settings[k] = v;
+  const { settings: cur = {} } = await chrome.storage.local.get('settings');
+  cur[k] = v;
+  await chrome.storage.local.set({ settings: cur });
+  $('saved').textContent = 'Saved ' + new Date().toLocaleTimeString();
+}
+function renderFieldTree() {
+  const box = $('fieldTree'); box.innerHTML = '';
+  const t = state.settings.fieldToggles || {};
+  JAA.FIELD_GROUPS.forEach(([group, items]) => {
+    const fs = document.createElement('fieldset');
+    const on = items.filter(([k]) => t[k] !== false).length;
+    fs.innerHTML = `<legend><label><input type="checkbox" data-group="${esc(group)}"> ${esc(group)}</label></legend>` +
+      items.map(([k, l]) => `<label class="ch"><input type="checkbox" data-field="${esc(k)}"${t[k] !== false ? ' checked' : ''}> ${esc(l)}</label>`).join('');
+    const g = fs.querySelector('[data-group]');
+    g.checked = on === items.length; g.indeterminate = on > 0 && on < items.length;
+    box.appendChild(fs);
+  });
+  const write = async () => {
+    const nt = {};
+    box.querySelectorAll('[data-field]').forEach(c => { if (!c.checked) nt[c.dataset.field] = false; });
+    await saveSetting('fieldToggles', nt);
+    renderFieldTree();
+  };
+  box.querySelectorAll('[data-field]').forEach(c => c.onchange = write);
+  box.querySelectorAll('[data-group]').forEach(g => g.onchange = () => { g.closest('fieldset').querySelectorAll('[data-field]').forEach(c => { c.checked = g.checked; }); write(); });
+}
+function initBehaviour() {
+  renderFieldTree();
+  $('fieldsAll').onclick = async () => { await saveSetting('fieldToggles', {}); renderFieldTree(); };
+  $('behaviour').addEventListener('change', e => {
+    const el = e.target; if (!el.id || !el.id.startsWith('s_')) return;
+    const k = el.id.slice(2);
+    saveSetting(k, el.type === 'checkbox' ? el.checked : el.value.trim());
+  });
+  $('tour').onclick = () => sendBg({ type: 'tour:open' });
+  ['appSearch', 'appStage', 'appSaved', 'appDue'].forEach(id => $(id).addEventListener(id === 'appSearch' ? 'input' : 'change', renderApps));
 }
 
 let dirtyFlag = false;
@@ -304,7 +370,7 @@ function initBackups() {
   Object.assign(state, all);
   await new Promise(r => chrome.runtime.sendMessage({ type: 'tracker:migrate' }, () => { void chrome.runtime.lastError; r(); }));
   state.applications = (await chrome.storage.local.get('applications')).applications || [];
-  renderProfile(); renderBank(); renderSettings(); renderResume(); renderApps(); renderRules(); mountImporter(); renderLibrary();
+  renderProfile(); renderBank(); renderSettings(); renderResume(); renderApps(); renderRules(); mountImporter(); renderLibrary(); initBehaviour();
   $('importAI').onchange = mountImporter;
   if (!state.settings.useLLM) $('importAI').checked = false, mountImporter();
   $('ruleAdd').onclick = () => { addRule($('ruleNew').value); $('ruleNew').value = ''; };
@@ -347,8 +413,9 @@ function initBackups() {
   $('import').onchange = e => { const f = e.target.files[0]; if (f) importJson(f); e.target.value = ''; };
 
   $('csv').onclick = () => {
-    const cols = ['date', 'company', 'title', 'site', 'status', 'url', 'submittedAt', 'confirmedAt', 'errorAt', 'lastError', 'filled', 'ai', 'todo', 'firstFilled'];
-    const rows = [cols.join(',')].concat(state.applications.map(a => cols.map(c => csvCell(a[c])).join(',')));
+    const cols = ['date', 'company', 'title', 'site', 'location', 'salary', 'stage', 'status', 'url', 'submittedAt', 'confirmedAt', 'errorAt', 'lastError', 'filled', 'ai', 'todo', 'firstFilled', 'bookmarked', 'notes', 'reminderAt', 'via'];
+    const stageCols = JAA.STAGES.map(([k]) => 'stage_' + k);
+    const rows = [cols.concat(stageCols).join(',')].concat(state.applications.map(a => cols.map(c => csvCell(c === 'stage' ? (JAA.STAGE_LABEL[a.stage] || a.stage || '') : a[c])).concat(JAA.STAGES.map(([k]) => csvCell(a.stageDates && a.stageDates[k] ? String(a.stageDates[k]).slice(0, 10) : ''))).join(',')));
     download(`job-applications-${new Date().toISOString().slice(0, 10)}.csv`, rows.join('\n'), 'text/csv');
   };
   $('clearApps').onclick = async () => { if (!confirm('Delete every tracked application?')) return; state.applications = []; await chrome.storage.local.set({ applications: [] }); renderApps(); };

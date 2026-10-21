@@ -3,7 +3,7 @@
 <body>
 <nav>
   <span class="brand"><img src="../icons/icon48.png" width="28" height="28" alt=""><strong>Job Apply Assistant</strong><span id="ver" class="ver"></span></span>
-  <a href="#profile">Profile</a><a href="#resume">Resume</a><a href="#tailoring">Tailoring</a><a href="#library">Saved resumes</a><a href="#style">Writing style</a><a href="#bank">Answer bank</a><a href="#ai">Local AI</a><a href="#backups">Backups</a><a href="#io">Import / export</a><a href="#tracker">Tracker</a><a href="../onboarding/welcome.html" target="_blank">Setup</a>
+  <a href="#profile">Profile</a><a href="#resume">Resume</a><a href="#tailoring">Tailoring</a><a href="#library">Saved resumes</a><a href="#style">Writing style</a><a href="#bank">Answer bank</a><a href="#fields">Fields to fill</a><a href="#behaviour">Behaviour</a><a href="#ai">Local AI</a><a href="#backups">Backups</a><a href="#io">Import / export</a><a href="#tracker">Tracker</a><a href="../onboarding/welcome.html" target="_blank">Setup</a>
   <span class="spacer"></span><span id="saved" class="muted"></span><button id="save" class="primary" type="button">Save</button>
 </nav>
 <main>
@@ -47,6 +47,30 @@
     <button id="bankAdd" type="button" class="secondary">+ Add answer</button>
   </section>
 
+  <section id="fields"><h2>Fields to fill</h2>
+    <p class="muted">Untick anything you'd rather fill yourself. Turned-off fields are left empty and listed as "turned off" in the panel. Consent boxes are never ticked by the assistant, whatever you choose here.</p>
+    <p><button type="button" class="secondary" id="fieldsAll">Turn all on</button></p>
+    <div id="fieldTree" class="ftree"></div>
+  </section>
+
+  <section id="behaviour"><h2>Behaviour</h2>
+    <div class="grid">
+      <label>Email for applications (optional)<input id="s_applicationEmail" type="email" placeholder="Leave empty to use the email in your profile"></label>
+      <label>Open the assistant panel on job pages<select id="s_panelAuto"><option value="manual">Manually (click the button)</option><option value="auto">Automatically when an application form appears</option></select></label>
+    </div>
+    <label class="check"><input id="s_showMatch" type="checkbox"> Show the resume match card on job postings</label>
+    <label class="check"><input id="s_matchAI" type="checkbox"> Let my local AI refine match keywords when I ask (Resume tab → Refine with local AI)</label>
+    <label class="check"><input id="s_refineToolbar" type="checkbox"> Show the "Refine with AI" toolbar under long-answer boxes</label>
+    <label class="check"><input id="s_showFloatingButton" type="checkbox"> Show the floating "Fill application" button on Greenhouse / Lever / Ashby</label>
+    <label class="check"><input id="s_trackSubmissions" type="checkbox"> Track my submissions automatically (Submitted → Applied / Error - not sent)</label>
+    <label class="check"><input id="s_showBadge" type="checkbox"> Show the status badge on the toolbar icon</label>
+    <label class="check"><input id="s_autoFillSteps" type="checkbox"> Auto-fill next steps of multi-step applications (Workday, LinkedIn Easy Apply, "Step 2 of 5" forms) after I press Next myself</label>
+    <label class="check"><input id="s_warnOnSubmit" type="checkbox"> Warn me (without blocking) if I press Submit while fields still need me</label>
+    <label class="check"><input id="s_trackWithoutFill" type="checkbox"> Track applications I submit without using Fill</label>
+    <label class="check"><input id="s_whatsNew" type="checkbox"> Tell me what's new after an update</label>
+    <p style="margin-top:12px"><button type="button" class="secondary" id="tour">🎓 Take the practice tour</button> <span class="muted small">A 2-minute walkthrough on a fake application.</span></p>
+  </section>
+
   <section id="ai"><h2>Local AI (Ollama)</h2>
     <div class="grid">
       <label>Ollama URL<input id="s_ollamaUrl" type="url" placeholder="http://127.0.0.1:11434"></label>
@@ -61,11 +85,6 @@
     <label class="check"><input id="s_rememberAnswers" type="checkbox"> Remember my answers: save what I type in yellow/blue fields to the answer bank</label>
     <label class="check"><input id="s_learnCompanySpecific" type="checkbox"> Also reuse company-specific answers ("Why {company}?") directly (off = only used as examples for the AI)</label>
     <label class="check"><input id="s_overwriteExisting" type="checkbox"> Overwrite fields that already have a value</label>
-    <label class="check"><input id="s_showFloatingButton" type="checkbox"> Show the floating "Fill application" button on Greenhouse / Lever / Ashby</label>
-    <label class="check"><input id="s_trackSubmissions" type="checkbox"> Track my submissions automatically (Submitted → Applied / Error - not sent)</label>
-    <label class="check"><input id="s_showBadge" type="checkbox"> Show the status badge on the toolbar icon</label>
-    <label class="check"><input id="s_autoFillSteps" type="checkbox"> Auto-fill next steps of multi-step applications (Workday, LinkedIn Easy Apply, "Step 2 of 5" forms) after I press Next myself</label>
-    <label class="check"><input id="s_warnOnSubmit" type="checkbox"> Warn me (without blocking) if I press Submit while fields still need me</label>
     <label class="check"><input id="s_chatHistory" type="checkbox"> Keep the assistant chat history for each job posting</label>
     <p><button id="test" type="button" class="secondary">Test connection</button> <span id="testOut" class="muted"></span></p>
   </section>
@@ -88,13 +107,13 @@
 
   <section id="tracker"><h2>Application tracker</h2>
     <p class="muted">Logged when you fill an application and when you submit one yourself. <b>Submitted</b> = you pressed Submit, waiting for the site's confirmation · <b>Applied</b> = confirmation seen · <b>Error - not sent</b> = the form showed an error after Submit. Change the status by hand any time (Interview, Offer, … are never overwritten automatically).</p>
-    <p><button id="csv" type="button" class="secondary">Export CSV</button> <button id="clearApps" type="button" class="danger">Clear all</button></p>
-    <table class="apps"><thead><tr><th>Last activity</th><th>Company</th><th>Title</th><th>Site</th><th>Fields</th><th>Status</th><th>Submitted</th><th>Confirmed</th><th></th></tr></thead><tbody id="appRows"></tbody></table>
+    <p class="trk-tools"><input id="appSearch" type="search" placeholder="Search company, title, notes…"> <select id="appStage"><option value="">All stages</option></select> <label class="check" style="display:inline-flex"><input id="appSaved" type="checkbox"> ★ Saved jobs only</label> <label class="check" style="display:inline-flex"><input id="appDue" type="checkbox"> ⏰ Reminders due</label>
+      <span class="spacer"></span><button id="csv" type="button" class="secondary">Export CSV</button> <button id="clearApps" type="button" class="danger">Clear all</button></p>
+    <div class="muted small" id="appCount"></div>
+    <table class="apps"><thead><tr><th></th><th>Job</th><th>Stage</th><th>Notes &amp; reminder</th><th>Submission</th><th></th></tr></thead><tbody id="appRows"></tbody></table>
   </section>
 </main>
 <script src="../lib/defaults.js"></script>
-<script src="../lib/vendor/jszip.min.js"></script>
-<script src="../lib/vendor/pdf.min.js"></script>
 <script src="../lib/pageutil.js"></script>
 <script src="../lib/resume.js"></script>
 <script src="../lib/tailor.js"></script>

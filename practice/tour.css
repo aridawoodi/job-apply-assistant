@@ -1,0 +1,5 @@
+/* practice tour: page-level tweaks (the coach marks themselves live in a shadow root) */
+body.jaa-touring .banner{display:none}
+.tourbar{display:flex;gap:10px;align-items:center;background:#eef2ff;border:1px solid #c7d2fe;color:#312e81;border-radius:12px;padding:10px 14px;margin-bottom:14px}
+.tourbar b{font-weight:700}.tourbar .sp{flex:1}
+.tourbar button{border:1px solid #c7d2fe;background:#fff;color:#4338ca;border-radius:8px;padding:6px 10px;font-weight:600;cursor:pointer}

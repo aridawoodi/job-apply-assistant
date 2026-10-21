@@ -950,6 +950,10 @@ async function tailoredAttach(msg) {
 
 const V4_TYPES = new Set(['tracker:update', 'tracker:bookmark', 'tracker:get', 'tracker:list', 'page:status', 'feedback:add', 'diag:info', 'tour:open', 'cover:open', 'cover:save', 'cover:fill', 'match:ai', 'whatsnew:seen', 'privacy:open', 'ollama:status', 'ollama:fixOrigin', 'system:info', 'tailor:open', 'tailor:forJob', 'tailor:save', 'tailor:attach', 'onboarding:open']);
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  // the practice page (and its tour) never writes to your real tracker, feedback or cover letters
+  if (msg && sender && sender.url && sender.url.startsWith(chrome.runtime.getURL('practice/')) && /^(tracker:update|tracker:bookmark|feedback:add|cover:save)$/.test(msg.type)) {
+    sendResponse({ ok: true, practice: true }); return false;
+  }
   const handlers = {
     'ollama:status': () => ollamaStatus(msg.url),
     'ollama:fixOrigin': () => installOriginRules(),

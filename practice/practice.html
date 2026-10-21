@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Practice application · Job Apply Assistant</title>
-<link rel="stylesheet" href="../lib/pages.css"><link rel="stylesheet" href="practice.css"></head>
+<link rel="stylesheet" href="../lib/pages.css"><link rel="stylesheet" href="practice.css"><link rel="stylesheet" href="tour.css"></head>
 <body>
 <div class="top"><img src="../icons/icon48.png" width="30" height="30" alt=""><strong>Practice application</strong><span class="sp"></span><span class="pill">Nothing here is sent anywhere</span></div>
 <main>
@@ -40,6 +40,7 @@
         <label class="f">Current company<input type="text" name="current_company" id="current_company" autocomplete="off"></label>
         <label class="f">What are your salary expectations?<input type="text" name="salary" id="salary" autocomplete="off"></label>
       </div>
+      <label class="f" style="margin-top:12px">How many years have you used SQL?<input type="text" name="q_sql" id="q_sql" autocomplete="off"></label>
       <label class="f" style="margin-top:12px">Why do you want to work at Example Co? *<textarea name="q_why" id="q_why" rows="4" required></textarea></label>
       <h3>Voluntary self-identification</h3>
       <p class="muted small">Optional. Your answers don't affect your application.</p>
@@ -50,10 +51,17 @@
       <label class="row consent"><input type="checkbox" name="consent" id="consent" required> I have read and agree to the (fake) privacy notice.</label>
       <div class="row" style="margin-top:16px"><button type="submit" class="primary big" id="submit">Submit application</button><span id="sent" class="muted"></span></div>
     </form>
+    <div id="confirmation" class="confirm" hidden>
+      <div class="big">✓</div>
+      <h2>Application received (practice)</h2>
+      <p>Thanks for applying to the pretend <b>Data Analyst</b> role at Example Co. On a real site this is the confirmation page, and the assistant would add the job to your tracker as <b>Applied</b>.</p>
+      <p class="muted small">Nothing was sent anywhere. <a href="#" id="again">Reset the practice form</a></p>
+    </div>
   </section>
 </main>
 <script src="practice.js"></script>
 <script src="../lib/defaults.js"></script>
+<script src="demo.js"></script>
 <script src="../lib/match.js"></script>
 <script src="../content/core.js"></script>
 <script src="../content/sites.js"></script>
@@ -66,4 +74,5 @@
 <script src="../content/track.js"></script>
 <script src="../content/main.js"></script>
 <script src="../content/match.js"></script>
+<script src="tour.js"></script>
 </body></html>

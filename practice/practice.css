@@ -2,3 +2,4 @@
 #job-description{margin-top:10px}#job-description ul{padding-left:20px}
 .consent{margin-top:14px;font-size:14px}.consent input{width:18px;height:18px}
 input[type=file]{font-size:13px}
+.confirm{text-align:center;padding:28px 10px}.confirm .big{width:64px;height:64px;margin:0 auto 10px;border-radius:50%;background:#dcfce7;color:#15803d;font:800 32px/64px system-ui}

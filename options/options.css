@@ -42,3 +42,18 @@ ul.rules{list-style:none;padding:0;margin:6px 0}ul.rules li{display:flex;gap:8px
 .ex{background:#eef2ff;color:#3730a3;border-radius:999px;padding:5px 10px;font-size:12px}
 .jobs .jobed{border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin:8px 0;background:#fcfcff}
 a.dl{display:inline-block;margin:2px 6px 2px 0;font-size:12px}
+
+/* v0.5: fields tree, tracker stepper */
+.ftree{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.ftree fieldset{border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px;margin:0}
+.ftree legend{font-weight:700;font-size:13px;padding:0 4px}.ftree legend label{display:flex;gap:6px;align-items:center}
+.ftree .ch{display:flex;gap:6px;align-items:center;font-size:13px;margin:3px 0 3px 4px}
+.trk-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.trk-tools input[type=search]{min-width:240px}
+.stepper{display:flex;gap:2px;flex-wrap:wrap}.stepper button{border:1px solid #e2e8f0;background:#fff;color:#64748b;border-radius:999px;padding:3px 8px;font-size:11px;cursor:pointer}
+.stepper button.past{background:#eef2ff;color:#4338ca;border-color:#c7d2fe}.stepper button.cur{background:#4f46e5;color:#fff;border-color:#4f46e5}
+.stepper button.rej.cur{background:#b91c1c;border-color:#b91c1c}
+.stdates{font-size:11px;color:#64748b;margin-top:3px}
+table.apps textarea{width:100%;min-height:38px;font-size:12px}table.apps input[type=date]{font-size:12px;margin-top:4px}
+.star{background:none;border:0;font-size:17px;cursor:pointer;color:#cbd5e1;padding:0}.star.on{color:#f59e0b}
+tr.due td{background:#fffbeb}
+.pill-st{display:inline-block;border-radius:999px;padding:2px 8px;font-size:11px;background:#f1f5f9}.pill-st.st-ok{background:#dcfce7}.pill-st.st-err{background:#fee2e2}.pill-st.st-wait{background:#fef9c3}

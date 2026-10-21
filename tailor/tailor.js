@@ -106,6 +106,7 @@
     $('#build').disabled = false;
   });
   async function build() {
+    await JAA.page.need('jspdf');
     const fmt = $('#format').value;
     const tailored = JAA.tailor.apply(master, changes);
     const base = JAA.tailor.fileBase(profile, job.company, job.title);

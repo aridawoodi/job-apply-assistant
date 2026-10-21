@@ -20,3 +20,8 @@ button.primary,button.secondary{display:block;width:calc(100% - 28px);margin:8px
 footer{display:flex;gap:14px;padding:10px 14px 12px;font-size:12px}a{color:var(--brand);text-decoration:none;font-weight:600}a:hover{text-decoration:underline}
 
 .setup{display:block;margin:8px 0;padding:9px 11px;border-radius:10px;background:#fef9c3;color:#713f12;font-size:12px;font-weight:600;text-decoration:none}.setup:hover{background:#fef08a}
+
+.wn{background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:8px 10px;margin:8px 0;font-size:12px;position:relative}
+.wn ul{margin:4px 0 4px 16px;padding:0}.wn a{color:#4338ca;font-weight:600}
+.wn .icon{position:absolute;top:2px;right:4px}
+#profile{margin-top:6px}

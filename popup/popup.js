@@ -37,6 +37,18 @@ function showResult(r) {
   const n = document.createElement('div'); n.className = 'muted'; n.textContent = 'Details are on the page. Review everything, then press Submit yourself.'; box.appendChild(n);
 }
 
+// open the in-page panel on a tab (Profile works on any normal web page; it's injected on demand)
+async function openPanel(tabName) {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const fallback = () => chrome.runtime.sendMessage({ type: 'options:open', section: 'profile' }, () => { void chrome.runtime.lastError; window.close(); });
+  if (!tab || !/^https?:/.test(tab.url || '')) return fallback();
+  try {
+    let r = await sendToTab(tab.id, { type: 'jaa:panel', tab: tabName });
+    if (r && (r.noReceiver || r.portClosed)) { await inject(tab.id); r = await sendToTab(tab.id, { type: 'jaa:panel', tab: tabName }); }
+    if (r && r.ok) window.close(); else fallback();
+  } catch (_) { fallback(); }
+}
+
 async function fill(generic) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const btn = generic ? $('generic') : $('fill');
@@ -71,6 +83,14 @@ async function fill(generic) {
   $('backup').onclick = e => { e.preventDefault(); openSection('backups'); };
 
   $('fill').onclick = () => fill(false);
+  $('profile').onclick = () => openPanel('profile');
+  const tour = e => { if (e) e.preventDefault(); chrome.runtime.sendMessage({ type: 'tour:open' }, () => { void chrome.runtime.lastError; window.close(); }); };
+  $('tourLink').onclick = tour;
+  $('wntour').onclick = e => { chrome.runtime.sendMessage({ type: 'whatsnew:seen' }); tour(e); };
+  $('wnx').onclick = () => { chrome.runtime.sendMessage({ type: 'whatsnew:seen' }); $('whatsnew').hidden = true; };
+  chrome.storage.local.get(['whatsNew', 'settings']).then(({ whatsNew, settings }) => {
+    if (whatsNew && !whatsNew.seen && whatsNew.from && !(settings && settings.whatsNew === false)) { $('wnv').textContent = whatsNew.version; $('whatsnew').hidden = false; }
+  });
   $('generic').onclick = () => fill(true);
   $('opts').onclick = e => { e.preventDefault(); openSection('profile'); };
   $('tracker').onclick = e => { e.preventDefault(); openSection('tracker'); };

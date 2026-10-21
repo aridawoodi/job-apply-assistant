@@ -8,6 +8,7 @@
   let running = false;
 
   function send(msg) {
+    if (JAA.demo && JAA.demo.handle) { const d = JAA.demo.handle(msg); if (d) return d; } // practice tour: canned answers
     return new Promise(resolve => {
       try {
         chrome.runtime.sendMessage(msg, r => {
@@ -305,6 +306,12 @@
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!msg || !msg.type) return false;
+    if (msg.type === 'jaa:panel') {
+      if (window.top !== window) return false;
+      if (JAA.chat) JAA.chat.openPanel(msg.tab || 'assistant');
+      sendResponse({ ok: true });
+      return false;
+    }
     if (msg.type === 'cover:fill') {
       if (!frameHasForm() || !coverFields().length) return false;
       if (location.protocol === 'chrome-extension:' && !msg.practice) return false;
