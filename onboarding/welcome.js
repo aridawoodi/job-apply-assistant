@@ -145,7 +145,6 @@
   $('#skipResume').addEventListener('click', () => go(cur + 1));
 
   /* ---------- step: questions ---------- */
-  const DECLINE = 'Decline to self-identify';
   const QUESTIONS = [
     { k: 'phone', q: 'What phone number should applications use?', text: true, onlyIfEmpty: true },
     { k: 'location', q: 'Where do you live (city, state / country)?', text: true, onlyIfEmpty: true },
@@ -155,12 +154,12 @@
     { k: 'availability', q: 'When could you start a new job?', chips: ['Immediately', '2 weeks notice', '1 month notice'], text: true },
     { k: 'willingToRelocate', q: 'Are you open to relocating?', chips: ['Yes', 'No', 'Depends on the role'] },
     { k: 'salaryExpectation', q: 'What salary are you looking for? (Only typed into forms that ask. It is never sent to the AI.)', text: true, placeholder: 'e.g. $120,000' },
-    { intro: 'The next questions are optional US equal-opportunity questions (voluntary self-identification). They are only used to fill those optional form sections and are never sent to the AI. "Decline" is always fine.' },
-    { k: 'eeo.gender', q: 'Gender', chips: ['Male', 'Female', 'Non-binary', DECLINE] },
-    { k: 'eeo.hispanicLatino', q: 'Are you Hispanic or Latino?', chips: ['No', 'Yes', DECLINE] },
-    { k: 'eeo.ethnicity', q: 'Race / ethnicity', chips: ['White', 'Black or African American', 'Asian', 'Hispanic or Latino', 'American Indian or Alaska Native', 'Native Hawaiian or Other Pacific Islander', 'Middle Eastern or North African', 'Two or more races', DECLINE] },
-    { k: 'eeo.veteran', q: 'Veteran status', chips: ['I am not a protected veteran', 'I identify as one or more of the classifications of protected veteran', DECLINE] },
-    { k: 'eeo.disability', q: 'Disability status', chips: ['No, I do not have a disability', 'Yes, I have a disability', DECLINE] }
+    { intro: 'The next questions are optional US equal-opportunity questions (voluntary self-identification). Nothing is pre-selected: if you skip one it stays "Not set", and forms leave that field for you to answer. They are only used to fill those optional sections and are never sent to the AI.' },
+    { k: 'eeo.gender', q: 'Gender', chips: JAA.EEO_CHOICES.gender },
+    { k: 'eeo.hispanicLatino', q: 'Are you Hispanic or Latino?', chips: JAA.EEO_CHOICES.hispanicLatino },
+    { k: 'eeo.ethnicity', q: 'Race / ethnicity', chips: JAA.EEO_CHOICES.ethnicity },
+    { k: 'eeo.veteran', q: 'Veteran status', chips: JAA.EEO_CHOICES.veteran },
+    { k: 'eeo.disability', q: 'Disability status', chips: JAA.EEO_CHOICES.disability }
   ];
   let qaStarted = false;
   async function startQA() {

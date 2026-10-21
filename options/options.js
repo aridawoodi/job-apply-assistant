@@ -3,14 +3,15 @@ const $ = id => document.getElementById(id);
 const YN = ['', 'Yes', 'No'];
 // [path, label, type, options?]
 const SECTIONS = [
-  ['Contact', [['firstName', 'First name'], ['lastName', 'Last name'], ['preferredName', 'Preferred name'], ['pronouns', 'Pronouns'], ['email', 'Email', 'email'], ['phone', 'Phone', 'tel']]],
+  ['Contact', [['firstName', 'First name'], ['lastName', 'Last name'], ['preferredName', 'Preferred name'], ['pronouns', 'Pronouns (optional)', 'pronouns', JAA.EEO_CHOICES.pronouns], ['email', 'Email', 'email'], ['phone', 'Phone', 'tel']]],
   ['Location', [['city', 'City'], ['state', 'State'], ['zip', 'ZIP'], ['country', 'Country'], ['location', 'Location as written on forms (e.g. "Nashville, TN")']]],
   ['Links', [['linkedin', 'LinkedIn URL', 'url'], ['github', 'GitHub URL', 'url'], ['portfolio', 'Portfolio URL', 'url'], ['website', 'Other website', 'url']]],
   ['Work authorization', [['workAuthorizedUS', 'Authorized to work in the US?', 'select', YN], ['needsSponsorship', 'Need visa sponsorship?', 'select', YN], ['citizenship', 'Citizenship'], ['over18', 'At least 18?', 'select', YN]]],
   ['Current job', [['currentEmployer', 'Current employer'], ['currentTitle', 'Current title'], ['currentStartDate', 'Start date (YYYY-MM)'], ['yearsExperience', 'Years of experience']]],
   ['Education', [['education.school', 'School'], ['education.degree', 'Degree'], ['education.field', 'Field of study'], ['education.location', 'School location'], ['education.startYear', 'Start year'], ['education.endYear', 'End year']]],
   ['Availability & preferences', [['availability', 'Earliest start date'], ['noticePeriod', 'Notice period'], ['salaryExpectation', 'Salary expectation (blank = you answer each time)'], ['willingToRelocate', 'Willing to relocate?', 'select', YN], ['howDidYouHear', 'Default "How did you hear about us?"']]],
-  ['Voluntary self-identification (EEO)', [['eeo.gender', 'Gender'], ['eeo.transgender', 'Transgender?'], ['eeo.sexualOrientation', 'Sexual orientation'], ['eeo.disability', 'Disability'], ['eeo.veteran', 'Veteran status'], ['eeo.ethnicity', 'Race / ethnicity'], ['eeo.hispanicLatino', 'Hispanic or Latino?']]],
+  // Voluntary self-ID: "Choose…" (empty = not set) until you pick; empty fields stay yellow on forms for you.
+  ['Voluntary self-identification (EEO, optional)', [['eeo.gender', 'Gender', 'eeo', JAA.EEO_CHOICES.gender], ['eeo.transgender', 'Transgender?', 'eeo', JAA.EEO_CHOICES.transgender], ['eeo.sexualOrientation', 'Sexual orientation', 'eeo', JAA.EEO_CHOICES.sexualOrientation], ['eeo.disability', 'Disability', 'eeo', JAA.EEO_CHOICES.disability], ['eeo.veteran', 'Veteran status', 'eeo', JAA.EEO_CHOICES.veteran], ['eeo.ethnicity', 'Race / ethnicity', 'eeo', JAA.EEO_CHOICES.ethnicity], ['eeo.hispanicLatino', 'Hispanic or Latino?', 'eeo', JAA.EEO_CHOICES.hispanicLatino]]],
   ['Signature & summary', [['signature', 'E-signature (typed name)'], ['summary', 'Short professional summary (used by the AI for free-text answers)', 'textarea'], ['resumeText', 'Resume text (paste plain text; the AI uses it to draft long answers like "Why us?")', 'textarea']]]
 ];
 const STYLE_FIELDS = [['toneNotes', 'Tone notes (e.g. "direct, warm, concrete examples, no buzzwords, short sentences")', 'textarea'], ['writingSamples', 'Writing samples: a few paragraphs you wrote yourself', 'textarea']];
@@ -35,6 +36,17 @@ function renderProfile() {
       if (type === 'select') {
         input = document.createElement('select');
         opts.forEach(o => { const op = document.createElement('option'); op.value = o; op.textContent = o || '—'; input.appendChild(op); });
+      } else if (type === 'eeo') {
+        // explicit choices only; the empty "Choose…" placeholder means "Not set" (never a default answer)
+        input = document.createElement('select');
+        input.dataset.eeo = '1';
+        const ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Choose… (not set)'; input.appendChild(ph);
+        opts.forEach(o => { const op = document.createElement('option'); op.value = op.textContent = o; input.appendChild(op); });
+      } else if (type === 'pronouns') {
+        input = document.createElement('input'); input.type = 'text'; input.placeholder = 'Not set';
+        const dl = document.createElement('datalist'); dl.id = 'dl-' + path.replace(/\W/g, '');
+        opts.forEach(o => { const op = document.createElement('option'); op.value = o; dl.appendChild(op); });
+        input.setAttribute('list', dl.id); l.appendChild(dl);
       } else if (type === 'textarea') {
         input = document.createElement('textarea');
         l.style.gridColumn = '1 / -1';
@@ -43,8 +55,8 @@ function renderProfile() {
       }
       input.dataset.path = path;
       input.value = get(state.profile, path) || '';
-      if (type === 'select' && input.value && !opts.includes(input.value)) {
-        const op = document.createElement('option'); op.value = op.textContent = input.value; input.appendChild(op); input.value = get(state.profile, path);
+      if ((type === 'select' || type === 'eeo') && get(state.profile, path) && !opts.includes(get(state.profile, path))) { // keep the user's own saved wording
+        const own = get(state.profile, path); const op = document.createElement('option'); op.value = op.textContent = own; input.appendChild(op); input.value = own;
       }
       l.appendChild(input); grid.appendChild(l);
     }

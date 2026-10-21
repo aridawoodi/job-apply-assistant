@@ -1,0 +1,25 @@
+<!doctype html><html><head><title>Job Application for Analyst at Example HQ</title>
+<meta property="og:site_name" content="Example HQ">
+<style>body{font:15px/1.5 system-ui;margin:0 auto;max-width:860px;padding:20px}label{display:block;margin-top:10px;font-weight:600}input,select,textarea{display:block;width:100%;padding:6px;margin-top:4px}</style>
+</head><body>
+<div class="job__title"><h1>Analyst</h1></div>
+<div class="job__description"><p>Example HQ is a pretend company for tests.</p></div>
+<form id="application-form">
+ <label for="first_name">First Name *<input id="first_name" name="first_name" required></label>
+ <label for="last_name">Last Name *<input id="last_name" name="last_name" required></label>
+ <label for="email">Email *<input id="email" name="email" type="email" required></label>
+ <label for="q_city">What city do you live in?<input id="q_city" name="q_city"></label>
+ <label for="pronouns">Pronouns<select id="pronouns" name="pronouns"><option value="">Select...</option><option>he/him</option><option>she/her</option><option>they/them</option><option>I don't wish to answer</option></select></label>
+ <h3>Voluntary Self-Identification</h3>
+ <label for="gender">Gender<select id="gender" name="gender"><option value="">Select...</option><option>Male</option><option>Female</option><option>Non-binary</option><option>I don't wish to answer</option></select></label>
+ <label for="transgender">Do you identify as transgender?<select id="transgender" name="transgender"><option value="">Select...</option><option>No</option><option>Yes</option><option>I don't wish to answer</option></select></label>
+ <label for="orientation">Sexual orientation<select id="orientation" name="orientation"><option value="">Select...</option><option>Heterosexual</option><option>Gay</option><option>Bisexual</option><option>I don't wish to answer</option></select></label>
+ <label for="hispanic">Are you Hispanic/Latino?<select id="hispanic" name="hispanic"><option value="">Select...</option><option>Yes</option><option>No</option><option>I don't wish to answer</option></select></label>
+ <label for="race">Please identify your race<select id="race" name="race"><option value="">Select...</option><option>White</option><option>Black or African American</option><option>Asian</option><option>Middle Eastern or North African</option><option>Two or More Races</option><option>I don't wish to answer</option></select></label>
+ <label for="describes">Which of the following best describes you?<select id="describes" name="describes"><option value="">Select...</option><option>White</option><option>Asian</option><option>Black or African American</option><option>Middle Eastern or North African</option><option>Prefer not to say</option></select></label>
+ <label for="veteran">Veteran Status<select id="veteran" name="veteran"><option value="">Select...</option><option>I am not a protected veteran</option><option>I identify as one or more of the classifications of protected veteran</option><option>I don't wish to answer</option></select></label>
+ <label for="disability">Disability Status<select id="disability" name="disability"><option value="">Select...</option><option>Yes, I have a disability</option><option>No, I do not have a disability</option><option>I don't wish to answer</option></select></label>
+ <button type="submit" id="submit">Submit application</button>
+</form>
+<script>document.getElementById('application-form').addEventListener('submit', e => { e.preventDefault(); window.__submits = (window.__submits || 0) + 1; });</script>
+</body></html>

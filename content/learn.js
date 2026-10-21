@@ -14,7 +14,7 @@
   let timer = null;
 
   // profile-owned or sensitive rules are never learned (EEO answers live in the profile)
-  const SKIP_RULES = new Set(['consent', 'botCheck', 'personal', 'ssn/dob', 'signature', 'date', 'salary', 'eduMonth', 'transgender', 'sexualOrientation', 'gender', 'hispanic', 'ethnicity', 'veteran', 'disability']);
+  const SKIP_RULES = new Set(['consent', 'botCheck', 'personal', 'ssn/dob', 'signature', 'date', 'salary', 'eduMonth', 'transgender', 'sexualOrientation', 'gender', 'hispanic', 'ethnicity', 'veteran', 'disability', 'pronouns']);
 
   const readValue = f => C.readValue(f);
 
@@ -34,6 +34,7 @@
     if (!q || q.length < 3) return null;
     const r = C.ruleFor(f);
     if (r && SKIP_RULES.has(r.key)) return null;
+    if (C.isEeoField(f)) return null; // voluntary self-ID is never put in the answer bank
     if (JAA.NEVER_LEARN.test(JAA.normText(q))) return null;
     const a = readValue(f);
     if (!a) return null;
@@ -56,6 +57,7 @@
     if (f.el && (f.el.type === 'password' || /captcha/i.test(f.el.name + ' ' + f.el.id))) return 'passwords/captchas are never saved';
     if (f.kind === 'checkbox' && !f.question) return 'consent boxes are never saved';
     const r = C.ruleFor(f);
+    if (!(r && SKIP_RULES.has(r.key)) && C.isEeoField(f)) return 'voluntary self-identification answers are never saved to the answer bank';
     if (r && SKIP_RULES.has(r.key)) return r.key === 'personal' ? 'personal questions are never saved' : (/consent|botCheck|signature|date/.test(r.key) ? 'consent/signature answers are never saved' : 'this one belongs in your profile, not the answer bank');
     const q = C.cleanLabel(f.question ? f.question + ' — ' + f.label : f.label);
     if (JAA.NEVER_LEARN.test(JAA.normText(q))) return 'personal/legal questions are never saved';

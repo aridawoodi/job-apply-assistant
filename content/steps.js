@@ -48,7 +48,7 @@
     const SRC = { rule: 'profile', bank: 'saved', ai: 'AI', you: 'you' };
     const fields = (summary.items || []).map(it => {
       const f = (JAA.state && JAA.state.fields || []).find(x => x.id === it.id);
-      const priv = f && (/^(personal|ssn\/dob|gender|transgender|sexualOrientation|hispanic|ethnicity|veteran|disability)$/.test((C.ruleFor(f) || {}).key || '') || (f.el && f.el.type === 'password') || JAA.NEVER_LEARN.test(JAA.normText(it.label)) && /pet|dog|cat|hobb|spouse|kids|children|religio/.test(JAA.normText(it.label)));
+      const priv = f && (/^(personal|ssn\/dob|gender|transgender|sexualOrientation|hispanic|ethnicity|veteran|disability|pronouns)$/.test((C.ruleFor(f) || {}).key || '') || C.isEeoField(f) || (f.el && f.el.type === 'password') || JAA.NEVER_LEARN.test(JAA.normText(it.label)) && /pet|dog|cat|hobb|spouse|kids|children|religio/.test(JAA.normText(it.label)));
       const v = f ? C.readValue(f) : (it.value || '');
       return { label: String(it.label || '').slice(0, 120), value: priv ? (v ? '(answered, private)' : '') : String(v || '').slice(0, 200), src: it.status === 'todo' ? (v ? 'you' : 'needs you') : (it.status === 'kept' ? 'already there' : (SRC[it.source] || it.status)), cls: it.status === 'todo' ? (v ? 'you' : 'todo') : it.status === 'ai' ? 'ai' : 'ok' };
     });

@@ -72,6 +72,7 @@ function profileFacts(profile, essay) {
   delete facts.resumeText;
   delete facts.writingSamples; delete facts.toneNotes; // style is passed separately, for long answers only
   delete facts.eeo;            // EEO answers are filled by rules only, never given to the model
+  delete facts.pronouns;       // self-identification too
   delete facts.salaryExpectation;
   // work history etc. from the resume import: compact one-liners (bullets are in resumeText for essays)
   if (Array.isArray(facts.workHistory)) facts.workHistory = facts.workHistory.slice(0, 8).map(j => `${j.title || ''} at ${j.company || ''}${j.start || j.end ? ` (${j.start || '?'} – ${j.end || '?'})` : ''}`);
@@ -262,7 +263,9 @@ async function answerQuestions(questions, opts) {
   opts = opts || {};
   const { profile, answerBank, settings } = await JAA.loadAll();
   if (!settings.useLLM) return { ok: false, error: 'Local AI is turned off in Options.' };
-  if (!questions || !questions.length) return { ok: true, answers: {} };
+  // the model never answers (or guesses) voluntary self-identification questions
+  questions = (questions || []).filter(q => !JAA.isEeoText([q.question, q.label, q.desc, q.hint].filter(Boolean).join(' '), q.options));
+  if (!questions.length) return { ok: true, answers: {} };
   const kind = opts.kind === 'essay' ? 'essay' : 'short';
   // short factual answers are cached for this browser session: the same question on the
   // next application (or a re-fill) is answered instantly

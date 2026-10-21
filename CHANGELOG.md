@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.5.1 (2026-10-21): voluntary self-ID is never pre-set
+- **EEO / self-ID answers default to empty ("Not set") for everyone.** This covers race/ethnicity,
+  Hispanic/Latino, gender, transgender, sexual orientation, disability, veteran status and pronouns.
+  An empty answer leaves the form field yellow for you. Nothing is picked for you, not even "decline".
+- **Fix:** an EEO question could be filled from the answer bank before your profile was checked, because
+  bank matches ran first. A question with EEO-style options but a generic label ("Which of the following
+  best describes you?") could also be filled from the bank or sent to the local AI. This is how a race
+  answer such as "White" could appear without being set in your profile. Now only the value saved in
+  your profile is used, and only for the matching category.
+  - EEO questions are recognized by label, description or option set.
+  - They are never answered from the answer bank or by the AI.
+  - They are filtered out of AI requests.
+  - They are never learned into the answer bank.
+  - Pronouns are no longer sent to the AI.
+- Race/ethnicity matching no longer has a built-in preference for one category. Each category maps only
+  to the site's wording for that same category.
+- **Settings → Profile:** every EEO field is a "Choose… (not set)" list of explicit options, each with
+  "I don't wish to answer". Pronouns is a text box showing "Not set" when empty. Answers you already saved,
+  including your own wording, are kept and shown.
+- Setup questions use the same explicit choices. Skipping one leaves it "Not set".
+- Resume import never sets EEO or pronouns. It never did, and this is now covered by a test.
+- Existing saved answers are not changed by the update.
+- Tests: `dev-tests/e2e-eeo.js`.
+
 ## 0.5.0 (2026-10-21): guided, faster, more helpful
 Everything still runs on your computer: no account, no telemetry, no servers.
 

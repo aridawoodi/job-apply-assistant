@@ -90,7 +90,7 @@ const PROFILE = {
     const rows = (await store('applications')).applications;
     check(mig.dataVersion === 5, 'dataVersion 5');
     check(mig.settings.trackWithoutFill === true && mig.settings.showMatch === true && mig.settings.panelAuto === 'manual' && mig.settings.useLLM === true, 'new settings added, existing kept');
-    check(mig.whatsNew && mig.whatsNew.version === '0.5.0' && mig.whatsNew.from === '0.4.0' && !mig.whatsNew.seen, 'what\'s new noted for 0.4.0 → 0.5.0');
+    check(mig.whatsNew && mig.whatsNew.version === require('../manifest.json').version && mig.whatsNew.from === '0.4.0' && !mig.whatsNew.seen, 'what\'s new noted for 0.4.0 → ' + require('../manifest.json').version);
         check(rows.find(r => r.key === 'greenhouse:oldco:1').stage === 'interview' && rows.find(r => r.key === 'greenhouse:oldco:2').stage === 'saved', 'tracker rows got stages (Interview → interview, Filled → saved)');
     const pop = await ctx.newPage();
     await pop.goto(X('popup/popup.html'));

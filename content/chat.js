@@ -25,9 +25,10 @@
   const st = () => JAA.state || { fields: [], items: [], info: {} };
   const fieldOf = item => (st().fields || []).find(f => f.id === item.id);
   const trunc = (s, n) => { s = String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
-  const EEO_KEYS = new Set(['transgender', 'sexualOrientation', 'gender', 'hispanic', 'ethnicity', 'veteran', 'disability']);
+  const EEO_KEYS = new Set(['transgender', 'sexualOrientation', 'gender', 'hispanic', 'ethnicity', 'veteran', 'disability', 'pronouns']);
   const ruleKey = f => { const r = C.ruleFor(f.kind === 'checkbox' && f.question ? Object.assign({}, f, { label: f.question }) : f); return r ? r.key : ''; };
-  const isPrivate = f => { const k = ruleKey(f); return EEO_KEYS.has(k) || k === 'personal' || k === 'ssn/dob' || (f.el && f.el.type === 'password') || JAA.NEVER_LEARN.test(JAA.normText(f.label)) && /pet|dog|cat|hobb|spouse|wife|husband|children|kids|religio|favou?rite/.test(JAA.normText(f.label)); };
+  const isEeo = f => EEO_KEYS.has(ruleKey(f)) || C.isEeoField(f); // voluntary self-ID: the user's own answer only
+  const isPrivate = f => { const k = ruleKey(f); return isEeo(f) || k === 'personal' || k === 'ssn/dob' || (f.el && f.el.type === 'password') || JAA.NEVER_LEARN.test(JAA.normText(f.label)) && /pet|dog|cat|hobb|spouse|wife|husband|children|kids|religio|favou?rite/.test(JAA.normText(f.label)); };
   async function settings() { if (!settingsCache) settingsCache = (await JAA.loadAll()).settings; return settingsCache; }
   try { chrome.storage.onChanged.addListener(ch => { if (ch.settings) settingsCache = null; }); } catch (_) { /* ignore */ }
 
@@ -434,7 +435,7 @@
   }
   function shownValue(item, f) {
     if (!f) return item.value || '';
-    if (isPrivate(f) && !EEO_KEYS.has(ruleKey(f))) return C.readValue(f) ? '(answered)' : '';
+    if (isPrivate(f) && !isEeo(f)) return C.readValue(f) ? '(answered)' : '';
     if (f.el && f.el.type === 'password') return C.readValue(f) ? '••••' : '';
     return C.readValue(f);
   }
@@ -521,7 +522,7 @@
     if (!f || !f.el.isConnected) return bot('I wanted to change a field, but couldn\'t find it on the page. Nothing was changed.');
     const k = ruleKey(f);
     if (f.kind === 'file') return bot('I can\'t attach files; please do that on the page.');
-    if (['consent', 'botCheck', 'personal', 'ssn/dob'].includes(k) || EEO_KEYS.has(k) || (f.kind === 'checkbox' && !f.question) || (f.el && f.el.type === 'password'))
+    if (['consent', 'botCheck', 'personal', 'ssn/dob'].includes(k) || isEeo(f) || (f.kind === 'checkbox' && !f.question) || (f.el && f.el.type === 'password'))
       return bot(`“${trunc(item.label, 50)}” is one you need to answer yourself, so I left it alone.`);
     if (value == null || (typeof value !== 'string' && !Array.isArray(value) && typeof value !== 'number' && typeof value !== 'boolean')) return bot('The model\'s change was malformed, so I ignored it.');
     if (typeof value !== 'string' && !Array.isArray(value)) value = String(value);

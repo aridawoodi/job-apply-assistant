@@ -132,7 +132,7 @@
           pending.push({ f, item });
           continue;
         }
-        if (r && r.missing) { item.status = 'todo'; item.why = r.missing === 'resume' ? 'Add your resume in Options' : `Not in your profile (${r.missing})`; C.mark(f, 'jaa-todo'); continue; }
+        if (r && r.missing) { item.status = 'todo'; item.why = r.why || (r.missing === 'resume' ? 'Add your resume in Options' : `Not in your profile (${r.missing})`); item.eeo = !!r.eeo; C.mark(f, 'jaa-todo'); continue; }
         if (r && r.skip) { item.status = 'todo'; item.why = r.skip; item.cover = !!r.cover; item.off = !!r.off; if (!r.off) C.mark(f, 'jaa-todo'); continue; }
         pending.push({ f, item });
       }

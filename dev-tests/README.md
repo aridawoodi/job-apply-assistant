@@ -72,3 +72,10 @@ Run from `dev-tests/` with `NODE_PATH` pointing at a folder where Playwright is 
   metrics with and without the extension, and writes `perf-v5.json` and `screenshots/v5/live-*.png`.
 - Mocks no longer use 302 redirects: Playwright doesn't route redirect targets, so the follow-up GET
   would have reached the real site.
+
+## v0.5.1 test
+- `node e2e-eeo.js`: on a fresh install every EEO/pronoun value is empty. Options shows "Choose… (not set)"
+  with "I don't wish to answer", and resume import can't set EEO. Fill leaves all 9 EEO/pronoun fields
+  empty and yellow (`eeo-mocks/gh-eeo.html`), even with EEO-looking answer-bank entries and a greedy mock
+  model; no EEO text reaches the model. An existing user's saved answers survive the update migration and
+  the Options save, and are filled with the exact category. Screenshots `screenshots/v5/28-29`.

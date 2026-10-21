@@ -304,6 +304,18 @@
   }
 
   /* ---------------- profile rules ---------------- */
+  // Site wording for each race / ethnicity category. Used only to find the option for the value the user
+  // saved; it never picks a category for someone who hasn't chosen one.
+  const ETHNICITY_ALTS = [
+    [/american indian|alaska/, /american indian|alaska native|indigenous|native american/],
+    [/^asian/, /^asian\b/],
+    [/black|african american/, /black|african american/],
+    [/hispanic|latin/, /hispanic|latin[oax]/],
+    [/middle eastern|north african|mena|swana/, /middle eastern|north african|\bmena\b|\bswana\b/],
+    [/hawaiian|pacific islander/, /hawaiian|pacific islander/],
+    [/^white/, /^white\b/],
+    [/two or more|multiracial|mixed/, /two or more|multiracial|multi racial|mixed/]
+  ];
   const yesAlt = [/^yes\b/], noAlt = [/^no\b/];
   const NON_US = /\b(canada|canadian|uk|united kingdom|britain|british|england|scotland|europe|european|eu|germany|german|india|indian|australia|australian|ireland|irish|mexico|mexican|brazil|france|french|spain|netherlands|dutch|singapore|singaporean|japan|japanese|israel|poland|philippines|ontario|quebec|london|china|chinese|hong kong|taiwan|korea|korean|switzerland|swiss|sweden|norway|denmark|finland|italy|portugal|belgium|austria|new zealand|uae|emirates|dubai|saudi|qatar|iraq|iraqi|turkey|egypt|nigeria|kenya|south africa|argentina|chile|colombia|peru|vietnam|thailand|malaysia|indonesia|pakistan|bangladesh|romania|czech|hungary|greece|ukraine|russia|costa rica|puerto rico|apac|emea|latam)\b/;
   const foreign = L => NON_US.test(L) && !US.test(L);
@@ -335,7 +347,7 @@
     ['github', /\bgit ?hub\b/, p => p.github, { short: true, noLLM: true }],
     ['portfolio', /\b(portfolio|personal (web ?site|site)|web ?site|blog)\b/, p => p.portfolio || p.website, { short: true, noLLM: true }],
     ['twitter', /\b(twitter|x com)\b/, () => '', { short: true, noLLM: true }],
-    ['pronouns', /\bpronoun/, p => p.pronouns, { short: true, noLLM: true }],
+    ['pronouns', /\bpronoun/, p => p.pronouns, { short: true, noLLM: true, eeo: true }],
     ['zip', /\b(zip|postal)( code)?\b/, p => p.zip, { short: true, noLLM: true }],
     ['city', /^(current )?city\b/, p => p.city, { short: true, noLLM: true }],
     ['state', /^(state|province|state province|region)\b/, p => p.state, { short: true, noLLM: true }],
@@ -365,8 +377,8 @@
     ['transgender', /\btransgender\b|\btrans\b/, p => p.eeo.transgender, { eeo: true, alts: v => /^no/i.test(v) ? [/^no\b/, /\bnot transgender\b|\bcisgender\b/] : [] }],
     ['sexualOrientation', /\bsexual orientation\b/, p => p.eeo.sexualOrientation, { eeo: true }],
     ['gender', /\b(gender|sex)\b/, p => p.eeo.gender, { eeo: true, alts: v => /^male$/i.test(v) ? [/^(male|man)\b/, /\bman\b/] : (/^female$/i.test(v) ? [/^(female|woman)\b/] : []) }],
-    ['hispanic', /\bhispanic|latin[oax]\b/, p => p.eeo.hispanicLatino, { eeo: true, alts: v => /^no/i.test(v) ? [/^no\b/, /\bnot hispanic\b/] : [/^yes\b/] }],
-    ['ethnicity', /\b(race|ethnicity|ethnic|racial)\b/, p => p.eeo.ethnicity, { eeo: true, alts: v => /middle eastern|north african|mena/i.test(v) ? [/middle eastern|north african|\bmena\b|\bswana\b|\barab\b/] : [] }],
+    ['hispanic', /^(?!.*\b(race|racial)\b).*(\bhispanic|latin[oax]\b)/, p => p.eeo.hispanicLatino, { eeo: true, alts: v => /^no/i.test(v) ? [/^no\b/, /\bnot hispanic\b/] : [/^yes\b/] }],
+    ['ethnicity', /\b(race|ethnicity|ethnic|racial)\b/, p => p.eeo.ethnicity, { eeo: true, alts: v => ETHNICITY_ALTS.filter(([re]) => re.test(norm(v))).map(([, alt]) => alt) }],
     ['veteran', /\b(veteran|military|armed forces|protected veteran)\b/, p => p.eeo.veteran, { eeo: true, alts: v => /no|not/i.test(v) ? [/\bnot a (protected )?veteran\b/, /\bno military\b/, /\b(never|have not|did not|not) served\b/, /^no\b/, /^i am not\b/] : [] }],
     ['disability', /\bdisabilit/, p => p.eeo.disability, { eeo: true, alts: v => /^no/i.test(v) ? [/^no\b/, /\b(do not|don t) have a disability\b/] : (/^yes/i.test(v) ? [/^yes\b/] : []) }]
   ];
@@ -386,6 +398,13 @@
       }
     }
     return null;
+  }
+
+  // a field is voluntary self-ID if its question, description or option set says so
+  function isEeoField(f) {
+    if (!f) return false;
+    const q = [f.label, f.question, f.desc, f.section].filter(Boolean).join(' ');
+    return JAA.isEeoText(q, f.options);
   }
 
   function bankMatch(label, bank, min) {
@@ -436,6 +455,14 @@
     const bankOn = on('bank');
     const r0 = ruleFor(f.kind === 'checkbox' && f.question ? Object.assign({}, f, { label: f.question }) : f);
     if (r0 && !r0.flags.never && !on(r0.key)) return OFF;
+    // Voluntary self-ID (EEO, pronouns): only the value the user saved in their profile is used.
+    // Empty = "Not set": the field stays yellow for the user. Never the answer bank, never the model,
+    // never a default such as "decline".
+    if ((r0 && r0.flags.eeo) || isEeoField(f)) {
+      const v = r0 && r0.flags.eeo ? r0.fn(p, f, r0.L) : '';
+      if (v === '' || v == null) return { missing: r0 && r0.flags.eeo ? r0.key : 'eeo', noLLM: true, eeo: true, why: 'Voluntary self-identification: not set in your profile, so it\'s yours to answer (or set it in Settings → Profile).' };
+      return { value: v, source: 'rule', key: r0.key, alts: r0.flags.alts ? r0.flags.alts(String(v)) : [], eeo: true };
+    }
     const strong = bankOn && bankMatch(label, data.answerBank, 0.85);
     if (strong) return { value: strong.answer, source: 'bank', key: 'bank: ' + strong.q };
     if (f.kind === 'checkbox' && !f.question) {
@@ -736,5 +763,5 @@
     setTimeout(() => t.classList.remove('jaa-flash'), 2200);
   }
 
-  JAA.core = { pickTailored, readValue, verify, peekOptions, flash, describe, highlightTarget, comboControl, norm, similarity, cleanLabel, textOf, sleep, isVisible, collect, hasValue, chooseOption, resolve, ruleFor, bankMatch, fill, mark, clearMarks, blockSubmits, isFilling, safeClick, RULES };
+  JAA.core = { isEeoField, pickTailored, readValue, verify, peekOptions, flash, describe, highlightTarget, comboControl, norm, similarity, cleanLabel, textOf, sleep, isVisible, collect, hasValue, chooseOption, resolve, ruleFor, bankMatch, fill, mark, clearMarks, blockSubmits, isFilling, safeClick, RULES };
 })();

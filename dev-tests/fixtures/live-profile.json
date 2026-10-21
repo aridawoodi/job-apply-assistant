@@ -14,9 +14,7 @@
  "currentEmployer": "Northwind Analytics",
  "currentTitle": "Data Engineer",
  "yearsExperience": "6",
- "eeo": {
-  "gender": "Decline to self-identify"
- },
+ "eeo": {},
  "salaryExpectation": "150000",
  "summary": "Data engineer with 6 years of experience building reliable batch and streaming pipelines.",
  "workHistory": [
@@ -63,5 +61,5 @@
   "Docker",
   "Git"
  ],
- "resumeText": "Jordan Rivera\nData Engineer, Northwind Analytics (Mar 2021 – Present)\n• Built batch and streaming pipelines in Python and SQL that feed 40 internal dashboards\n• Modeled analytics data with dbt and PostgreSQL for Looker dashboards\n• Partnered with product managers on experiment analysis\nSoftware Developer, Contoso Retail (Jul 2018 – Feb 2021)\n• Automated reports with Airflow and Spark\nSkills: Python, SQL, Airflow, Spark, dbt, PostgreSQL, Looker, AWS, Docker, Git\nEducation: B.S. Computer Science, State University"
+ "resumeText": "Jordan Rivera\nData Engineer, Northwind Analytics (Mar 2021 \u2013 Present)\n\u2022 Built batch and streaming pipelines in Python and SQL that feed 40 internal dashboards\n\u2022 Modeled analytics data with dbt and PostgreSQL for Looker dashboards\n\u2022 Partnered with product managers on experiment analysis\nSoftware Developer, Contoso Retail (Jul 2018 \u2013 Feb 2021)\n\u2022 Automated reports with Airflow and Spark\nSkills: Python, SQL, Airflow, Spark, dbt, PostgreSQL, Looker, AWS, Docker, Git\nEducation: B.S. Computer Science, State University"
 }
