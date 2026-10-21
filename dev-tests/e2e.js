@@ -19,11 +19,8 @@ const EXT = '/workspace/job-apply-extension';
   await opt.setInputFiles('#import', `${EXT}/dev-tests/fixtures/test-profile.json`);
   await opt.waitForTimeout(500);
   console.log('options: first name field =', await opt.inputValue('[data-path="firstName"]'), '| bank rows =', await opt.locator('#bankRows tr').count());
-  // resume upload through the real file input
-  fs.writeFileSync('/tmp/Alex_Morgan_Resume.pdf', '%PDF-1.4\n%%EOF\n');
-  await opt.setInputFiles('#resumeFile', '/tmp/Alex_Morgan_Resume.pdf');
-  await opt.waitForTimeout(500);
-  console.log('options: resume =', await opt.textContent('#resumeInfo'));
+  // resume (v0.4+ imports resumes through the setup wizard; here a tiny fake PDF is stored directly)
+  await sw.evaluate(async () => chrome.storage.local.set({ resume: { name: 'Alex_Morgan_Resume.pdf', type: 'application/pdf', dataUrl: 'data:application/pdf;base64,' + btoa('%PDF-1.4\n%%EOF\n'), size: 15 } }));
   await opt.click('#test');
   await opt.waitForFunction(() => !/Testing/.test(document.getElementById('testOut').textContent), null, { timeout: 15000 });
   console.log('options: Test connection ->', JSON.stringify(await opt.textContent('#testOut')));

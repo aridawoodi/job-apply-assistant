@@ -42,7 +42,10 @@ Everything still runs on your computer: no account, no telemetry, no servers.
 - **What's new** banner in the popup after an update.
 - **Performance:** pdf.js, JSZip and jsPDF load only when needed (Options, setup and the tailor page no
   longer load them up front). Page observers are debounced. The match card is computed when the browser is
-  idle, about 1 s after load. Injection cost was measured on live pages (see the README).
+  idle, about 1 s after load. Measured on live Greenhouse, Lever and Ashby postings (median of 3 loads,
+  `dev-tests/perf-v5.json`). The extension's own CPU time was 25–77 ms over load plus the first 9 s, at
+  most 0.5 ms per 5 s while idle, and 46–64 ms for a full Fill. The page's load event was unchanged within
+  noise (350 vs 352 ms, 839 vs 639 ms, 575 vs 601 ms without vs with the extension).
 - **Data migration to v5:** existing tracker rows get stages, and new settings get defaults. Nothing is
   removed.
 - Fixes: LinkedIn pages outside `/jobs/` count as unsupported. Practice pages can't write to the real

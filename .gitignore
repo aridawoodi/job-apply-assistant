@@ -18,3 +18,4 @@ dev-tests/screenshots/v4/ari-private/
 dev-tests/screenshots/v4/real/
 dev-tests/screenshots/live-*.png
 *.local.json
+dev-tests/screenshots/v5/live-*.png

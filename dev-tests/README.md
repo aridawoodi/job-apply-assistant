@@ -15,7 +15,7 @@ Paths inside assume `/workspace/job-apply-extension`; edit `EXT` if needed.
   short-first/essays-last ordering, per-batch timeouts, Retry, the qwen2.5:3b advice, the think fallback,
   answer learning (fuzzy de-dupe, company templates, pet question never stored, capture at Submit), bank
   reuse and the Options source/edit/delete UI. It uses `submit-mocks/gh-many.html`.
-- `e2e.js [url]`: fill-only run on a live posting (never submits).
+- `e2e.js [url]`: fill-only run on a live posting (never submits). Superseded by `e2e-live-v5.js` (v0.5), which also aborts every non-GET request.
 
 ## v0.3.0 tests
 Start `node mock-ollama2.js` fresh before each script (it clears its request log on start). It now streams
@@ -56,3 +56,19 @@ Run from `dev-tests/` with `NODE_PATH` pointing at a folder where Playwright is 
   `RESUME_PDF`, `JOB_FILE`, `JOB_TITLE`, `JOB_COMPANY`, `OUT_DIR`, `SHOTS_DIR`). Defaults to the fake fixtures.
   If you point it at your own resume, keep `OUT_DIR`/`SHOTS_DIR` outside the repo or in an ignored folder.
 - `../scripts/make-store-assets.js`: composes `store-assets/` from the v4 screenshots.
+
+## v0.5.0 tests
+- `node e2e-v5.js` (`ONLY=migrate,match,fill,refine,cover,profile,track,options,tour` to run sections):
+  the loaded extension against routed mocks in `v5-mocks/` with `mock-ollama-v5.js`. It covers the v4→v5
+  migration and What's new, the icon color and tooltip, the match card (lazy, idle), job/privacy cards,
+  live progress and checklists, field toggles, the application email, the Refine toolbar and feedback, cover
+  letters (invented facts blocked, PDF/DOCX names, fill + attach), the Profile tab (also on a non-job page),
+  Report a problem (preview and URL contain no personal data), tracking without Fill plus the modal, the
+  Options tracker/fields/behaviour, lazy libraries and the 10-step tour (nothing saved). It writes
+  `screenshots/v5/01-27`.
+- `node e2e-live-v5.js` (`RUNS=3`): live Greenhouse/Lever/Ashby, fill only. Every non-GET request is
+  aborted, except Ashby's read-only form GraphQL, so nothing can be submitted or uploaded. It uses the
+  fake `fixtures/live-profile.json`. It also measures the extension's CPU time (CDP profiler) and page
+  metrics with and without the extension, and writes `perf-v5.json` and `screenshots/v5/live-*.png`.
+- Mocks no longer use 302 redirects: Playwright doesn't route redirect targets, so the follow-up GET
+  would have reached the real site.

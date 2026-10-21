@@ -1,0 +1,97 @@
+{
+ "date": "2026-10-21T16:21:47.771Z",
+ "runs": 3,
+ "note": "medians; extCpu* = CPU sampled in chrome-extension:// frames; scriptMs/taskMs = CDP Performance ScriptDuration/TaskDuration over 9 s after navigation start; heapMB = main world only",
+ "sites": {
+  "greenhouse": {
+   "extCpuLoadMs": 25.1,
+   "extCpuIdle5sMs": 0.5,
+   "scriptMs": {
+    "without": 396,
+    "with": 326
+   },
+   "taskMs": {
+    "without": 548,
+    "with": 827
+   },
+   "loadEventMs": {
+    "without": 350,
+    "with": 352
+   },
+   "heapMB": {
+    "without": 15.9,
+    "with": 21.9
+   },
+   "fill": {
+    "ms": 3288,
+    "extCpuMs": 46.53,
+    "fields": {
+     "ok": 8,
+     "ai": 0,
+     "todo": 15
+    },
+    "required": "6/14"
+   }
+  },
+  "lever": {
+   "extCpuLoadMs": 76.9,
+   "extCpuIdle5sMs": 0,
+   "scriptMs": {
+    "without": 131,
+    "with": 128
+   },
+   "taskMs": {
+    "without": 337,
+    "with": 669
+   },
+   "loadEventMs": {
+    "without": 839,
+    "with": 639
+   },
+   "heapMB": {
+    "without": 11.3,
+    "with": 10.2
+   },
+   "fill": {
+    "ms": 3389,
+    "extCpuMs": 64.197,
+    "fields": {
+     "ok": 10,
+     "ai": 1,
+     "todo": 11
+    },
+    "required": "4/11"
+   }
+  },
+  "ashby": {
+   "extCpuLoadMs": 28.1,
+   "extCpuIdle5sMs": 0.3,
+   "scriptMs": {
+    "without": 299,
+    "with": 269
+   },
+   "taskMs": {
+    "without": 438,
+    "with": 797
+   },
+   "loadEventMs": {
+    "without": 575,
+    "with": 601
+   },
+   "heapMB": {
+    "without": 16.2,
+    "with": 17.2
+   },
+   "fill": {
+    "ms": 1317,
+    "extCpuMs": 52.175,
+    "fields": {
+     "ok": 5,
+     "ai": 0,
+     "todo": 9
+    },
+    "required": "5/8"
+   }
+  }
+ }
+}

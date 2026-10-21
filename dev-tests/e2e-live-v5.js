@@ -51,11 +51,11 @@ async function extCpu(page, ms, fn) {
   return { extMs: ext / 1000, pageJsMs: all / 1000 };
 }
 
+// Performance metrics only count from Performance.enable, so enable it before navigation
+async function track(page) { const cdp = await page.context().newCDPSession(page); await cdp.send('Performance.enable', { timeDomain: 'threadTicks' }); page.__perf = cdp; }
 async function metrics(page) {
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send('Performance.enable');
+  const cdp = page.__perf;
   const { metrics } = await cdp.send('Performance.getMetrics');
-  await cdp.detach();
   const g = k => (metrics.find(x => x.name === k) || {}).value || 0;
   const nav = await page.evaluate(() => { const n = performance.getEntriesByType('navigation')[0]; return n ? { dcl: n.domContentLoadedEventEnd, load: n.loadEventEnd } : {}; });
   return { script: g('ScriptDuration') * 1000, task: g('TaskDuration') * 1000, heapMB: g('JSHeapUsedSize') / 1048576, dcl: nav.dcl, load: nav.load, nodes: g('Nodes') };
@@ -70,8 +70,8 @@ async function metrics(page) {
   for (const [name, url] of SITES) {
     perf[name] = { without: [], with: [], ext: [], extIdle: [], fill: null };
     for (let i = 0; i < RUNS; i++) {
-      const p = await plain.newPage();
-      await p.goto(url, { waitUntil: 'load', timeout: 60000 }).catch(() => {}); await sleep(5000);
+      const p = await plain.newPage(); await track(p);
+      await p.goto(url, { waitUntil: 'load', timeout: 60000 }).catch(() => {}); await sleep(9000);
       perf[name].without.push(await metrics(p)); await p.close();
     }
   }
@@ -97,13 +97,13 @@ async function metrics(page) {
   for (const [name, url] of SITES) {
     console.log(`\n${name}: ${url}`);
     for (let i = 0; i < RUNS; i++) {
-      const p = await ctx.newPage();
+      const p = await ctx.newPage(); await track(p);
       // cost of loading + injecting + the first 5 s idle (match card, observers), then 5 s of steady state
       const c = await extCpu(p, 9000, () => p.goto(url, { waitUntil: 'load', timeout: 60000 }).catch(() => {}));
       perf[name].ext.push(c.extMs);
+      perf[name].with.push(await metrics(p)); // same 9 s window as the baseline
       const idle = await extCpu(p, 5000, async () => {});
       perf[name].extIdle.push(idle.extMs);
-      perf[name].with.push(await metrics(p));
       if (i < RUNS - 1) { await p.close(); continue; }
       // last run: Fill (never submit)
       await p.addInitScript(() => {});
@@ -147,7 +147,7 @@ async function metrics(page) {
     };
   }
   console.log('\nPERF ' + JSON.stringify(out, null, 1));
-  fs.writeFileSync('/tmp/jaa-live/perf-v5.json', JSON.stringify(out, null, 1));
+  fs.writeFileSync(path.join(__dirname, 'perf-v5.json'), JSON.stringify({ date: new Date().toISOString(), runs: RUNS, note: 'medians; extCpu* = CPU sampled in chrome-extension:// frames; scriptMs/taskMs = CDP Performance ScriptDuration/TaskDuration over 9 s after navigation start; heapMB = main world only', sites: out }, null, 1));
   await ctx.close(); await mock.close();
   console.log(failures ? `\n${failures} FAILED` : '\nALL PASSED');
   process.exit(failures ? 1 : 0);
