@@ -87,6 +87,7 @@ function createMock(opts) {
         let content;
         if (/You read a resume/.test(sys)) content = JSON.stringify(extractAnswer(j.messages[1].content));
         else if (/You tailor a resume/.test(sys)) content = JSON.stringify(tailorAnswer(j.messages[1].content));
+        else if (state.opts.route && (content = state.opts.route(sys, j)) != null) { /* v0.5 routes */ }
         else content = JSON.stringify({ answers: {} });
         state.last = j;
         if (j.stream === false) return json(200, { message: { role: 'assistant', content }, done: true });

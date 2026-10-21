@@ -11,7 +11,7 @@
   const trunc = (s, n) => { s = String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
   const adapter = () => JAA.sites.detect(location);
   const jobUrl = () => (window.top === window ? location.href : (document.referrer || location.href));
-  const supported = () => !adapter().generic && !adapter().stub;
+  const supported = () => { const a = adapter(); return !a.generic && !a.stub && !(/LinkedIn/.test(a.name) && !/\/jobs\//.test(location.pathname)); };
   const sec = (title, ...kids) => h('div', { class: 'sec' }, h('h4', { text: title }), ...kids);
 
   async function copy(text, what) {
@@ -232,8 +232,9 @@
     try { fields = JAA.scan ? JAA.scan() : []; } catch (_) { fields = []; }
     const d = await send({ type: 'diag:info' });
     const st = JAA.state || {};
+    const sup = supported();
     return {
-      site: a.generic ? 'not supported (' + location.hostname + ')' : a.name, host: location.hostname, supported: !a.generic && !a.stub,
+      site: !sup ? 'not supported (' + location.hostname + ')' : a.name, host: location.hostname, supported: sup,
       fields: fields.length, kinds: Object.entries(fields.reduce((m, f) => { m[f.kind] = (m[f.kind] || 0) + 1; return m; }, {})).map(([k, n]) => `${k} ${n}`).join(', '),
       lastFill: st.items ? { filled: st.items.filter(i => i.status === 'ok').length, ai: st.items.filter(i => i.status === 'ai').length, todo: st.items.filter(i => i.status === 'todo').length } : null,
       version: d.version || chrome.runtime.getManifest().version, browser: d.browser || '', os: [d.os, d.arch].filter(Boolean).join(' '),

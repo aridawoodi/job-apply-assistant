@@ -56,9 +56,9 @@
     root = host.attachShadow({ mode: 'open' });
     root.innerHTML = `<style>
       :host{all:initial}
-      .hole{position:fixed;border-radius:12px;box-shadow:0 0 0 4px rgba(99,102,241,.9),0 0 0 9999px rgba(15,23,42,.55);pointer-events:none;transition:all .25s ease;z-index:1}
+      .hole{position:fixed;border-radius:12px;box-shadow:0 0 0 4px rgba(99,102,241,.9),0 0 0 9999px rgba(15,23,42,.55);pointer-events:none;transition:all .25s ease;z-index:2147483640}
       .hole.none{box-shadow:0 0 0 9999px rgba(15,23,42,.55);width:0!important;height:0!important;left:50%!important;top:50%!important}
-      .card{position:fixed;z-index:2;width:340px;max-width:calc(100vw - 24px);background:#fff;border-radius:16px;box-shadow:0 18px 48px rgba(15,23,42,.35);padding:16px 18px;font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0f172a;pointer-events:auto}
+      .card{position:fixed;z-index:2147483647;width:340px;max-width:calc(100vw - 24px);background:#fff;border-radius:16px;box-shadow:0 18px 48px rgba(15,23,42,.35);padding:16px 18px;font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0f172a;pointer-events:auto}
       .n{font:700 11px/1 inherit;color:#6366f1;letter-spacing:.04em;text-transform:uppercase}
       h3{margin:6px 0 6px;font-size:16px}p{margin:6px 0}
       .row{display:flex;gap:8px;align-items:center;margin-top:12px}.sp{flex:1}
@@ -66,7 +66,7 @@
       .p{background:#4f46e5;color:#fff}.p:disabled{opacity:.5;cursor:default}.s{background:#f1f5f9;color:#334155}.l{background:none;color:#64748b;padding:8px 4px;font-weight:600}
       .dots{display:flex;gap:4px}.dots i{width:6px;height:6px;border-radius:50%;background:#e2e8f0}.dots i.on{background:#6366f1}
       .wait{color:#64748b;font-size:12px}
-      .modal{position:fixed;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.55);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0f172a}
+      .modal{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.55);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0f172a}
       .mbox{background:#fff;border-radius:20px;padding:26px 28px;width:min(440px,92vw);text-align:center;box-shadow:0 24px 60px rgba(15,23,42,.4)}
       .mbox .big{font-size:46px;line-height:1}.mbox h2{margin:8px 0 6px;font-size:22px}
       .mbox ul{text-align:left;margin:10px 0 14px 18px;padding:0;color:#334155}

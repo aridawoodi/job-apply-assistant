@@ -1,0 +1,36 @@
+<!doctype html><html><head><title>Job Application for Senior Data Engineer at Example HQ</title>
+<meta property="og:site_name" content="Example HQ">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230ea5e9'/%3E%3C/svg%3E">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"JobPosting","title":"Senior Data Engineer","datePosted":"__POSTED__","hiringOrganization":{"@type":"Organization","name":"Example HQ"},"jobLocation":{"@type":"Place","address":{"@type":"PostalAddress","addressLocality":"Chicago","addressRegion":"IL","addressCountry":"US"}},"baseSalary":{"@type":"MonetaryAmount","currency":"USD","value":{"@type":"QuantitativeValue","minValue":140000,"maxValue":170000,"unitText":"YEAR"}}}</script>
+<style>body{font:15px/1.5 system-ui;margin:0 auto;max-width:860px;padding:20px}label{display:block;margin-top:10px;font-weight:600}input,select,textarea{display:block;width:100%;padding:6px;margin-top:4px}textarea{min-height:90px}</style>
+</head><body>
+<div class="job__title"><h1>Senior Data Engineer</h1><div class="job__location">Chicago, IL (Hybrid)</div></div>
+<div class="job__description">
+<p>Example HQ is a pretend company for tests. We are hiring a Senior Data Engineer to build reliable data pipelines and analytics tooling.</p>
+<h3>What you'll do</h3><ul><li>Design and run batch and streaming pipelines with Python, SQL, Airflow and Spark.</li><li>Model data in dbt and PostgreSQL for analytics and dashboards in Looker.</li><li>Operate services on AWS with Docker and Kubernetes, and set up Terraform.</li><li>Work with product managers on experiments and A/B testing.</li></ul>
+<h3>Requirements</h3><ul><li>5+ years of data engineering with Python and SQL.</li><li>Experience with Airflow, Spark and dbt.</li><li>Experience with Kubernetes, Terraform and Snowflake is a plus.</li><li>Clear communication with non-technical partners.</li></ul>
+<p>Thank you for your interest in Example HQ.</p></div>
+<form id="application-form">
+ <label for="first_name">First Name *<input id="first_name" name="first_name" required></label>
+ <label for="last_name">Last Name *<input id="last_name" name="last_name" required></label>
+ <label for="email">Email *<input id="email" name="email" type="email" required></label>
+ <label for="phone">Phone<input id="phone" name="phone" type="tel"></label>
+ <label for="resume">Resume/CV *<input id="resume" name="resume" type="file" accept=".pdf,.docx" required></label>
+ <label for="cover_letter">Cover Letter<input id="cover_letter" name="cover_letter" type="file" accept=".pdf,.docx"></label>
+ <label for="linkedin">LinkedIn Profile<input id="linkedin" name="linkedin"></label>
+ <label for="q_why">Why do you want to work at Example HQ? *<textarea id="q_why" name="q_why" required></textarea></label>
+ <label for="q_auth">Are you legally authorized to work in the United States? *<select id="q_auth" name="q_auth" required><option value="">Select...</option><option>Yes</option><option>No</option></select></label>
+ <label for="gender">Gender<select id="gender" name="gender"><option value="">Select...</option><option>Male</option><option>Female</option><option>Decline to self-identify</option></select></label>
+ <label><input type="checkbox" id="consent" name="consent" style="display:inline;width:auto"> I agree to the (fake) privacy policy</label>
+ <button type="submit" id="submit">Submit application</button>
+</form>
+<script>
+ const form = document.getElementById('application-form');
+ window.__submits = 0;
+ form.addEventListener('submit', async e => {
+   e.preventDefault();
+   window.__submits++;
+   const r = await fetch(location.pathname, { method: 'POST', body: new FormData(form) });
+   if (r.ok) document.body.innerHTML = '<div class="confirmation"><h1>Thank you for applying!</h1><p>Your application has been received.</p></div>';
+ });
+</script></body></html>

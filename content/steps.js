@@ -98,7 +98,7 @@
     const i0 = stepInfo(); lastStepN = i0 && i0.n || null;
     const obs = new MutationObserver(muts => {
       // ignore our own UI
-      if (muts.every(m => m.target && m.target.closest && m.target.closest('#jaa-host, #jaa-toast-host'))) return;
+      if (muts.every(m => m.target && m.target.closest && m.target.closest('#jaa-host, #jaa-toast-host, #jaa-match-host, #jaa-tour-host, #jaa-tracked-host, [data-jaa-ui]'))) return;
       if (JAA.isRunning && JAA.isRunning()) { pending = true; return; }
       schedule('dom');
     });

@@ -1,0 +1,18 @@
+<!doctype html><html><head><title>Example Labs - Analytics Engineer</title></head><body style="font:15px/1.5 system-ui;max-width:860px;margin:0 auto;padding:20px">
+<div class="posting-headline"><h2>Analytics Engineer</h2></div>
+<form id="application-form" method="POST" action="/examplelabs/cccc-3333/apply">
+ <ul style="list-style:none;padding:0">
+ <li class="application-question"><label><div class="application-label">Full name</div><div class="application-field"><input name="name" required></div></label></li>
+ <li class="application-question"><label><div class="application-label">Email</div><div class="application-field"><input name="email" type="email" required></div></label></li>
+ <li class="application-question"><label><div class="application-label">Cover letter</div><div class="application-field"><textarea name="comments" rows="6" style="width:100%"></textarea></div></label></li>
+ </ul>
+ <button type="submit" class="template-btn-submit">Submit application</button>
+</form>
+<script>
+ // posts to the (mocked) server, then goes to /thanks like Lever does (a plain GET, so the test route serves it)
+ document.getElementById('application-form').addEventListener('submit', async e => {
+   e.preventDefault();
+   const r = await fetch(location.pathname, { method: 'POST', body: new FormData(e.target) });
+   if (r.ok) location.href = location.pathname.replace(/\/apply$/, '/thanks');
+ });
+</script></body></html>
