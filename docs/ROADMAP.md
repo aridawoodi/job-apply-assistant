@@ -24,7 +24,7 @@
 - **Profile on unsupported sites** needs a click on the toolbar popup (*My profile*), which grants access
   to that one tab. The page isn't read until you do.
 - **Report a problem** opens a GitHub issue form in your browser. You need a GitHub account, and the
-  repository URL in `lib/defaults.js` (`YOUR-GITHUB-USERNAME`) has to be set before publishing.
+  repository URL in `lib/defaults.js` is set to https://github.com/aridawoodi/job-apply-assistant.
 - **Refine toolbar** appears only under larger text boxes (at least 200×48 px, or 3+ rows), and not inside
   the extension's own panels.
 - **The tour** shows how to pin the icon with an illustration. Chrome doesn't let extensions pin

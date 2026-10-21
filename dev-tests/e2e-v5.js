@@ -359,7 +359,7 @@ const PROFILE = {
     const [gh] = await Promise.all([ctx.waitForEvent('page'), inHost(up, '[data-act="open-issue"]').click()]);
     await gh.waitForLoadState().catch(() => {});
     const ghUrl = decodeURIComponent(gh.url());
-    check(/^https:\/\/github\.com\/YOUR-GITHUB-USERNAME\/job-apply-assistant\/issues\/new\?title=/.test(gh.url()), 'opens a prefilled GitHub new-issue URL');
+    check(/^https:\/\/github\.com\/aridawoodi\/job-apply-assistant\/issues\/new\?title=/.test(gh.url()), 'opens a prefilled GitHub new-issue URL');
     check(!/Jordan|jordan\.rivera|555-|Northwind/.test(ghUrl), 'issue URL has no personal data');
     await gh.close(); await up.close();
   }

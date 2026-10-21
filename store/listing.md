@@ -44,7 +44,7 @@ REQUIREMENTS
 • Chrome 110 or newer on Mac, Windows or Linux.
 • Ollama (free, from ollama.com). 8 GB of memory is enough; about 3 GB of disk space for the small model.
 
-Open source (MIT): https://github.com/YOUR-GITHUB-USERNAME/job-apply-assistant
+Open source (MIT): https://github.com/aridawoodi/job-apply-assistant
 Job Apply Assistant is not affiliated with Greenhouse, Lever, Ashby, Workday, LinkedIn or Ollama.
 
 ## Single purpose (Privacy practices tab)
@@ -68,10 +68,10 @@ Certify all three:
 Note for the "data is transmitted" questions: data is processed on the user's device and sent only to the Ollama server on the user's own computer (127.0.0.1); it is never sent to the developer.
 
 ## Privacy policy URL
-https://github.com/YOUR-GITHUB-USERNAME/job-apply-assistant/blob/main/PRIVACY.md
+https://github.com/aridawoodi/job-apply-assistant/blob/main/PRIVACY.md
 
 ## Support / homepage URL
-https://github.com/YOUR-GITHUB-USERNAME/job-apply-assistant
+https://github.com/aridawoodi/job-apply-assistant
 
 ## Images (store-assets/)
 - Small promo tile 440x280: `store-assets/promo-tile-440x280.png`
