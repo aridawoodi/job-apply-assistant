@@ -32,7 +32,7 @@ WHAT IT DOES
 
 EASY SETUP, NO TERMINAL
 1. Install the extension. A setup page opens.
-2. It finds Ollama (or gives you a one-click download for Mac or Windows) and downloads the right AI model for your computer, with a progress bar.
+2. It finds the free local AI app (or gives you a one-click download for Mac or Windows) and downloads the right AI model for your computer, with a progress bar.
 3. Drop in your resume (PDF or Word). Your profile fills itself in; you check it and answer a few quick questions. Then try it on the built-in practice application.
 
 PRIVATE BY DESIGN
@@ -42,10 +42,9 @@ PRIVATE BY DESIGN
 
 REQUIREMENTS
 • Chrome 110 or newer on Mac, Windows or Linux.
-• Ollama (free, from ollama.com). 8 GB of memory is enough; about 3 GB of disk space for the small model.
+• The free Ollama app. 8 GB of memory is enough; about 3 GB of disk space for the small model.
 
 Open source (MIT): https://github.com/aridawoodi/job-apply-assistant
-Job Apply Assistant is not affiliated with Greenhouse, Lever, Ashby, Workday, LinkedIn or Ollama.
 
 ## Single purpose (Privacy practices tab)
 Job Apply Assistant helps the user complete job applications: it fills application forms from the user's own profile and tailors the user's resume to the job, using an AI model that runs locally on the user's computer.
