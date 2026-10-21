@@ -83,7 +83,7 @@
     out.total = out.yellow + out.blue;
     return out;
   }
-  function updateCount() { if (ui().isShown()) ui().setCount(attention().total); }
+  function updateCount() { if (ui().isShown()) ui().setCount(attention().total); refreshChecklists(); }
   let cTimer = null;
   ['input', 'change'].forEach(t => document.addEventListener(t, e => { if (e.isTrusted) { clearTimeout(cTimer); cTimer = setTimeout(updateCount, 400); } }, true));
 
@@ -96,19 +96,54 @@
     key = JAA.jobKey(location.href);
   }
 
+  // One card per run: live progress while filling ("Scanning page… N fields found", then each
+  // field ticks off), then collapsible Required / Optional checklists with jump links.
+  const ICONS = { ok: ['✓', 'ok'], ai: ['✦', 'ai'], you: ['✓', 'you'], kept: ['✓', 'kept'], todo: ['•', 'todo'] };
+  function itemDone(it) { const f = fieldOf(it); return it.status === 'ok' || it.status === 'you' || it.status === 'kept' || (it.status === 'ai') || (it.status === 'todo' && f && C.hasValue(f)); }
+  function checkRow(it, live) {
+    const f = fieldOf(it);
+    const filledByHand = it.status === 'todo' && f && C.hasValue(f);
+    const [ic, cls] = !it.status ? ['⏳', 'wait'] : filledByHand ? ['✓', 'you'] : (ICONS[it.status] || ['•', 'todo']);
+    const note = !it.status ? (it.pendingAI ? 'asking local AI…' : '') : it.status === 'ai' ? 'AI answer · check it' : (it.status === 'todo' && !filledByHand) ? (it.why ? trunc(it.why, 60) : 'needs you') : it.source === 'bank' ? 'saved answer' : it.status === 'kept' ? 'already filled' : '';
+    return h('li', { class: 'fr ' + cls + (live ? ' live' : ''), 'data-id': it.id },
+      h('span', { class: 'fi ' + cls, text: ic }),
+      h('button', { class: 'fl', type: 'button', title: 'Jump to this field', text: trunc(it.label || '(unlabelled)', 48), onclick: () => { if (f) C.flash(f); } }),
+      note ? h('span', { class: 'fn', text: note }) : null);
+  }
+  function checklists(items) {
+    const req = items.filter(i => i.required), opt = items.filter(i => !i.required);
+    const box = h('div', { class: 'cls' });
+    for (const [name, list] of [['Required', req], ['Optional', opt]]) {
+      if (!list.length) continue;
+      const done = list.filter(itemDone).length;
+      const d = h('details', { class: 'cl', 'data-list': name.toLowerCase() });
+      if (name === 'Required' && done < list.length) d.open = true;
+      d.appendChild(h('summary', {}, h('span', { class: 'clt', text: `${name} ${done} of ${list.length}` }), h('span', { class: 'clbar' }, h('i', { style: `width:${Math.round(100 * done / list.length)}%` }))));
+      d.appendChild(h('ul', { class: 'fl-list' }, list.map(i => checkRow(i))));
+      box.appendChild(d);
+    }
+    return box;
+  }
   function onSummary(s) {
     ui().open();
     if (!resultCard) {
-      resultCard = ui().add('bot', '', 'card');
+      resultCard = ui().add('bot', '', 'card fillcard');
     }
     const c = resultCard;
     c.innerHTML = '';
-    const stp = s.step && (s.step.total || s.step.n) ? `Step ${s.step.n}${s.step.total ? ' of ' + s.step.total : ''}${s.step.label ? ' · ' + s.step.label : ''}` : 'Fill results';
+    const stp = s.step && (s.step.total || s.step.n) ? `Step ${s.step.n}${s.step.total ? ' of ' + s.step.total : ''}${s.step.label ? ' · ' + s.step.label : ''}` : (s.progress || s.scanning ? 'Filling this page' : 'Fill results');
     c.appendChild(h('div', { class: 'kick', text: stp }));
     c.appendChild(h('div', { class: 'lbl', text: (s.title || 'Application') + (s.company ? ' · ' + s.company : '') }));
-    const todo = s.items.filter(i => i.status === 'todo').length;
-    const saved = s.items.filter(i => i.status === 'ok' && i.source === 'bank').length;
-    c.appendChild(h('div', { class: 'stats' },
+    const items = s.items || [];
+    if (s.scanned != null) c.appendChild(h('div', { class: 'scan' }, h('span', { class: 'fi ok', text: '✓' }), `Scanning page… ${s.scanned} field${s.scanned === 1 ? '' : 's'} found`));
+    const running = !!(s.progress || s.scanning);
+    if (running) {
+      // live list: every field so far, ticking off one by one
+      c.appendChild(h('ul', { class: 'fl-list livelist' }, items.map(i => checkRow(i, true))));
+    }
+    const todo = items.filter(i => i.status === 'todo').length;
+    const saved = items.filter(i => i.status === 'ok' && i.source === 'bank').length;
+    if (!s.scanning) c.appendChild(h('div', { class: 'stats' },
       h('span', { class: 'pill ok', text: `${s.filled} filled` }),
       saved ? h('span', { class: 'pill ok', title: 'Green fields that came from your answer bank', text: `${saved} from your saved answers` }) : null,
       h('span', { class: 'pill ai', text: `${s.ai} by local AI (check these)` }),
@@ -117,18 +152,30 @@
       (s.unstuck || []).length ? h('span', { class: 'pill bad', text: `${s.unstuck.length} didn't stick` }) : null));
     if (s.progress) c.appendChild(h('div', { class: 'prog' }, h('span', { class: 'dot' }), '⏳ ' + s.progress));
     if (s.llmError) c.appendChild(h('div', { class: 'err', text: 'Local AI: ' + s.llmError }));
+    if (!running) c.appendChild(checklists(items));
     if (s.retryable && !s.progress) c.appendChild(h('div', { class: 'chips' }, h('button', { class: 'chip pri', type: 'button', 'data-act': 'retry', text: '↻ Retry AI for remaining', onclick: () => JAA.run({ retry: true }) })));
-    const remember = s.remember !== false;
-    const cb = h('input', { type: 'checkbox', 'data-act': 'remember' }); cb.checked = remember;
-    cb.onchange = async () => { const r = await chrome.storage.local.get('settings'); await chrome.storage.local.set({ settings: Object.assign({}, r.settings || {}, { rememberAnswers: cb.checked }) }); };
-    c.appendChild(h('div', { class: 'row' }, h('label', {}, cb, ' Remember my answers'),
-      h('button', { class: 'chip ghost', type: 'button', 'data-act': 'save', title: 'Save what you typed in yellow/blue fields to your answer bank', text: 'Save answers now', onclick: async () => {
-        const n = JAA.learn ? await JAA.learn.flush('button', true) : 0;
-        ui().toast(n ? `Saved ${n} answer${n > 1 ? 's' : ''} to your answer bank` : 'Nothing new to save', n ? 'ok' : 'info', 'Job Apply Assistant · answer bank');
-      } })));
-    if (!s.progress) c.appendChild(h('div', { class: 'why', text: 'Green = profile / saved answers · Blue = AI draft · Teal = you · Yellow = needs you. Nothing was submitted.' }));
+    if (!running) {
+      const remember = s.remember !== false;
+      const cb = h('input', { type: 'checkbox', 'data-act': 'remember' }); cb.checked = remember;
+      cb.onchange = async () => { const r = await chrome.storage.local.get('settings'); await chrome.storage.local.set({ settings: Object.assign({}, r.settings || {}, { rememberAnswers: cb.checked }) }); };
+      c.appendChild(h('div', { class: 'row' }, h('label', {}, cb, ' Remember my answers'),
+        h('button', { class: 'chip ghost', type: 'button', 'data-act': 'save', title: 'Save what you typed in yellow/blue fields to your answer bank', text: 'Save answers now', onclick: async () => {
+          const n = JAA.learn ? await JAA.learn.flush('button', true) : 0;
+          ui().toast(n ? `Saved ${n} answer${n > 1 ? 's' : ''} to your answer bank` : 'Nothing new to save', n ? 'ok' : 'info', 'Job Apply Assistant · answer bank');
+        } })));
+      c.appendChild(h('div', { class: 'why', text: 'Green = profile / saved answers · ✦ Blue = AI draft · Teal = you · Yellow = needs you. Nothing was submitted.' }));
+    }
     ui().scrollDown();
     updateCount();
+  }
+  // keep the checklists current while the user types on the page
+  function refreshChecklists() {
+    if (!resultCard || !resultCard.isConnected) return;
+    const old = resultCard.querySelector('.cls'); if (!old) return;
+    const open = Array.from(old.querySelectorAll('details')).map(d => [d.dataset.list, d.open]);
+    const fresh = checklists(st().items || []);
+    open.forEach(([k, o]) => { const d = fresh.querySelector(`[data-list="${k}"]`); if (d) d.open = o; });
+    old.replaceWith(fresh);
   }
 
   async function afterRun(s, fields, opts) {
@@ -189,6 +236,7 @@
     const skip = h('button', { class: 'chip ghost', type: 'button', text: 'Skip', onclick: () => { item.skipped = true; disableCard(card); me('Skip'); askNext(); } });
     const chips = h('div', { class: 'chips' });
     card.appendChild(chips);
+    if (item.cover && JAA.panel) chips.appendChild(h('button', { class: 'chip', type: 'button', 'data-act': 'write-cover', text: '✍️ Write it from my resume', onclick: () => JAA.panel.openCover(f) }));
     const answer = async (value, shownAs) => {
       disableCard(card);
       me(isPrivate(f) ? `${trunc(item.label, 40)}: (answered)` : (shownAs || (Array.isArray(value) ? value.join(', ') : String(value))));
@@ -328,6 +376,7 @@
 
   /* ---------- streaming helper ---------- */
   function stream(payload, onDelta) {
+    if (JAA.demo && JAA.demo.stream) return JAA.demo.stream(payload, onDelta); // practice tour: canned answers
     return new Promise(resolve => {
       let port;
       try { port = chrome.runtime.connect({ name: 'jaa-stream' }); } catch (e) { return resolve({ error: 'Extension was reloaded: refresh this page.' }); }
@@ -567,13 +616,14 @@
     const { profile } = await JAA.loadAll();
     const info = (JAA.sites.detect(location).jobInfo || (() => ({})))() || {};
     ui().header((info.company ? info.company + ' · ' : '') + 'Job Apply Assistant', info.title || '');
+    if (JAA.panel) JAA.panel.fillTop();
     bot(`Hi${profile.firstName ? ' ' + profile.firstName : ''} 👋 I'll fill this ${info.company ? info.company + ' ' : ''}application from your profile and saved answers, then ask you about anything I couldn't fill. I never press Submit, Next or Continue — you do.`);
   }
   async function onButton() {
     if (ui().isOpen() && runs) { ui().close(); return; }
     ui().open();
     if (!runs && !(JAA.isRunning && JAA.isRunning())) {
-      await greet();
+      if (!greeted) { greeted = true; await greet(); }
       JAA.run({ source: 'chat' });
     } else if (!histShown) { await loadHistory(); showOldHistory(); }
   }
@@ -584,5 +634,14 @@
   // a step or popup run without the chat opened first: still show history + greet once
   async function ensureIntro() { if (!histShown) { await loadHistory(); showOldHistory(); } }
 
-  JAA.chat = { tailorResume, onButton, onHeader, onUserText, onSummary, afterRun, beginRun, attention, updateCount, reviewCard, askNext, ensureIntro, applyAction, hasRun: () => runs > 0, _hist: () => hist };
+  // open the panel on a tab without starting a fill (popup Profile button, match card, auto-open)
+  let greeted = false;
+  async function openPanel(tab) {
+    ui().open();
+    if (tab && tab !== 'assistant') { ui().tab(tab); }
+    else ui().tab('assistant');
+    if (!runs && !greeted && !(JAA.isRunning && JAA.isRunning())) { greeted = true; await greet(); }
+    else if (JAA.panel) JAA.panel.fillTop();
+  }
+  JAA.chat = { openPanel, stream, say: t => bot(t), tailorResume, onButton, onHeader, onUserText, onSummary, afterRun, beginRun, attention, updateCount, reviewCard, askNext, ensureIntro, applyAction, hasRun: () => runs > 0, _hist: () => hist };
 })();

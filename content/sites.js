@@ -228,6 +228,71 @@
   };
 
   const LIST = [practice, greenhouse, lever, ashby, workday, linkedin];
+
+  // ---- job card details: location, salary, posted age, logo (v0.5) ----------------------
+  // JSON-LD JobPosting first (many boards publish it), then site selectors, then text patterns.
+  function ldJob() {
+    for (const sc of document.querySelectorAll('script[type="application/ld+json"]')) {
+      let j; try { j = JSON.parse(sc.textContent); } catch (_) { continue; }
+      const list = Array.isArray(j) ? j : (j['@graph'] || [j]);
+      const hit = list.find(x => x && /JobPosting/.test([].concat(x['@type'] || []).join(' ')));
+      if (hit) return hit;
+    }
+    return null;
+  }
+  const LOC_SEL = ['.job__location', '.location', '.posting-categories .location', '.posting-category.location', '[data-qa="posting-location"]', '[data-automation-id="locations"]',
+    '[class*="_location" i]', '.job-details-jobs-unified-top-card__primary-description-container .tvm__text', '.jobs-unified-top-card__bullet', '#job-location'];
+  const SALARY_RE = /(?:[$£€]\s?\d[\d,.]*\s?[kK]?|\d[\d,.]*\s?[kK]?\s?(?:USD|EUR|GBP))\s?(?:-|–|—|to)\s?(?:[$£€]\s?)?\d[\d,.]*\s?[kK]?(?:\s?(?:USD|EUR|GBP))?(?:\s?(?:per|\/|a)\s?(?:year|yr|annum|hour|hr))?/;
+  const AGE_RE = /\b(?:posted|listed|published)\s*(?:on\s*)?:?\s*((?:\d+\+?\s*(?:minutes?|hours?|days?|weeks?|months?)\s*ago)|today|yesterday|just now)|\b(\d+\+?\s*(?:minutes?|hours?|days?|weeks?|months?)\s*ago)\b/i;
+  function ageFrom(iso) {
+    const d = Date.parse(iso); if (!d) return '';
+    const days = Math.floor((Date.now() - d) / 864e5);
+    if (days < 0) return '';
+    if (days === 0) return 'today'; if (days === 1) return 'yesterday';
+    if (days < 31) return days + ' days ago';
+    const m = Math.floor(days / 30); return m < 12 ? m + (m === 1 ? ' month ago' : ' months ago') : 'over a year ago';
+  }
+  function fmtSalary(b) {
+    if (!b || typeof b !== 'object') return '';
+    const v = b.value || {}; const cur = b.currency || v.currency || '';
+    const sym = { USD: '$', EUR: '€', GBP: '£' }[cur] || (cur ? cur + ' ' : '');
+    const n = x => x >= 1000 ? Math.round(x / 1000) + 'k' : String(x);
+    const unit = { YEAR: '/yr', HOUR: '/hr', MONTH: '/mo' }[(v.unitText || '').toUpperCase()] || '';
+    if (v.minValue && v.maxValue) return `${sym}${n(+v.minValue)} – ${sym}${n(+v.maxValue)}${unit}`;
+    if (v.value) return `${sym}${n(+v.value)}${unit}`;
+    return '';
+  }
+  JAA.jobMeta = function () {
+    const a = JAA.sites.detect(location);
+    const info = (a.jobInfo ? a.jobInfo() : {}) || {};
+    const out = { title: info.title || '', company: info.company || '', location: '', salary: '', posted: '', logo: '', site: a.name };
+    const ld = ldJob();
+    if (ld) {
+      const loc = [].concat(ld.jobLocation || [])[0];
+      const addr = loc && loc.address ? loc.address : null;
+      if (addr) out.location = [addr.addressLocality, addr.addressRegion, addr.addressCountry && typeof addr.addressCountry === 'string' && addr.addressCountry.length > 3 ? addr.addressCountry : ''].filter(Boolean).join(', ');
+      if (/TELECOMMUTE/i.test(ld.jobLocationType || '')) out.location = out.location ? out.location + ' · Remote' : 'Remote';
+      out.salary = fmtSalary(ld.baseSalary);
+      out.posted = ageFrom(ld.datePosted);
+      const org = ld.hiringOrganization || {};
+      if (org.logo) out.logo = typeof org.logo === 'string' ? org.logo : org.logo.url || '';
+      if (!out.company && org.name) out.company = org.name;
+    }
+    if (!out.location) for (const sel of LOC_SEL) { const el = q(sel); const v = t(el); if (v && v.length < 90 && !el.closest('#jaa-host')) { out.location = v.replace(/^location:?\s*/i, ''); break; } }
+    const text = (descriptionFrom(['#job-description', '.job__description', '[data-qa="job-description"]', '[class*="_descriptionText"]', '[data-automation-id="jobPostingDescription"]', '#job-details', '.jobs-description__content', 'main']) || '').slice(0, 8000);
+    if (!out.salary) { const m = text.match(SALARY_RE) || t(document.body).slice(0, 20000).match(SALARY_RE); if (m) out.salary = m[0].replace(/\s+/g, ' ').trim(); }
+    if (!out.posted) {
+      const wd = t(q('[data-automation-id="postedOn"]'));
+      const m = (wd || t(q('.jobs-unified-top-card__posted-date')) || t(q('.job-details-jobs-unified-top-card__primary-description-container')) || t(document.body).slice(0, 6000)).match(AGE_RE);
+      if (m) out.posted = (m[1] || m[2] || '').toLowerCase();
+    }
+    if (!out.logo) {
+      const ic = q('link[rel="apple-touch-icon"]') || q('link[rel~="icon"]');
+      if (ic && ic.href && /^https:/.test(ic.href)) out.logo = ic.href;
+      else if (location.protocol === 'https:') out.logo = location.origin + '/favicon.ico';
+    }
+    return out;
+  };
   JAA.sites = {
     list: LIST,
     generic,

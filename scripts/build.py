@@ -5,7 +5,7 @@ Usage: python3 scripts/build.py [output.zip]   (default: dist/job-apply-assistan
 import json, os, sys, zipfile
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-INCLUDE = ['manifest.json', 'background.js', 'LICENSE', 'PRIVACY.md', 'lib', 'content', 'popup', 'options', 'onboarding', 'tailor', 'practice', 'icons']
+INCLUDE = ['manifest.json', 'background.js', 'LICENSE', 'PRIVACY.md', 'lib', 'content', 'popup', 'options', 'onboarding', 'tailor', 'practice', 'cover', 'privacy', 'icons']
 SKIP_NAMES = {'.DS_Store', 'Thumbs.db'}
 SKIP_EXT = {'.svg'}  # icon sources; the PNGs are shipped
 

@@ -9,6 +9,7 @@
   let host, root, btn, panel, msgs, composer, input, countEl, stepEl, titleEl, subEl, busyEl;
   let prefs = { w: 390, h: 560, min: false };
   let interacted = false;
+  let currentTab = 'assistant';
 
   const ICON = `<svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><defs><linearGradient id="jaag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#818cf8"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><rect x="0.5" y="0.5" width="31" height="31" rx="8" fill="url(#jaag)"/><path d="M12 8h8a2 2 0 0 1 2 2v2h-2.5v-1.5h-7V12H10v-2a2 2 0 0 1 2-2z" fill="#e0e7ff"/><rect x="5" y="11.5" width="22" height="14" rx="3" fill="#fff"/><circle cx="23.5" cy="23.5" r="6.5" fill="#10b981" stroke="#fff" stroke-width="1.6"/><path d="M20.6 23.6l2 2 3.8-4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const GEAR = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7zm7.4-2.5a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.5 7.5 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.5 7.5 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.4 2.5h4l.4-2.5c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4-2-1.6z"/></svg>';
@@ -84,6 +85,57 @@
     .grip::after{content:"";position:absolute;left:4px;top:4px;width:8px;height:8px;border-left:2px solid rgba(255,255,255,.75);border-top:2px solid rgba(255,255,255,.75);border-top-left-radius:3px}
     .busy{font-size:11px;opacity:.9}
     a{color:#4f46e5}
+    .tabs{flex:none;display:flex;gap:2px;padding:4px 6px 0;background:#fff;border-bottom:1px solid #e2e8f0}
+    .tab{flex:1;border:0;background:none;padding:7px 2px 8px;font:600 12px/1 inherit;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+    .tab:hover{color:#3730a3}.tab.on{color:#4338ca;border-bottom-color:#6366f1}
+    .tab .tc{display:inline-block;min-width:16px;height:16px;padding:0 4px;margin-left:3px;border-radius:99px;background:#fef3c7;color:#92400e;font:700 10px/16px inherit}
+    .tab .tc:empty{display:none}
+    .views{flex:1;min-height:0;display:flex;flex-direction:column}
+    .view{flex:1;min-height:0;display:none;flex-direction:column}.view.on{display:flex}
+    .pbody{flex:1;overflow:auto;padding:12px;background:#f8fafc;display:flex;flex-direction:column;gap:10px}
+    .panel.min .tabs,.panel.min .views{display:none}
+    .sec{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px}
+    .sec h4{margin:0 0 6px;font-size:12.5px;color:#334155;display:flex;align-items:center;gap:6px}
+    .sec .muted,.muted{color:#64748b;font-size:12px}
+    .jc{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px;margin:0}
+    .jc .fav{width:34px;height:34px;border-radius:9px;flex:none;background:#eef2ff;color:#4338ca;display:flex;align-items:center;justify-content:center;font:800 15px/1 inherit;overflow:hidden}
+    .jc .fav img{width:22px;height:22px}
+    .jc .jt{font-weight:700;font-size:13.5px;line-height:1.3}.jc .jco{color:#475569;font-size:12px}
+    .jc .meta{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.jc .meta span{background:#f1f5f9;color:#334155;border-radius:99px;padding:2px 8px;font-size:11px}
+    .jc .bm{margin-left:auto;border:1px solid #e2e8f0;background:#fff;border-radius:8px;padding:4px 8px;cursor:pointer;font:600 12px/1.2 inherit;color:#4338ca;white-space:nowrap}
+    .jc .bm.on{background:#fef3c7;border-color:#fde68a;color:#92400e}
+    .priv{display:flex;gap:8px;align-items:center;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;border-radius:12px;padding:8px 10px;font-size:12px}
+    .priv b{display:block;font-size:12.5px}.priv a{color:#047857;font-weight:600;cursor:pointer}
+    .priv.mini{background:none;border:0;padding:0 2px;justify-content:center;color:#64748b;font-size:11px}.priv.mini a{color:#64748b}
+    .btnp{border:0;border-radius:10px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font:700 13px/1 inherit;padding:10px 14px;cursor:pointer;width:100%}
+    .btnp:hover{filter:brightness(1.07)}.btnp[disabled]{opacity:.55;cursor:default}
+    .btns{border:1px solid #c7d2fe;border-radius:10px;background:#eef2ff;color:#3730a3;font:600 12.5px/1 inherit;padding:8px 12px;cursor:pointer}
+    .copyl{list-style:none;margin:0;padding:0}.copyl li{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid #f1f5f9}.copyl li:first-child{border-top:0}
+    .copyl .k{color:#64748b;font-size:11.5px;width:88px;flex:none}.copyl .v{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+    .cp{border:1px solid #e2e8f0;background:#fff;border-radius:7px;padding:3px 7px;font:600 11px/1.2 inherit;color:#4338ca;cursor:pointer;flex:none}.cp:hover{background:#eef2ff}.cp.done{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+    .ring{--p:0;width:74px;height:74px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:conic-gradient(var(--c,#6366f1) calc(var(--p)*1%),#e2e8f0 0)}
+    .ring b{width:58px;height:58px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font:800 18px/1 inherit;color:#1e1b4b}
+    .kw{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.kw span{border-radius:99px;padding:2px 8px;font-size:11px;background:#dcfce7;color:#166534}.kw span.miss{background:#fee2e2;color:#991b1b}
+    .diag{list-style:none;padding:0;margin:0}.diag li{padding:3px 0;font-size:12px}
+    select.sel,textarea.ta,input.in{width:100%;font:13px/1.4 inherit;border:1px solid #cbd5e1;border-radius:9px;padding:7px 9px;color:#0f172a;background:#fff}
+    textarea.ta{min-height:80px;resize:vertical}
+    pre.prev{white-space:pre-wrap;background:#f1f5f9;border-radius:8px;padding:8px;font:11.5px/1.4 ui-monospace,Menlo,Consolas,monospace;max-height:180px;overflow:auto;margin:6px 0}
+    .stepper{display:flex;gap:3px;margin:6px 0}.stepper button{flex:1;border:1px solid #e2e8f0;background:#fff;border-radius:6px;padding:4px 0;font:600 10.5px/1.2 inherit;color:#64748b;cursor:pointer}
+    .stepper button.past{background:#eef2ff;color:#4338ca;border-color:#c7d2fe}.stepper button.cur{background:#4f46e5;color:#fff;border-color:#4f46e5}.stepper button.rej.cur{background:#dc2626;border-color:#dc2626}
+    .trow{border-top:1px solid #f1f5f9;padding:7px 0}.trow:first-child{border-top:0}.trow .t1{font-weight:700;font-size:12.5px}.trow .t2{color:#64748b;font-size:11.5px}
+    .scan{display:flex;gap:6px;align-items:center;font-size:12px;color:#334155;margin:4px 0}
+    ul.fl-list{list-style:none;margin:4px 0;padding:0;max-height:220px;overflow:auto}
+    .fr{display:flex;align-items:center;gap:6px;padding:2px 0;font-size:12px}
+    .fr.live{animation:jaain .25s ease-out}@keyframes jaain{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+    .fi{width:16px;height:16px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;font:800 10px/1 inherit}
+    .fi.ok,.fi.kept{background:#dcfce7;color:#166534}.fi.ai{background:#dbeafe;color:#1d4ed8}.fi.you{background:#ccfbf1;color:#115e59}.fi.todo{background:#fef9c3;color:#854d0e}.fi.wait{background:#f1f5f9;color:#64748b}
+    .fl{border:0;background:none;padding:0;color:#0f172a;cursor:pointer;font:12px/1.3 inherit;text-align:left;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fl:hover{color:#4338ca;text-decoration:underline}
+    .fn{color:#64748b;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
+    details.cl{border:1px solid #e2e8f0;border-radius:10px;padding:6px 8px;margin:6px 0;background:#fff}
+    details.cl summary{cursor:pointer;display:flex;align-items:center;gap:8px;font-weight:700;font-size:12px;list-style:none}
+    details.cl summary::-webkit-details-marker{display:none}details.cl summary::before{content:'▸';color:#6366f1}details.cl[open] summary::before{content:'▾'}
+    .clbar{flex:1;height:5px;border-radius:99px;background:#e2e8f0;overflow:hidden}.clbar i{display:block;height:100%;background:#22c55e}
+    @media (prefers-reduced-motion: reduce){.fr.live{animation:none}}
   `;
 
   function h(tag, attrs, ...kids) {
@@ -123,12 +175,27 @@
         <div class="head"><span class="ic">${ICON}</span><div class="tt"><div class="t1">Job Apply Assistant</div><div class="t2"></div></div>
           <span class="busy"></span>
           <button class="hb" data-h="review" type="button" title="Review every field before you submit">Review</button>
-          <button class="hb" data-h="settings" type="button" title="Profile & settings">${GEAR}</button>
+          <button class="hb" data-h="settings" type="button" title="Settings">${GEAR}</button>
           <button class="hb" data-h="min" type="button" title="Minimize">–</button>
           <button class="hb x" data-h="close" type="button" title="Close">×</button></div>
-        <div class="step" hidden><span class="st"></span><span class="bar"><i></i></span></div>
-        <div class="body" aria-live="polite"></div>
-        <div class="composer"><textarea rows="1" placeholder="Ask me anything, e.g. &quot;what's left?&quot; or &quot;make the why-us answer more technical&quot;"></textarea><button class="send" type="button">Send</button></div>
+        <div class="tabs" role="tablist">
+          <button class="tab on" data-tab="assistant" role="tab" type="button">Assistant<span class="tc"></span></button>
+          <button class="tab" data-tab="resume" role="tab" type="button">Resume</button>
+          <button class="tab" data-tab="profile" role="tab" type="button">Profile</button>
+          <button class="tab" data-tab="tracker" role="tab" type="button">Tracker</button>
+          <button class="tab" data-tab="report" role="tab" type="button">Report</button>
+        </div>
+        <div class="views">
+          <div class="view on" data-view="assistant">
+            <div class="step" hidden><span class="st"></span><span class="bar"><i></i></span></div>
+            <div class="body" aria-live="polite"></div>
+            <div class="composer"><textarea rows="1" placeholder="Ask me anything, e.g. &quot;what's left?&quot; or &quot;make the why-us answer more technical&quot;"></textarea><button class="send" type="button">Send</button></div>
+          </div>
+          <div class="view" data-view="resume"><div class="pbody"></div></div>
+          <div class="view" data-view="profile"><div class="pbody"></div></div>
+          <div class="view" data-view="tracker"><div class="pbody"></div></div>
+          <div class="view" data-view="report"><div class="pbody"></div></div>
+        </div>
       </div>
       <button class="btn" type="button" title="Fill this application with your saved profile and chat with the assistant (you still press Submit)"><span class="ic">${ICON}</span><span class="lb">⚡ Fill application</span><span class="count" hidden></span></button>
     </div>`;
@@ -147,6 +214,7 @@
       interacted = true; btn.classList.remove('pulse');
       if (JAA.chat) JAA.chat.onButton(); else if (JAA.run) JAA.run({ source: 'button' });
     });
+    root.querySelectorAll('.tab').forEach(b => b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); JAA.ui.tab(b.dataset.tab); }));
     root.querySelectorAll('[data-h]').forEach(b => b.addEventListener('click', e => {
       e.preventDefault(); e.stopPropagation();
       const a = b.dataset.h;
@@ -249,6 +317,22 @@
       return m;
     },
     clearMessages() { ensure(); msgs.innerHTML = ''; },
+    // panel tabs: Assistant (chat + fill), Resume (match + tailor + cover letter), Profile, Tracker, Report
+    tab(name) {
+      ensure();
+      if (!root.querySelector(`[data-view="${name}"]`)) name = 'assistant';
+      root.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === name));
+      root.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.dataset.view === name));
+      if (prefs.min) { prefs.min = false; applySize(); }
+      currentTab = name;
+      if (name !== 'assistant' && JAA.panel) JAA.panel.render(name, root.querySelector(`[data-view="${name}"] .pbody`));
+      if (name === 'assistant') scrollDown();
+    },
+    currentTab: () => currentTab,
+    view: name => { ensure(); return root.querySelector(`[data-view="${name}"] .pbody`); },
+    tabCount(name, n) { ensure(); const t = root.querySelector(`[data-tab="${name}"] .tc`); if (t) t.textContent = n ? String(n) : ''; },
+    // a fixed slot above the chat messages (job card + privacy card)
+    topSlot() { ensure(); let s = msgs.querySelector('.top-slot'); if (!s) { s = h('div', { class: 'top-slot', style: 'display:flex;flex-direction:column;gap:8px' }); msgs.prepend(s); } return s; },
     scrollDown,
     focusInput() { try { input.focus(); } catch (_) { /* ignore */ } },
     root: () => root,

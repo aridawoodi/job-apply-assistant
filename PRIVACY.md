@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: October 19, 2026 · applies to Job Apply Assistant v0.4.0 and later_
+_Last updated: October 19, 2026 · applies to Job Apply Assistant v0.5.0 and later_
 
 Job Apply Assistant is a browser extension that fills job applications and tailors resumes using an AI
 model that runs **on your own computer** (Ollama). It is built so that your information stays with you.
@@ -12,7 +12,9 @@ On your computer, in your browser's extension storage (`chrome.storage.local`) o
 - optional voluntary self-identification (EEO) answers, only if you choose to give them;
 - your resume file and the tailored resumes you create;
 - your answer bank (answers you saved or that were learned from your own typing), writing-style samples,
-  settings, assistant chat history per job, the application tracker and automatic backup snapshots.
+  👍/👎 feedback on AI drafts, cover letters you create, resume-match results per job page, settings,
+  assistant chat history per job, the application tracker (stages, notes, reminder dates) and automatic
+  backup snapshots.
 
 It never stores passwords, file uploads other than your resumes, consent/terms answers, signatures,
 SSN or date of birth, or personal questions unrelated to the job (for example pets, hobbies, family or
@@ -30,6 +32,14 @@ The extension talks to:
    these requests; the default is your own computer only.
 2. **The job application page you are on**, where it types your answers into the form, exactly as you
    would. It never presses Submit, Next or Apply; you do.
+
+3. **GitHub, only when you click "Open a GitHub issue"** in the Report tab. Your browser opens a new-issue
+   page prefilled with the text shown to you first: your description and diagnostics (extension/browser/OS
+   version, site name, number of fields found, whether Ollama and the model are available, which profile
+   sections are empty). No names, contact details, answers or page addresses. You submit it yourself.
+
+The company logo shown in the panel's job card is the image the job page itself provides; no third-party
+favicon service is used.
 
 When you click the Ollama download button on the setup page, your browser opens ollama.com (Ollama's own
 site, with its own privacy policy). Downloading an AI model is done by the Ollama app.

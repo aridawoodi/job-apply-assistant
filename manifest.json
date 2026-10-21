@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Job Apply Assistant",
   "short_name": "Job Apply",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Fills job applications and tailors your resume with a free local AI. Private: your data stays on your computer. Never clicks Submit.",
   "minimum_chrome_version": "110",
   "permissions": [
@@ -76,14 +76,18 @@
       ],
       "js": [
         "lib/defaults.js",
+        "lib/match.js",
         "content/core.js",
         "content/sites.js",
         "content/ui.js",
         "content/learn.js",
         "content/chat.js",
+        "content/panel.js",
+        "content/refine.js",
         "content/steps.js",
         "content/track.js",
-        "content/main.js"
+        "content/main.js",
+        "content/match.js"
       ],
       "run_at": "document_idle",
       "all_frames": true

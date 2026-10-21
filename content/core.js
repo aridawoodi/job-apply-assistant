@@ -416,10 +416,13 @@
   // -> {value, source, key, alts} | {missing:key, noLLM} | {skip:reason} | null (ask model)
   function resolve(f, data) {
     const p = data.profile;
+    const on = k => !JAA.fieldOn || JAA.fieldOn(data.settings, k);
+    const OFF = { skip: 'Turned off in Options → Fields to fill', off: true };
     if (f.kind === 'file') {
       const L = norm(f.label + ' ' + f.name + ' ' + f.idAttr);
-      if (/cover/.test(L)) return { skip: 'Cover letter upload: attach it yourself if you want one.' };
+      if (/cover/.test(L)) return on('coverLetter') ? { skip: 'Cover letter upload: write one with the assistant (Resume tab) or attach your own.', cover: true } : OFF;
       if (/resume|cv|curriculum/.test(L) || f.isOnlyFile) {
+        if (!on('resume')) return OFF;
         const t = pickTailored(f, data);
         if (t) return { value: t, source: 'rule', key: 'resume', tailored: true };
         return data.resume ? { value: data.resume, source: 'rule', key: 'resume' } : { missing: 'resume', noLLM: true };
@@ -427,13 +430,19 @@
       return { skip: 'File upload: not sure what this one is for.' };
     }
     const label = f.label || '';
-    const strong = bankMatch(label, data.answerBank, 0.85);
+    if ((f.kind === 'textarea' || f.kind === 'text') && /\bcover (letter|note)\b/i.test(label) && !f.options) {
+      return on('coverLetter') ? { skip: 'Cover letter: I can write one from your resume (fact-checked) — Resume tab, or the button below.', cover: true } : OFF;
+    }
+    const bankOn = on('bank');
+    const r0 = ruleFor(f.kind === 'checkbox' && f.question ? Object.assign({}, f, { label: f.question }) : f);
+    if (r0 && !r0.flags.never && !on(r0.key)) return OFF;
+    const strong = bankOn && bankMatch(label, data.answerBank, 0.85);
     if (strong) return { value: strong.answer, source: 'bank', key: 'bank: ' + strong.q };
     if (f.kind === 'checkbox' && !f.question) {
       // a lone checkbox is usually a consent/terms box: leave it for the user to read
       return { skip: 'Checkbox (consent/terms?): review and tick it yourself.' };
     }
-    const r = ruleFor(f.kind === 'checkbox' && f.question ? Object.assign({}, f, { label: f.question }) : f);
+    const r = r0;
     if (r) {
       if (r.flags.never) return { skip: r.flags.why || 'Sensitive (SSN / date of birth): fill this yourself.' };
       const v = r.fn(p, f, r.L);
@@ -443,7 +452,7 @@
       }
       // v === null: the rule chose not to answer (e.g. non-US work authorization); fall through
     }
-    const weak = bankMatch(label, data.answerBank, 0.6);
+    const weak = bankOn && bankMatch(label, data.answerBank, 0.6);
     if (weak) return { value: weak.answer, source: 'bank', key: 'bank: ' + weak.q };
     return null;
   }

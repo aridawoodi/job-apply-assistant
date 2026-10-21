@@ -355,6 +355,8 @@ function draftPrompt(profile, ctx, settings) {
     (resumeText ? `Resume text: ${resumeText.slice(0, 2500)}\n` : '') +
     styleBlock(profile) +
     (ctx.examples && ctx.examples.length ? `Earlier answers to similar questions (adapt, don't copy company names): ${JSON.stringify(ctx.examples.slice(0, 3))}\n` : '') +
+    (ctx.liked && ctx.liked.length ? `Answers the candidate liked (👍; match this quality and style, don't copy): ${JSON.stringify(ctx.liked.slice(0, 2))}\n` : '') +
+    (ctx.disliked && ctx.disliked.length ? `Answers the candidate disliked (👎; avoid writing like this): ${JSON.stringify(ctx.disliked.slice(0, 2))}\n` : '') +
     `Question: ${ctx.question}\n` +
     (ctx.previous ? `Previous draft (write a clearly different, better version): ${String(ctx.previous).slice(0, 1500)}\n` : '') +
     (ctx.instruction ? `Instruction from the candidate: ${String(ctx.instruction).slice(0, 400)}\n` : '');
@@ -387,6 +389,7 @@ chrome.runtime.onConnect.addListener(port => {
       msg.examples = answerBank.filter(x => x && x.q && x.a && JAA.textSim(x.q, msg.question) >= 0.35).slice(0, 3)
         .map(x => ({ q: String(x.q).replace(/\{company\}/g, msg.company || 'the company'), a: String(x.a).replace(/\{company\}/g, msg.company || 'the company') }));
     }
+    if (draft) { const fb = await feedbackExamples(msg.question || '', msg.company || ''); msg.liked = fb.liked; msg.disliked = fb.disliked; }
     const messages = draft ? draftPrompt(profile, msg, settings) : chatPrompt(profile, msg);
     const predict = draft ? ({ short: 260, medium: 380, long: 560 }[settings.draftLength] || 260) : 700;
     const timeoutSec = (Date.now() - warm.at < 20 * 60 * 1000) ? (settings.llmTimeoutSec || 90) : (settings.llmFirstTimeoutSec || 180);
@@ -425,19 +428,35 @@ function learnAnswers(entries, force) {
 }
 
 /* ---------------- tracker ---------------- */
-const TRACKER_VERSION = 2;
+const TRACKER_VERSION = 3;
 const PENDING_TTL_MS = 30 * 60 * 1000; // a submit is "pending" for 30 min
 
 const normUrl = u => String(u || '').split('#')[0].split('?')[0].replace(/\/+$/, '');
 
 // v1 rows: {company,title,url,site,date,firstFilled,status,filled,ai,todo}
 // v2 adds: key, submittedAt, confirmedAt, errorAt, lastError, history[]
+// v3 (0.5) adds: stage (saved|applied|screen|interview|offer|rejected|withdrawn), stageDates{}, notes,
+//   reminderAt, bookmarked, via ('fill' | 'tracked' | 'bookmark'), location, salary
 function migrateRow(a) {
-  const row = Object.assign({ status: JAA.STATUS.FILLED, submittedAt: '', confirmedAt: '', errorAt: '', lastError: '', history: [] }, a);
+  const row = Object.assign({ status: JAA.STATUS.FILLED, submittedAt: '', confirmedAt: '', errorAt: '', lastError: '', history: [], notes: '', reminderAt: '' }, a);
   if (!row.key) row.key = JAA.jobKey(row.formUrl || row.url);
-  if (!row.firstFilled && row.date && row.status === JAA.STATUS.FILLED) row.firstFilled = row.date;
+  if (!row.firstFilled && row.date && row.status === JAA.STATUS.FILLED && !row.bookmarked) row.firstFilled = row.date;
   if (!Array.isArray(row.history)) row.history = [];
+  if (!row.stage) row.stage = JAA.stageFromStatus(row.status);
+  if (!row.stageDates || typeof row.stageDates !== 'object') {
+    row.stageDates = {};
+    row.stageDates[row.stage] = (row.stage === 'applied' ? (row.confirmedAt || row.submittedAt) : '') || row.date || '';
+    if (row.stage !== 'saved' && row.stage !== 'applied' && (row.submittedAt || row.confirmedAt)) row.stageDates.applied = row.confirmedAt || row.submittedAt;
+  }
+  if (!row.via) row.via = row.bookmarked ? 'bookmark' : (row.firstFilled || row.filled != null ? 'fill' : 'tracked');
   return row;
+}
+function setStage(row, stage, when) {
+  if (!JAA.STAGE_LABEL[stage]) return false;
+  row.stage = stage;
+  row.stageDates = Object.assign({}, row.stageDates || {});
+  if (!row.stageDates[stage]) row.stageDates[stage] = when || new Date().toISOString();
+  return true;
 }
 
 let trackerLock = Promise.resolve();
@@ -477,7 +496,7 @@ function upsert(apps, entry) {
   const { i, key } = findRow(apps, entry);
   const now = new Date().toISOString();
   const clean = {};
-  for (const k of ['company', 'title', 'url', 'formUrl', 'site']) if (entry[k]) clean[k] = entry[k];
+  for (const k of ['company', 'title', 'url', 'formUrl', 'site', 'location', 'salary']) if (entry[k]) clean[k] = entry[k];
   if (i >= 0) {
     // keep a good company/title we already had (confirmation pages often have generic titles)
     if (entry.weakInfo) {
@@ -525,12 +544,16 @@ async function trackerEvent(msg, sender) {
   const tabId = sender && sender.tab ? sender.tab.id : null;
   const res = await withTracker((apps, pending) => {
     const entry = Object.assign({}, msg.entry);
+    // "Track applications submitted without Fill" off: only follow jobs that were filled (or are already tracked)
+    if (settings.trackWithoutFill === false && !entry.filledHere && !findRowExists(apps, entry) && !Object.values(pending).some(x => x.tabId === tabId)) return { ok: false, disabled: true, withoutFill: true };
     // a confirmation page may only know the tab: fall back to that tab's pending submit
     if (msg.event !== 'submitted' && !findRowExists(apps, entry)) {
       const p = Object.values(pending).find(x => x.tabId === tabId);
       if (p) { entry.key = p.key; entry.weakInfo = true; }
     }
+    const isNew = !findRowExists(apps, entry);
     const row = upsert(apps, entry);
+    if (isNew) { row.via = entry.filledHere ? 'fill' : 'tracked'; if (!entry.filledHere) { row.stageDates = {}; row.firstFilled = ''; } }
     const now = new Date().toISOString();
     const before = row.status;
     const manual = JAA.MANUAL_STATUSES.includes(row.status);
@@ -540,12 +563,14 @@ async function trackerEvent(msg, sender) {
       row.lastError = '';
       if (!manual && row.status !== JAA.STATUS.APPLIED) row.status = JAA.STATUS.SUBMITTED;
       pending[row.key] = { key: row.key, tabId, at: Date.now(), url: entry.url };
+      if (row.stage === 'saved' || !row.stage) setStage(row, 'applied', now);
       log('submitted', msg.detail);
     } else if (msg.event === 'confirmed') {
       row.confirmedAt = now;
       if (!row.submittedAt) row.submittedAt = now;
       row.lastError = '';
       if (!manual) row.status = JAA.STATUS.APPLIED;
+      if (row.stage === 'saved' || !row.stage) setStage(row, 'applied', now);
       delete pending[row.key];
       log('confirmed', msg.detail);
     } else if (msg.event === 'error') {
@@ -554,7 +579,7 @@ async function trackerEvent(msg, sender) {
       if (!manual && row.status !== JAA.STATUS.APPLIED) row.status = JAA.STATUS.ERROR;
       log('error', row.lastError);
     }
-    return { ok: true, changed: before !== row.status, status: row.status, row: Object.assign({}, row, { history: undefined }) };
+    return { ok: true, changed: before !== row.status, status: row.status, isNew, row: Object.assign({}, row, { history: undefined }) };
   });
   await setBadge(tabId, res.status);
   return res;
@@ -686,7 +711,10 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   await withTracker(() => null);
   const { dataVersion } = await chrome.storage.local.get('dataVersion');
   if ((dataVersion || 2) < 4) await migrateV4();
+  if ((dataVersion || 2) < 5) await migrateV5(details.reason);
+  if (details.reason === 'update') await noteWhatsNew(details.previousVersion);
   await installOriginRules();
+  await setDefaultIcon();
 });
 // v0.4: keep everything; switch the old default Ollama URL to 127.0.0.1; existing users skip the setup wizard.
 async function migrateV4() {
@@ -695,6 +723,22 @@ async function migrateV4() {
   if (settings && /^http:\/\/localhost:11434\/?$/.test(settings.ollamaUrl || '')) patch.settings = Object.assign({}, settings, { ollamaUrl: 'http://127.0.0.1:11434' });
   if (!onboarding && profile && (profile.firstName || profile.email)) patch.onboarding = { done: true, migrated: true, at: Date.now() };
   await chrome.storage.local.set(patch);
+}
+
+// v0.5: new settings get their defaults (merge), tracker rows get stages (withTracker migrates them),
+// people who finished setup before 0.5 haven't seen the tour yet (offered, never forced).
+async function migrateV5(reason) {
+  const { settings, tour } = await chrome.storage.local.get(['settings', 'tour']);
+  const patch = { dataVersion: 5 };
+  if (settings) patch.settings = JAA.merge(JAA.DEFAULT_SETTINGS, settings);
+  if (!tour && reason === 'update') patch.tour = { done: false, offered: false };
+  await chrome.storage.local.set(patch);
+}
+async function noteWhatsNew(prev) {
+  const { settings } = await JAA.loadAll();
+  const ver = chrome.runtime.getManifest().version;
+  if (!settings.whatsNew || prev === ver) return;
+  await chrome.storage.local.set({ whatsNew: { version: ver, from: prev || '', at: Date.now(), seen: false } });
 }
 
 /* ================= v0.4: no-terminal Ollama setup ================= */
@@ -901,7 +945,7 @@ async function tailoredAttach(msg) {
   } catch (e) { return { ok: false, error: 'Could not reach the application page (' + String(e && e.message || e) + '). Reload it and try again.' }; }
 }
 
-const V4_TYPES = new Set(['ollama:status', 'ollama:fixOrigin', 'system:info', 'tailor:open', 'tailor:forJob', 'tailor:save', 'tailor:attach', 'onboarding:open']);
+const V4_TYPES = new Set(['tracker:update', 'tracker:bookmark', 'tracker:get', 'tracker:list', 'page:status', 'feedback:add', 'diag:info', 'tour:open', 'cover:open', 'cover:save', 'cover:fill', 'match:ai', 'whatsnew:seen', 'privacy:open', 'ollama:status', 'ollama:fixOrigin', 'system:info', 'tailor:open', 'tailor:forJob', 'tailor:save', 'tailor:attach', 'onboarding:open']);
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   const handlers = {
     'ollama:status': () => ollamaStatus(msg.url),
@@ -911,7 +955,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     'tailor:forJob': () => tailoredFor(msg.key),
     'tailor:save': () => tailoredSave(msg.entry),
     'tailor:attach': () => tailoredAttach(msg),
-    'onboarding:open': () => chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/welcome.html' + (msg.step ? '#' + msg.step : '')) }).then(() => ({ ok: true }))
+    'onboarding:open': () => chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/welcome.html' + (msg.step ? '#' + msg.step : '')) }).then(() => ({ ok: true })),
+    'tour:open': () => chrome.tabs.create({ url: chrome.runtime.getURL('practice/practice.html?tour=1') }).then(() => ({ ok: true })),
+    'tracker:update': () => trackerUpdate(msg),
+    'tracker:bookmark': () => trackerBookmark(msg.entry, msg.on !== false),
+    'tracker:get': () => withTracker(apps => { const { i } = findRow(apps, msg.entry || { key: msg.key }); return { ok: true, row: i >= 0 ? apps[i] : null }; }),
+    'tracker:list': () => withTracker(apps => ({ ok: true, rows: apps.slice(0, msg.limit || 200) })),
+    'page:status': () => pageStatus(msg, sender),
+    'feedback:add': () => feedbackAdd(msg.entry),
+    'diag:info': () => diagInfo(),
+    'cover:open': () => coverOpen(msg, sender),
+    'cover:save': () => coverSave(msg.entry),
+    'cover:fill': () => coverFill(msg),
+    'match:ai': () => matchAI(msg),
+    'privacy:open': () => chrome.tabs.create({ url: chrome.runtime.getURL('privacy/privacy.html') }).then(() => ({ ok: true })),
+    'whatsnew:seen': () => chrome.storage.local.get('whatsNew').then(({ whatsNew }) => chrome.storage.local.set({ whatsNew: Object.assign({}, whatsNew || {}, { seen: true }) })).then(() => ({ ok: true }))
   };
   const h = msg && handlers[msg.type];
   if (!h) return false; // handled by the main listener
@@ -919,6 +977,196 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return true;
 });
 
+
+/* ================= v0.5 ================= */
+/* ---------- tracker: stages, notes, reminders, bookmarks ---------- */
+async function trackerUpdate(msg) {
+  return withTracker(apps => {
+    const { i } = findRow(apps, msg.entry || { key: msg.key });
+    if (i < 0) return { ok: false, error: 'Not in your tracker.' };
+    const row = apps[i];
+    const p = msg.patch || {};
+    const now = new Date().toISOString();
+    if (p.stage && p.stage !== row.stage) {
+      setStage(row, p.stage, p.stageDate || now);
+      if (p.stageDate) row.stageDates[p.stage] = p.stageDate;
+      // keep the old status field meaningful for CSV / older views
+      const manualMap = { interview: 'Interview', offer: 'Offer', rejected: 'Rejected', withdrawn: 'Withdrawn' };
+      if (manualMap[p.stage]) row.status = manualMap[p.stage];
+      else if (p.stage === 'applied' && !/Submitted|Applied/.test(row.status)) row.status = JAA.STATUS.APPLIED;
+      else if (p.stage === 'saved' || p.stage === 'screen') { if (JAA.MANUAL_STATUSES.includes(row.status)) row.status = row.confirmedAt ? JAA.STATUS.APPLIED : (row.submittedAt ? JAA.STATUS.SUBMITTED : JAA.STATUS.FILLED); }
+      row.history.push({ at: now, event: 'stage', detail: JAA.STAGE_LABEL[p.stage] });
+      if (row.history.length > 20) row.history.shift();
+    }
+    if (p.stageDates && typeof p.stageDates === 'object') row.stageDates = Object.assign({}, row.stageDates, p.stageDates);
+    if (typeof p.notes === 'string') row.notes = p.notes.slice(0, 4000);
+    if (typeof p.reminderAt === 'string') row.reminderAt = p.reminderAt.slice(0, 10);
+    row.date = now;
+    return { ok: true, row };
+  });
+}
+async function trackerBookmark(entry, on) {
+  return withTracker(apps => {
+    const { i } = findRow(apps, entry || {});
+    if (i >= 0) {
+      apps[i].bookmarked = !!on;
+      if (entry.location && !apps[i].location) apps[i].location = entry.location;
+      if (entry.salary && !apps[i].salary) apps[i].salary = entry.salary;
+      return { ok: true, row: apps[i], existed: true };
+    }
+    if (!on) return { ok: true, row: null };
+    const row = upsert(apps, Object.assign({}, entry));
+    Object.assign(row, { bookmarked: true, via: 'bookmark', firstFilled: '', filled: undefined });
+    row.status = JAA.STATUS.FILLED;
+    row.stage = 'saved'; row.stageDates = { saved: new Date().toISOString() };
+    return { ok: true, row };
+  });
+}
+
+/* ---------- toolbar icon: colour on supported job pages, gray elsewhere ---------- */
+const ICON_ON = { 16: 'icons/icon16.png', 32: 'icons/icon32.png', 48: 'icons/icon48.png', 128: 'icons/icon128.png' };
+const ICON_OFF = { 16: 'icons/gray16.png', 32: 'icons/gray32.png', 48: 'icons/gray48.png', 128: 'icons/gray128.png' };
+const SUPPORTED_SITES = [
+  [/(^|\.)greenhouse\.io$/, 'Greenhouse', () => true],
+  [/(^|\.)lever\.co$/, 'Lever', () => true],
+  [/(^|\.)ashbyhq\.com$/, 'Ashby', () => true],
+  [/(^|\.)(myworkdayjobs|myworkday|myworkdaysite)\.com$/, 'Workday', () => true],
+  [/(^|\.)linkedin\.com$/, 'LinkedIn', u => /^\/jobs\//.test(u.pathname)]
+];
+function siteForUrl(url) {
+  let u; try { u = new URL(url); } catch (_) { return null; }
+  if (u.protocol === 'chrome-extension:' && u.host === chrome.runtime.id && /\/practice\//.test(u.pathname)) return 'Practice';
+  if (u.protocol !== 'https:') return null;
+  const hit = SUPPORTED_SITES.find(([re, , ok]) => re.test(u.hostname) && ok(u));
+  return hit ? hit[1] : null;
+}
+async function setDefaultIcon() { try { await chrome.action.setIcon({ path: ICON_OFF }); await chrome.action.setTitle({ title: 'Job Apply Assistant: not a supported job page. Click for your profile, tracker and tools.' }); } catch (_) { /* ignore */ } }
+const tabState = new Map(); // tabId -> { site, kind }
+async function paintTab(tabId, site, kind) {
+  if (tabId == null || tabId < 0) return;
+  const on = !!site && kind !== 'none';
+  const what = kind === 'application' ? 'application form found: click Fill or open the assistant' : kind === 'posting' ? 'job posting: see your resume match' : 'supported job site';
+  try {
+    await chrome.action.setIcon({ tabId, path: on ? ICON_ON : ICON_OFF });
+    await chrome.action.setTitle({ tabId, title: on ? `Job Apply Assistant: ${site} · ${what}` : 'Job Apply Assistant: not a supported job page. Click for your profile, tracker and tools.' });
+  } catch (_) { /* tab closed */ }
+}
+async function pageStatus(msg, sender) {
+  const tabId = sender && sender.tab ? sender.tab.id : null;
+  if (tabId == null) return { ok: false };
+  if (sender.frameId && msg.kind !== 'application') return { ok: true }; // only the frame with the form upgrades the icon
+  const prev = tabState.get(tabId) || {};
+  const rank = { none: 0, site: 1, posting: 2, application: 3 };
+  const kind = sender.frameId && prev.kind && rank[prev.kind] > rank[msg.kind] ? prev.kind : msg.kind;
+  const site = siteForUrl(sender.tab.url || '') || (msg.kind === 'application' ? msg.site : null);
+  tabState.set(tabId, { site, kind });
+  await paintTab(tabId, site, kind);
+  return { ok: true, site, kind };
+}
+try {
+  chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
+    if (!info.url && info.status !== 'loading') return;
+    const url = info.url || tab.url || '';
+    const site = siteForUrl(url);
+    tabState.set(tabId, { site, kind: site ? 'site' : 'none' });
+    paintTab(tabId, site, site ? 'site' : 'none');
+  });
+  chrome.tabs.onRemoved.addListener(tabId => tabState.delete(tabId));
+} catch (_) { /* no tabs api in tests */ }
+setDefaultIcon();
+
+/* ---------- 👍 / 👎 feedback on drafts: kept locally, used as examples for later drafts ---------- */
+async function feedbackAdd(entry) {
+  if (!entry || !entry.text || !/^(up|down)$/.test(entry.vote)) return { ok: false, error: 'bad feedback' };
+  const q = String(entry.q || '');
+  if (JAA.NEVER_LEARN.test(JAA.normText(q))) return { ok: false, skipped: 'personal or one-off question' };
+  const { draftFeedback = [] } = await chrome.storage.local.get('draftFeedback');
+  const list = draftFeedback.filter(x => !(x.text === entry.text && x.q === q));
+  list.push({ q: q.slice(0, 300), text: String(entry.text).slice(0, 2000), vote: entry.vote, company: String(entry.company || '').slice(0, 80), at: Date.now() });
+  await chrome.storage.local.set({ draftFeedback: list.slice(-60) });
+  return { ok: true, count: list.length };
+}
+async function feedbackExamples(question, company) {
+  const { draftFeedback = [] } = await chrome.storage.local.get('draftFeedback');
+  const score = x => JAA.textSim(x.q, question) + (Date.now() - x.at < 30 * 864e5 ? 0.05 : 0);
+  const pick = vote => draftFeedback.filter(x => x.vote === vote).sort((a, b) => score(b) - score(a)).slice(0, 2)
+    .map(x => ({ q: x.q, a: company && x.company ? x.text.split(x.company).join(company) : x.text }));
+  return { liked: pick('up'), disliked: pick('down') };
+}
+
+/* ---------- diagnostics for "Report a problem" (no personal data) ---------- */
+async function diagInfo() {
+  const all = await chrome.storage.local.get(['profile', 'resume', 'settings', 'answerBank', 'applications']);
+  const st = await ollamaStatus();
+  const p = JAA.merge(JAA.EMPTY_PROFILE, all.profile);
+  const has = k => !!(p[k] && String(p[k]).trim());
+  const core = ['firstName', 'lastName', 'email', 'phone', 'location', 'linkedin', 'workAuthorizedUS', 'needsSponsorship'];
+  const missing = core.filter(k => !has(k));
+  let plat = {}; try { plat = await chrome.runtime.getPlatformInfo(); } catch (_) { /* ignore */ }
+  return {
+    ok: true, version: chrome.runtime.getManifest().version, os: plat.os || '', arch: plat.arch || '',
+    browser: (navigator.userAgent.match(/Chrom(e|ium)\/[\d.]+/) || [''])[0],
+    ollama: { reachable: st.reachable, originOk: st.originOk, version: st.version, model: st.model, hasModel: st.hasModel },
+    profile: { complete: missing.length === 0, missing, resume: !!all.resume, answers: (all.answerBank || []).length },
+    useLLM: JAA.merge(JAA.DEFAULT_SETTINGS, all.settings).useLLM
+  };
+}
+
+/* ---------- cover letters (cover/cover.html does the writing; same plumbing as tailoring) ---------- */
+async function coverOpen(msg, sender) {
+  const id = 'c' + Date.now().toString(36);
+  const job = Object.assign({}, msg.job || {}, { tabId: sender && sender.tab ? sender.tab.id : msg.tabId || null, frameId: sender ? sender.frameId : 0, field: msg.field || null });
+  const { tailorJobs = {} } = await chrome.storage.local.get('tailorJobs');
+  const keys = Object.keys(tailorJobs).sort();
+  while (keys.length > 20) delete tailorJobs[keys.shift()];
+  tailorJobs[id] = Object.assign(job, { at: Date.now() });
+  await chrome.storage.local.set({ tailorJobs });
+  await chrome.tabs.create({ url: chrome.runtime.getURL('cover/cover.html?job=' + id), index: sender && sender.tab ? sender.tab.index + 1 : undefined });
+  return { ok: true, id };
+}
+async function coverSave(entry) {
+  const { coverLetters = [] } = await chrome.storage.local.get('coverLetters');
+  const list = coverLetters.filter(t => t.id !== entry.id);
+  list.push(entry);
+  await chrome.storage.local.set({ coverLetters: list.slice(-40) });
+  if (entry.jobKey) await withTracker(apps => { const i = apps.findIndex(a => a.key === entry.jobKey); if (i >= 0) apps[i] = Object.assign({}, apps[i], { coverId: entry.id }); return null; });
+  return { ok: true };
+}
+async function coverFill(msg) {
+  // relay to the application tab: put the approved text into the cover letter box, or attach the file
+  const { tailorJobs = {} } = await chrome.storage.local.get('tailorJobs');
+  const job = tailorJobs[msg.jobId];
+  if (!job || !job.tabId) return { ok: false, error: 'The application tab is gone. Open the job page again.' };
+  const payload = { type: 'cover:fill', entryId: msg.entryId, mode: msg.mode };
+  try {
+    const r = job.url && job.url.startsWith(chrome.runtime.getURL('practice/'))
+      ? await chrome.runtime.sendMessage(Object.assign({ practice: true }, payload))
+      : await chrome.tabs.sendMessage(job.tabId, payload, { frameId: job.frameId || 0 });
+    if (r && r.ok) { try { await chrome.tabs.update(job.tabId, { active: true }); } catch (_) { /* ignore */ } }
+    return r || { ok: false, error: 'No answer from the application page. Reload it and try again.' };
+  } catch (e) { return { ok: false, error: 'Could not reach the application page (' + String(e && e.message || e) + ').' }; }
+}
+
+/* ---------- optional local-AI refinement of match keywords ---------- */
+async function matchAI(msg) {
+  const { settings } = await JAA.loadAll();
+  if (!settings.useLLM) return { ok: false, error: 'Local AI is off.' };
+  const base = trimUrl(settings.ollamaUrl);
+  let res;
+  try { res = await postOllama(base, '/api/chat', {
+    model: settings.model, stream: false, think: false, format: 'json', keep_alive: KEEP_ALIVE,
+    options: { temperature: 0, num_ctx: 4096, num_predict: 300 },
+    messages: [
+      { role: 'system', content: 'You pick the skills and requirements from a job description. Return JSON {"keywords":["..."]} with 8-20 short items (tools, languages, methods, domains) copied as written in the text. No soft skills like "communication" unless stressed. Only JSON.' },
+      { role: 'user', content: 'JOB DESCRIPTION:\n' + String(msg.text || '').slice(0, 5000) }
+    ]
+  }, 90000); } catch (e) { return { ok: false, error: explainFetchError(e, base, 90) }; }
+  if (!res.ok) return { ok: false, error: res.status === 403 ? ORIGINS_HINT : 'Local AI error HTTP ' + res.status };
+  const j = await res.json().catch(() => ({}));
+  const data = parseModelJson(stripThink((j.message && j.message.content) || ''));
+  const kw = data && Array.isArray(data.keywords) ? data.keywords.map(String).filter(k => k.length > 1 && k.length < 40).slice(0, 25) : [];
+  return { ok: true, keywords: kw };
+}
 
 // Exported for the Node test harness.
 if (typeof module !== 'undefined') module.exports = { buildPrompt, parseModelJson, stripThink, salvageAnswers, splitAction, visibleText };

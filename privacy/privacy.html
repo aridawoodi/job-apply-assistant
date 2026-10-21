@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacy · Job Apply Assistant</title>
+<link rel="stylesheet" href="../lib/pages.css"></head>
+<body>
+<div class="top"><img src="../icons/icon48.png" width="30" height="30" alt=""><strong>Privacy</strong><span class="ver" id="ver"></span></div>
+<main>
+<section class="card">
+  <h2 style="margin-top:0">🔒 Everything stays on your computer</h2>
+  <p>Job Apply Assistant has <b>no server, no account, no analytics and no tracking</b>. Nothing is sent to the developer or to anyone else.</p>
+  <h3>What is stored, and where</h3>
+  <p>Only in this browser's extension storage on this computer: your profile, resume and tailored resumes, cover letters you create,
+  saved answers, writing samples, 👍/👎 feedback on drafts, settings, chat history per job, the application tracker (stages, notes, reminders),
+  resume-match results per job page, and automatic backups. Removing the extension deletes it all.</p>
+  <p>It never stores passwords, consent or terms answers, signatures, SSN or date of birth, or personal details unrelated to the job (pets, hobbies, family, religion).</p>
+  <h3>Who the extension talks to</h3>
+  <ul>
+    <li><b>Ollama on your own computer</b> (default <code>http://127.0.0.1:11434</code>) for drafting answers, tailoring, cover letters and optional match refinement. EEO answers, salary, SSN and date of birth are never sent to the AI.</li>
+    <li><b>The job page you are on</b>: it reads the form and the job description and types your answers, like you would. It never presses Submit, Next or Continue, and never ticks consent boxes for you. The company logo in the job card is the one the page itself shows.</li>
+    <li><b>GitHub, only if you click "Open a GitHub issue"</b> in the Report tab. You see exactly what is included first (diagnostics such as versions, site name and field counts; no personal data), and you press Submit on GitHub yourself.</li>
+  </ul>
+  <h3>Your control</h3>
+  <p>Edit or delete anything in Options. Turn individual fields off in <b>Options → Fields to fill</b>. Export everything with <b>Backups → Backup to file</b>.</p>
+  <p class="muted"><a href="../options/options.html" target="_blank">Open Options</a></p>
+</section>
+</main>
+<script src="privacy.js"></script>
+</body></html>

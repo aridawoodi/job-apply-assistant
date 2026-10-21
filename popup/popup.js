@@ -1,6 +1,6 @@
 'use strict';
 const $ = id => document.getElementById(id);
-const CONTENT_FILES = ['lib/defaults.js', 'content/core.js', 'content/sites.js', 'content/ui.js', 'content/learn.js', 'content/chat.js', 'content/steps.js', 'content/track.js', 'content/main.js'];
+const CONTENT_FILES = ['lib/defaults.js', 'lib/match.js', 'content/core.js', 'content/sites.js', 'content/ui.js', 'content/learn.js', 'content/chat.js', 'content/panel.js', 'content/refine.js', 'content/steps.js', 'content/track.js', 'content/main.js', 'content/match.js'];
 
 function siteOf(url) {
   let u; try { u = new URL(url); } catch (_) { return { name: 'Unknown' }; }

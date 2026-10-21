@@ -89,6 +89,8 @@
         return { ok: false, account: true, error: adapter.accountNote };
       }
       const data = await JAA.loadAll();
+      // a separate email for job applications (Options → Behaviour) replaces the profile email here only
+      if (data.settings.applicationEmail) data.profile = Object.assign({}, data.profile, { email: data.settings.applicationEmail });
       data.tailored = await tailoredForThisJob();
       const info0 = (adapter.jobInfo ? adapter.jobInfo() : {}) || {};
       data.answerBank = prepareBank(data.answerBank, data.settings, info0.company);
@@ -111,8 +113,11 @@
       const step = opts.step || (adapter.stepInfo ? adapter.stepInfo() : null);
       const jobDescription = (adapter.jobDescription ? adapter.jobDescription() : '') || '';
       JAA.state = { fields, items, adapter, info: info0, data, step, jobDescription, at: Date.now() };
+      const live = () => ({ ok: true, scanning: true, scanned: fields.length, site: adapter.name, title: info0.title || '', company: info0.company || '', filled, ai, kept, items, step });
+      JAA.ui.summary(live(), fields);
       for (const f of fields) {
         const item = { id: f.id, label: f.label || f.question || f.name, kind: f.kind, required: !!f.required, desc: f.desc || '' };
+        if (items.length) JAA.ui.summary(live(), fields); // tick the previous field off
         items.push(item);
         if (!data.settings.overwriteExisting && C.hasValue(f)) { kept++; item.status = 'kept'; continue; }
         const r = C.resolve(f, data);
@@ -127,15 +132,18 @@
           continue;
         }
         if (r && r.missing) { item.status = 'todo'; item.why = r.missing === 'resume' ? 'Add your resume in Options' : `Not in your profile (${r.missing})`; C.mark(f, 'jaa-todo'); continue; }
-        if (r && r.skip) { item.status = 'todo'; item.why = r.skip; C.mark(f, 'jaa-todo'); continue; }
+        if (r && r.skip) { item.status = 'todo'; item.why = r.skip; item.cover = !!r.cover; item.off = !!r.off; if (!r.off) C.mark(f, 'jaa-todo'); continue; }
         pending.push({ f, item });
       }
+      // live ticks: the loop above awaits each fill, so the card updates field by field
+      for (const p of pending) p.item.pendingAI = data.settings.useLLM && JAA.fieldOn(data.settings, 'ai');
+      JAA.ui.summary(live(), fields);
 
       let llmError = null;
       const summarize = (progress, retryable) => ({ ok: true, site: adapter.name, title: info0.title || '', company: info0.company || '', url: location.href, filled, ai, kept, todo: items.filter(i => i.status === 'todo' || (!i.status && i.pendingAI)).length, llmError, items, progress, retryable, unstuck, step, remember: data.settings.rememberAnswers !== false });
       if (pending.length) {
-        if (!data.settings.useLLM) {
-          llmError = 'Local AI is off (Options), so open questions were left for you.';
+        if (!data.settings.useLLM || !JAA.fieldOn(data.settings, 'ai')) {
+          llmError = data.settings.useLLM ? 'Local AI answers are turned off in Options → Fields to fill.' : 'Local AI is off (Options), so open questions were left for you.';
         } else {
           pending.forEach(p => { p.item.pendingAI = true; p.essay = isEssay(p.f); });
           // short factual questions first; long free-text drafts last
@@ -151,7 +159,7 @@
           if (cur.length) batches.push(cur);
 
           JAA.ui.busy('Loading local model…');
-          JAA.ui.summary(summarize('Loading local model… (first time can take a minute on 8 GB)'), fields);
+          JAA.ui.summary(Object.assign(summarize('Loading local model… (first time can take a minute on 8 GB)'), { scanned: fields.length }), fields);
           const w = await send({ type: 'ollama:warm' });
           if (w && w.ok === false && w.error && !/took longer/i.test(w.error)) llmError = w.error;
 
@@ -161,7 +169,7 @@
             const batch = batches[bi];
             const label = `Local AI: batch ${bi + 1}/${batches.length} (${batch.length} ${batch[0].essay ? 'long answer' + (batch.length > 1 ? 's' : '') : 'question' + (batch.length > 1 ? 's' : '')})…`;
             JAA.ui.busy(`AI ${bi + 1}/${batches.length}…`);
-            JAA.ui.summary(summarize(label), fields);
+            JAA.ui.summary(Object.assign(summarize(label), { scanned: fields.length }), fields);
             const questions = batch.map(({ f, essay }) => {
               const qd = { id: f.id, question: (f.question ? f.question + ' — ' : '') + (f.label || f.name || 'Untitled field'), type: f.kind === 'checkboxGroup' ? 'multi-select' : (essay ? 'long-text' : f.kind) };
               if (f.options && f.options.length) qd.options = trimOptions(f, qd.question).map(o => o.text);
@@ -200,7 +208,7 @@
               else if (out.unstuck) { unstuck.push(item.label); item.why = out.why; item.unstuck = true; }
               else item.why = 'AI answer didn\'t fit: ' + out.why;
             }
-            JAA.ui.summary(summarize(bi + 1 < batches.length ? `Filled batch ${bi + 1}/${batches.length}…` : ''), fields);
+            JAA.ui.summary(Object.assign(summarize(bi + 1 < batches.length ? `Filled batch ${bi + 1}/${batches.length}…` : ''), { scanned: fields.length }), fields);
           }
           if (!llmError && errors.length) llmError = `${errors.length} of ${batches.length} AI batches failed (the rest were filled). ${errors[errors.length - 1].replace(/^batch \d+: /, '')}`;
           if (pending.length > ordered.length) llmError = (llmError ? llmError + ' ' : '') + `Only the first ${MAX_LLM_QUESTIONS} open questions were sent to the model.`;
@@ -213,11 +221,12 @@
       lastRetryable = items.some(i => i.status === 'todo' && /AI|Local AI/.test(i.why || ''));
 
       const info = (adapter.jobInfo ? adapter.jobInfo() : {}) || {};
-      const summary = { ok: true, site: adapter.name, title: info.title || '', company: info.company || '', url: location.href, filled, ai, kept, todo: items.filter(i => i.status === 'todo').length, llmError, items, retryable: lastRetryable && data.settings.useLLM, unstuck, step, remember: data.settings.rememberAnswers !== false };
+      const summary = { ok: true, site: adapter.name, title: info.title || '', company: info.company || '', url: location.href, filled, ai, kept, todo: items.filter(i => i.status === 'todo').length, llmError, items, retryable: lastRetryable && data.settings.useLLM, unstuck, step, remember: data.settings.rememberAnswers !== false, scanned: fields.length };
       JAA.ui.summary(summary, fields);
       if (JAA.chat) JAA.chat.afterRun(summary, fields, opts);
       if (JAA.learn) JAA.learn.watch(fields, items, { company: summary.company, site: adapter.name });
-      send({ type: 'tracker:log', entry: { key: JAA.jobKey(location.href), company: summary.company, title: summary.title, url: (window.top === window ? location.href : (document.referrer || location.href)), formUrl: location.href, site: adapter.name, filled, ai, todo: summary.todo } });
+      const extra = (JAA.jobMeta ? JAA.jobMeta() : {}) || {};
+      send({ type: 'tracker:log', entry: { key: JAA.jobKey(location.href), company: summary.company, title: summary.title, url: (window.top === window ? location.href : (document.referrer || location.href)), formUrl: location.href, site: adapter.name, filled, ai, todo: summary.todo, location: extra.location || '', salary: extra.salary || '' } });
       return summary;
     } catch (e) {
       C.blockSubmits(false);
@@ -264,8 +273,44 @@
     return r.ok ? { ok: true, name: file.name } : { ok: false, error: r.why || 'Could not attach.' };
   }
 
+  JAA.attachTailored = attachTailored;
+  // Cover letter from the Cover letter page (after the user approved it): text box or upload field
+  function coverFields() {
+    return scan(JAA.sites.detect(location)).filter(f => /\bcover\b/i.test(f.label + ' ' + f.name + ' ' + f.idAttr) && (f.kind === 'file' || f.kind === 'textarea' || f.kind === 'text'));
+  }
+  async function coverFill(entryId, mode) {
+    const { coverLetters = [] } = await chrome.storage.local.get('coverLetters');
+    const entry = coverLetters.find(t => t.id === entryId);
+    if (!entry) return { ok: false, error: 'Cover letter not found.' };
+    const fields = coverFields();
+    const textF = fields.find(f => f.kind !== 'file'), fileF = fields.find(f => f.kind === 'file');
+    const useText = mode === 'text' ? textF : mode === 'file' ? null : textF;
+    if (useText) {
+      const r = await C.fill(useText, entry.text);
+      if (r.ok) { C.mark(useText, 'jaa-you'); C.flash(useText); }
+      return r.ok ? { ok: true, how: 'text' } : { ok: false, error: r.why || 'Could not fill the cover letter box.' };
+    }
+    if (!fileF) return { ok: false, error: 'No cover letter field on this page. Copy the text from the Cover letter page instead.' };
+    const files = entry.files || [];
+    const accept = String(fileF.el.accept || '').toLowerCase();
+    const okPdf = !accept || /pdf|\*/.test(accept), okDocx = !accept || /docx|word|officedocument|\*/.test(accept);
+    const pdf = files.find(x => /pdf/.test(x.mime)), docx = files.find(x => /word|officedocument/.test(x.mime));
+    const pick = (okPdf && pdf) || (okDocx && docx);
+    if (!pick) return { ok: false, error: 'Make a PDF or DOCX of the letter first (this field accepts ' + (accept || 'files') + ').' };
+    const r = await C.fill(fileF, { name: pick.name, type: pick.mime, dataUrl: pick.dataUrl });
+    if (r.ok) { C.mark(fileF, 'jaa-you'); C.flash(fileF); }
+    return r.ok ? { ok: true, how: 'file', name: pick.name } : { ok: false, error: r.why || 'Could not attach.' };
+  }
+  JAA.coverFill = coverFill;
+
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!msg || !msg.type) return false;
+    if (msg.type === 'cover:fill') {
+      if (!frameHasForm() || !coverFields().length) return false;
+      if (location.protocol === 'chrome-extension:' && !msg.practice) return false;
+      coverFill(msg.entryId, msg.mode).then(sendResponse);
+      return true;
+    }
     if (msg.type === 'tailor:attach') {
       if (!frameHasForm()) return false;
       if (location.protocol === 'chrome-extension:' && !msg.practice) return false; // only the background's relay
@@ -300,10 +345,14 @@
     if (a.generic || a.stub) return;
     // Workday and LinkedIn open their forms later (wizard pages / Easy Apply modal): keep looking
     const patient = a.name === 'Workday' || /LinkedIn/.test(a.name);
-    let tries = 0, warmed = false;
+    let tries = 0, warmed = false, statusSent = false;
     const tick = () => {
       if (frameHasForm()) {
         JAA.ui.showButton(true);
+        send({ type: 'page:status', kind: 'application', site: a.name });
+        if (settings.panelAuto === 'auto' && window.top === window && JAA.chat && !JAA.ui.isOpen() && !sessionStorage.getItem('jaa-auto-opened')) {
+          sessionStorage.setItem('jaa-auto-opened', '1'); JAA.chat.openPanel();
+        }
         if (!warmed && settings.useLLM && settings.warmUp !== false) { warmed = true; send({ type: 'ollama:warm' }); } // load the model before the user clicks Fill
         if (JAA.steps) JAA.steps.start();
         // SPA frameworks (Remix/React hydration on Greenhouse, Ashby) can wipe nodes they
@@ -311,6 +360,7 @@
         setInterval(() => { if (!document.getElementById('jaa-host') && frameHasForm()) JAA.ui.showButton(true); }, 2000);
         return;
       }
+      if (!statusSent && window.top === window && (statusSent = true)) send({ type: 'page:status', kind: JAA.match && JAA.match.isPosting() ? 'posting' : 'site', site: a.name });
       if (patient || ++tries < 20) setTimeout(tick, patient ? 2500 : 1500);
     };
     tick();
