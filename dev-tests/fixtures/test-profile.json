@@ -1,0 +1,90 @@
+{
+  "_note": "Test fixture: a made-up person used by the Playwright tests. Not real data.",
+  "profile": {
+    "firstName": "Alex",
+    "lastName": "Morgan",
+    "preferredName": "",
+    "pronouns": "",
+    "email": "alex.morgan@example.com",
+    "phone": "",
+    "city": "",
+    "state": "",
+    "country": "",
+    "zip": "",
+    "location": "",
+    "linkedin": "",
+    "github": "",
+    "portfolio": "",
+    "website": "",
+    "workAuthorizedUS": "Yes",
+    "needsSponsorship": "No",
+    "citizenship": "U.S. Citizen",
+    "over18": "Yes",
+    "currentEmployer": "Northwind",
+    "currentTitle": "",
+    "currentStartDate": "2021-06",
+    "yearsExperience": "",
+    "education": {
+      "school": "State University",
+      "degree": "Bachelor's",
+      "field": "Computer Science / Software Engineering",
+      "location": "Springfield, IL",
+      "startYear": "2003",
+      "endYear": "2007"
+    },
+    "eeo": {
+      "gender": "Male",
+      "transgender": "No",
+      "sexualOrientation": "I don't wish to answer",
+      "disability": "No",
+      "veteran": "No military service",
+      "ethnicity": "Decline to self-identify",
+      "hispanicLatino": ""
+    },
+    "availability": "ASAP",
+    "noticePeriod": "",
+    "salaryExpectation": "",
+    "willingToRelocate": "",
+    "howDidYouHear": "",
+    "signature": "Alex Morgan",
+    "summary": ""
+  },
+  "answerBank": [
+    {
+      "q": "Are you legally authorized to work in the United States?",
+      "a": "Yes"
+    },
+    {
+      "q": "Will you now or in the future require sponsorship for employment visa status (e.g. H-1B)?",
+      "a": "No"
+    },
+    {
+      "q": "Are you a U.S. citizen?",
+      "a": "Yes"
+    },
+    {
+      "q": "When can you start?",
+      "a": "ASAP"
+    },
+    {
+      "q": "Who is your current employer?",
+      "a": "Northwind (since June 2021)"
+    },
+    {
+      "q": "What is your highest level of education?",
+      "a": "Bachelor's degree in Computer Science / Software Engineering, State University, Springfield, IL (2003-2007)"
+    },
+    {
+      "q": "Please type your full name as your electronic signature",
+      "a": "Alex Morgan"
+    }
+  ],
+  "settings": {
+    "ollamaUrl": "http://localhost:11434",
+    "model": "qwen2.5:3b",
+    "useLLM": true,
+    "overwriteExisting": false,
+    "showFloatingButton": true,
+    "llmTimeoutSec": 120
+  }
+}

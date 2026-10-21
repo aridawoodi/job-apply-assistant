@@ -1,0 +1,22 @@
+:root{--brand:#4f46e5;--brand2:#7c3aed}
+body{width:320px;margin:0;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#0f172a;background:#fff}
+header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff}
+header img{border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+header .tt{flex:1;display:flex;flex-direction:column}header strong{font-size:14px}header .muted{color:#e0e7ff;font-size:11px}
+.icon{width:32px;height:32px;border:0;border-radius:9px;background:rgba(255,255,255,.18);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;margin:0}
+.icon:hover{background:rgba(255,255,255,.3)}
+.site{padding:10px 14px 2px;display:flex;flex-direction:column;gap:6px}
+.tag{align-self:flex-start;background:#eef2ff;color:#3730a3;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700}
+.note{color:#475569;font-size:12px}
+button.primary,button.secondary{display:block;width:calc(100% - 28px);margin:8px 14px 0;border:0;border-radius:12px;padding:11px;font:700 14px/1 inherit;cursor:pointer}
+.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 6px 16px rgba(79,70,229,.3)}.primary[disabled]{opacity:.6;cursor:progress}
+.secondary{background:#eef2ff;color:#3730a3}
+#result{margin:8px 14px 0;font-size:12px}
+.pill{display:inline-block;border-radius:999px;padding:1px 8px;margin:2px 2px 2px 0;font-weight:600}
+.ok{background:#dcfce7;color:#166534}.ai{background:#dbeafe;color:#1e40af}.todo{background:#fef9c3;color:#854d0e}
+.status{display:flex;align-items:flex-start;gap:7px;margin:10px 14px 0;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px}
+.dotx{flex:none;width:8px;height:8px;border-radius:50%;background:#cbd5e1;margin-top:5px}.dotx.good{background:#22c55e}.dotx.bad{background:#ef4444}
+.muted{color:#64748b;font-size:12px}.bad{color:#b91c1c;font-size:12px;white-space:pre-wrap}.good{color:#15803d;font-size:12px}
+footer{display:flex;gap:14px;padding:10px 14px 12px;font-size:12px}a{color:var(--brand);text-decoration:none;font-weight:600}a:hover{text-decoration:underline}
+
+.setup{display:block;margin:8px 0;padding:9px 11px;border-radius:10px;background:#fef9c3;color:#713f12;font-size:12px;font-weight:600;text-decoration:none}.setup:hover{background:#fef08a}

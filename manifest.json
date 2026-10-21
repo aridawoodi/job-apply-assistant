@@ -1,0 +1,92 @@
+{
+  "manifest_version": 3,
+  "name": "Job Apply Assistant",
+  "short_name": "Job Apply",
+  "version": "0.4.0",
+  "description": "Fills job applications and tailors your resume with a free local AI. Private: your data stays on your computer. Never clicks Submit.",
+  "minimum_chrome_version": "110",
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "activeTab",
+    "scripting",
+    "declarativeNetRequestWithHostAccess",
+    "system.memory"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "https://*.greenhouse.io/*",
+    "https://jobs.lever.co/*",
+    "https://jobs.ashbyhq.com/*",
+    "https://*.myworkdayjobs.com/*",
+    "https://*.myworkday.com/*",
+    "https://*.myworkdaysite.com/*",
+    "https://www.linkedin.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Job Apply Assistant",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.greenhouse.io/*",
+        "https://jobs.lever.co/*",
+        "https://jobs.ashbyhq.com/*",
+        "https://*.myworkdayjobs.com/*",
+        "https://*.myworkday.com/*",
+        "https://*.myworkdaysite.com/*"
+      ],
+      "js": [
+        "content/netwatch.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://*.greenhouse.io/*",
+        "https://jobs.lever.co/*",
+        "https://jobs.ashbyhq.com/*",
+        "https://*.myworkdayjobs.com/*",
+        "https://*.myworkday.com/*",
+        "https://*.myworkdaysite.com/*",
+        "https://www.linkedin.com/*"
+      ],
+      "js": [
+        "lib/defaults.js",
+        "content/core.js",
+        "content/sites.js",
+        "content/ui.js",
+        "content/learn.js",
+        "content/chat.js",
+        "content/steps.js",
+        "content/track.js",
+        "content/main.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ]
+}

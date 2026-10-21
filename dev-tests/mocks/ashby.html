@@ -1,0 +1,28 @@
+<!doctype html><html><head><title>Product Engineer @ Acme</title></head><body>
+<h1 class="ashby-job-posting-heading">Product Engineer</h1>
+<div class="ashby-application-form-container">
+<form onsubmit="window.__submitted=true;return false;">
+ <div class="_autofillPane"><p>Autofill from resume</p><input type="file" id="autofill-file"></div>
+ <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="_systemfield_name">Name</label><input id="_systemfield_name" name="_systemfield_name" type="text"></div>
+ <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="_systemfield_email">Email</label><input id="_systemfield_email" name="_systemfield_email" type="email"></div>
+ <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="_systemfield_resume">Resume</label><input id="_systemfield_resume" type="file" style="display:none"><button type="button">Upload File</button></div>
+ <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title">Do you now or will you in the future require visa sponsorship?</label>
+   <div class="_yesno"><button class="yes">Yes</button><button class="no">No</button></div><input type="checkbox" style="display:none" name="q_spons"></div>
+ <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="loc">Location</label>
+   <input id="loc" role="combobox" aria-autocomplete="list" aria-controls="loc-list" type="text"><div id="loc-list" role="listbox"></div></div>
+ <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="deg">Highest degree</label>
+   <input id="deg" role="combobox" aria-autocomplete="list" aria-controls="deg-list" type="text"><div id="deg-list" role="listbox"></div></div>
+ <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="why">What excites you about this role?</label><textarea id="why"></textarea></div>
+ <button type="submit">Submit Application</button>
+</form></div>
+<script>
+ // tiny combobox: open on ArrowDown, filter on input, select on click
+ function combo(id, opts){ const inp=document.getElementById(id), list=document.getElementById(id+'-list');
+   const render=f=>{ list.innerHTML=''; opts.filter(o=>o.toLowerCase().includes(f.toLowerCase())).forEach(o=>{const d=document.createElement('div');d.setAttribute('role','option');d.textContent=o;d.onclick=()=>{inp.value=o;inp.dataset.selected=o;list.innerHTML='';};list.appendChild(d);});};
+   inp.addEventListener('keydown',e=>{ if(e.key==='ArrowDown') render(''); });
+   inp.addEventListener('input',()=>render(inp.value)); }
+ combo('loc',[]); // async-like list: empty until typing; nothing in profile anyway
+ combo('deg',["High school","Associate's Degree","Bachelor's Degree","Master's Degree","Doctorate"]);
+ document.querySelectorAll('._yesno button').forEach(b=>b.addEventListener('click',()=>{b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('active'));b.classList.add('active');}));
+</script>
+</body></html>

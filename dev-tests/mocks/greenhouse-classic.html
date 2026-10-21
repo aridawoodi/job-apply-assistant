@@ -1,0 +1,26 @@
+<!doctype html><html><head><title>Job Application for Software Engineer at Acme</title></head><body>
+<div id="app_body"><h1 class="app-title">Software Engineer</h1><span class="company-name">at Acme</span>
+<form id="application_form" action="https://boards.greenhouse.io/acme/jobs/1" method="post" onsubmit="window.__submitted=true;return false;">
+ <div class="field"><label for="first_name">First Name <span class="asterisk">*</span></label><input type="text" id="first_name" name="job_application[first_name]"></div>
+ <div class="field"><label for="last_name">Last Name *</label><input type="text" id="last_name" name="job_application[last_name]"></div>
+ <div class="field"><label for="email">Email *</label><input type="text" id="email" name="job_application[email]"></div>
+ <div class="field"><label for="phone">Phone</label><input type="text" id="phone" name="job_application[phone]"></div>
+ <div class="field"><label>Resume/CV *</label><input type="file" id="resume_file" name="job_application[resume]" style="display:none"><button type="button">Attach</button></div>
+ <div class="field"><label>Cover Letter</label><input type="file" id="cover_letter_file" style="display:none"></div>
+ <div class="field"><label for="q1">LinkedIn Profile</label><input type="text" id="q1" name="job_application[answers_attributes][0][text_value]"></div>
+ <div class="field"><label for="q2">Are you legally authorized to work in the United States? *</label>
+   <select id="q2" name="job_application[answers_attributes][1][boolean_value]"><option value="">--</option><option value="1">Yes</option><option value="0">No</option></select></div>
+ <div class="field"><label for="q3">Will you now or in the future require sponsorship for employment visa status (e.g. H-1B visa status)? *</label>
+   <select id="q3" name="job_application[answers_attributes][2][boolean_value]"><option value="">--</option><option value="1">Yes</option><option value="0">No</option></select></div>
+ <div class="field"><label for="q4">Why do you want to work at Acme? *</label><textarea id="q4" name="job_application[answers_attributes][3][text_value]"></textarea></div>
+ <div class="field"><label for="q5">What is your desired salary?</label><input id="q5" type="text" name="job_application[answers_attributes][4][text_value]"></div>
+ <div class="field"><label for="q6">Have you worked with Microsoft Power Platform?</label><select id="q6" name="x6"><option value="">Please select</option><option>Yes</option><option>No</option></select></div>
+ <div class="field"><label><input type="checkbox" id="q7" name="consent"> I agree to the privacy policy</label></div>
+ <h3>U.S. Equal Employment Opportunity Information</h3>
+ <div class="field"><label for="job_application_gender">Gender</label><select id="job_application_gender" name="job_application[gender]"><option value="">Please select</option><option value="1">Male</option><option value="2">Female</option><option value="3">Decline To Self Identify</option></select></div>
+ <div class="field"><label for="job_application_hispanic_ethnicity">Are you Hispanic/Latino?</label><select id="job_application_hispanic_ethnicity"><option value="">Please select</option><option>Yes</option><option>No</option><option>Decline To Self Identify</option></select></div>
+ <div class="field"><label for="job_application_race">Please identify your race</label><select id="job_application_race"><option value="">Please select</option><option>American Indian or Alaskan Native</option><option>Asian</option><option>Black or African American</option><option>Native Hawaiian or Other Pacific Islander</option><option>White</option><option>Two or More Races</option><option>Decline To Self Identify</option></select></div>
+ <div class="field"><label for="job_application_veteran_status">Veteran Status</label><select id="job_application_veteran_status"><option value="">Please select</option><option>I am not a protected veteran</option><option>I identify as one or more of the classifications of protected veteran</option><option>I don't wish to answer</option></select></div>
+ <div class="field"><label for="job_application_disability_status">Disability Status</label><select id="job_application_disability_status"><option value="">Please select</option><option>Yes, I have a disability (or previously had a disability)</option><option>No, I do not have a disability and have not had one in the past</option><option>I do not want to answer</option></select></div>
+ <input type="submit" id="submit_app" value="Submit Application">
+</form></div></body></html>

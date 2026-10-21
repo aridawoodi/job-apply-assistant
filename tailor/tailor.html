@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tailor my resume · Job Apply Assistant</title>
+<link rel="stylesheet" href="../lib/pages.css"></head>
+<body>
+<div class="top"><img src="../icons/icon48.png" width="30" height="30" alt=""><strong>Tailor my resume</strong><span class="ver" id="ver"></span><span class="sp"></span><a href="../options/options.html#tailoring" target="_blank">Tailoring rules</a>&nbsp;&nbsp;<a href="../options/options.html#library" target="_blank">Saved resumes</a></div>
+<main>
+  <section class="card" id="jobCard">
+    <h2 id="jobTitle">Loading…</h2>
+    <div class="muted" id="jobMeta"></div>
+    <details style="margin-top:8px"><summary class="muted">Job description used (<span id="jdLen">0</span> characters): check or paste it if it's missing</summary>
+      <textarea id="jd" rows="8" style="margin-top:6px"></textarea></details>
+  </section>
+
+  <section class="card" id="masterCard">
+    <h3 style="margin-top:0">Master resume</h3>
+    <div id="masterInfo" class="muted">Loading…</div>
+    <h3>Your tailoring rules</h3>
+    <ul id="rules" class="muted"></ul>
+    <div class="row"><input type="text" id="extraRule" class="grow" placeholder="Extra rule for this job only (optional), e.g. Lead with the data pipeline work"></div>
+    <p class="row" style="margin-top:14px"><button class="primary big" id="suggest" type="button">✨ Suggest changes for this job</button><span id="sugStatus" class="muted"></span></p>
+    <p class="muted small">Only rewording, reordering and emphasis using facts already in your resume. Nothing is invented: every suggestion is checked against your master resume, and anything that adds a new employer, title, date, number or tool is blocked.</p>
+  </section>
+
+  <section class="card hidden" id="changesCard">
+    <div class="row"><h2 class="grow" style="margin:0">Suggested changes</h2><button class="ghost" id="allOn" type="button">Accept all valid</button><button class="ghost" id="allOff" type="button">Reject all</button></div>
+    <div id="changes"></div>
+    <div class="row" style="margin-top:12px"><label class="row small">Format:
+      <select id="format" style="width:auto"><option value="both">PDF + Word</option><option value="pdf">PDF</option><option value="docx">Word (.docx)</option></select></label>
+      <span class="grow"></span><button class="primary big" id="build" type="button">📄 Create my tailored resume</button></div>
+    <p class="muted small" id="layoutNote"></p>
+  </section>
+
+  <section class="card hidden" id="resultCard">
+    <h2>Your tailored resume</h2>
+    <div id="checks"></div>
+    <div class="files" id="files" style="margin:12px 0"></div>
+    <div class="row"><button class="primary" id="attach" type="button">📎 Attach to the application</button><span id="attachOut" class="muted"></span></div>
+    <p class="muted small">Saved in Settings → Saved resumes, linked to this job in your tracker.</p>
+  </section>
+</main>
+<script src="../lib/defaults.js"></script>
+<script src="../lib/vendor/jszip.min.js"></script>
+<script src="../lib/vendor/pdf.min.js"></script>
+<script src="../lib/vendor/jspdf.umd.min.js"></script>
+<script src="../lib/pageutil.js"></script>
+<script src="../lib/resume.js"></script>
+<script src="../lib/tailor.js"></script>
+<script src="../lib/docx.js"></script>
+<script src="../lib/pdfout.js"></script>
+<script src="tailor.js"></script>
+</body></html>

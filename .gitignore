@@ -1,0 +1,20 @@
+# dependencies and build output
+node_modules/
+dist/
+*.zip
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# private data: never commit real resumes, profiles or screenshots of real applications
+private/
+ari-private/
+*-private/
+dev-tests/screenshots/v4/ari-private/
+dev-tests/screenshots/v4/real/
+dev-tests/screenshots/live-*.png
+*.local.json

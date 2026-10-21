@@ -1,0 +1,26 @@
+<!doctype html><html><head><title>Job Application for Mock Engineer at Mockco</title></head><body>
+<div class="job__title"><h1>Mock Engineer</h1></div>
+<div class="job__description"><p>We build mock things.</p><p>Thank you for your interest in Mockco.</p></div>
+<form id="application-form">
+ <div class="field"><label for="first_name">First Name *</label><input id="first_name" name="first_name" required></div>
+ <div class="field"><label for="last_name">Last Name *</label><input id="last_name" name="last_name" required></div>
+ <div class="field"><label for="email">Email *</label><input id="email" name="email" type="email" required aria-invalid="false"></div>
+ <div class="field"><label for="q1">Why Mockco?</label><textarea id="q1" name="q1"></textarea></div>
+ <div class="field"><label for="q2">Are you legally authorized to work in the United States?</label><select id="q2" name="q2"><option value="">Select...</option><option>Yes</option><option>No</option></select></div>
+ <div id="email-error" class="helper-text--error"></div>
+ <button type="submit" id="submit">Submit application</button>
+</form>
+<script>
+ const form = document.getElementById('application-form');
+ form.addEventListener('submit', async e => {
+   e.preventDefault();
+   window.__submits = (window.__submits || 0) + 1;
+   const r = await fetch(location.pathname, { method: 'POST', body: new FormData(form) });
+   if (r.ok) {
+     document.body.innerHTML = '<div class="confirmation"><h1>Thank you for applying!</h1><p>Your application has been received.</p></div>';
+   } else {
+     document.getElementById('email-error').textContent = 'There was a problem submitting your application. Please check the highlighted fields.';
+     document.getElementById('email').setAttribute('aria-invalid', 'true');
+   }
+ });
+</script></body></html>

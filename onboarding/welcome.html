@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Set up Job Apply Assistant</title>
+<link rel="stylesheet" href="../lib/pages.css"><link rel="stylesheet" href="welcome.css"></head>
+<body>
+<div class="top"><img src="../icons/icon48.png" width="30" height="30" alt=""><strong>Job Apply Assistant</strong><span class="ver" id="ver"></span><span class="sp"></span><a href="../options/options.html" target="_blank">Settings</a></div>
+<main>
+  <div class="steps" id="steps"></div>
+
+  <section class="card step" data-step="welcome">
+    <h1>Welcome 👋</h1>
+    <p>Job Apply Assistant fills job applications for you from your own profile, and writes answers with a free AI that runs <b>on your own computer</b>. Your data never leaves this computer.</p>
+    <p class="muted">Setup takes about 5–10 minutes (most of it is a one-time download). You won't need a terminal or any commands.</p>
+    <div class="status"><span class="dot ok"></span><span>Detected: <b id="osName">your computer</b><span id="ramTxt"></span></span></div>
+    <p style="margin-top:18px"><button class="primary big" data-next>Let's start →</button></p>
+  </section>
+
+  <section class="card step" data-step="ollama">
+    <h2>1 · Install Ollama (the free local AI app)</h2>
+    <p class="muted">Ollama is a free app that runs AI models on your computer. Job Apply Assistant talks to it privately.</p>
+    <div id="ollamaStatus" class="status"><span class="dot wait"></span><span class="txt">Looking for Ollama on this computer…</span></div>
+    <div id="installBox" class="hidden">
+      <p style="margin:16px 0"><a id="dlBtn" class="btn primary big" href="https://ollama.com/download" target="_blank" rel="noopener">⬇ Download Ollama</a> <span class="muted small" id="dlNote"></span></p>
+      <div class="illus" id="illus"></div>
+      <p class="muted small">Keep this page open. It notices automatically when Ollama is running (it checks every 2 seconds).</p>
+    </div>
+    <div id="originBox" class="hidden card" style="background:#fff7ed;border-color:#fed7aa">
+      <h3 style="margin-top:0">Ollama is running but refuses the connection</h3>
+      <p>This is fixed automatically on most computers. Try the automatic fix first:</p>
+      <p><button class="primary" id="fixOrigin" type="button">Try the automatic fix</button> <span id="fixOut" class="muted"></span></p>
+      <details><summary>Still not working? One-time manual fix</summary><div id="manualFix"></div></details>
+    </div>
+    <p class="row" style="margin-top:16px"><button class="secondary" data-back>← Back</button><span class="grow"></span><button class="primary" id="ollamaNext" data-next disabled>Continue →</button></p>
+  </section>
+
+  <section class="card step" data-step="model">
+    <h2>2 · Download an AI model</h2>
+    <p class="muted" id="ramAdvice">Picking the best model for your computer…</p>
+    <div id="modelCards" class="grid"></div>
+    <div id="pullBox" class="hidden" style="margin-top:14px">
+      <div class="row"><b id="pullTitle">Downloading…</b><span class="grow"></span><span id="pullPct" class="muted">0%</span></div>
+      <div class="bar" style="margin:8px 0"><i id="pullBar"></i></div>
+      <div class="row"><span id="pullTxt" class="muted small"></span><span class="grow"></span><button class="ghost" id="pullCancel" type="button">Cancel</button></div>
+    </div>
+    <p id="modelMsg" class="muted"></p>
+    <p class="row" style="margin-top:16px"><button class="secondary" data-back>← Back</button><span class="grow"></span><button class="primary" id="modelNext" data-next disabled>Continue →</button></p>
+  </section>
+
+  <section class="card step" data-step="resume">
+    <h2>3 · Add your resume</h2>
+    <p class="muted">I'll read it and fill in your profile: name, contact details, work history, education and skills. You check everything before it's saved. The file also becomes your <b>master resume</b> for tailoring.</p>
+    <div id="importer"></div>
+    <p class="row" style="margin-top:16px"><button class="secondary" data-back>← Back</button><span class="grow"></span><button class="ghost" id="skipResume" type="button">Skip for now</button><button class="primary" id="resumeNext" data-next disabled>Continue →</button></p>
+  </section>
+
+  <section class="card step" data-step="questions">
+    <h2>4 · A few questions resumes don't answer</h2>
+    <p class="muted">Applications often ask these. Answer once and they're filled for you every time. Skip anything you prefer to answer per application.</p>
+    <div class="chat" id="qa"></div>
+    <p class="row" style="margin-top:16px"><button class="secondary" data-back>← Back</button><span class="grow"></span><button class="primary" id="qNext" data-next>Continue →</button></p>
+  </section>
+
+  <section class="card step" data-step="ready">
+    <h1>You're ready 🎉</h1>
+    <div id="summary"></div>
+    <h3>How to use it</h3>
+    <ol>
+      <li>Open a job application on Greenhouse, Lever, Ashby, Workday or LinkedIn Easy Apply.</li>
+      <li>Click the purple <b>⚡ Fill application</b> button (bottom right), or the toolbar icon.</li>
+      <li>Answer what's left in the chat, review, and press the site's <b>Submit</b> button yourself. The assistant never presses it.</li>
+    </ol>
+    <p class="row"><a class="btn primary big" id="practice" href="../practice/practice.html" target="_blank">Try it on a practice application →</a><a class="btn secondary" href="../options/options.html" target="_blank">Open settings</a></p>
+    <p class="muted small">Tip: in the chat, type <b>tailor my resume for this job</b> to get a version of your resume matched to the posting.</p>
+  </section>
+</main>
+<script src="../lib/defaults.js"></script>
+<script src="../lib/vendor/jszip.min.js"></script>
+<script src="../lib/vendor/pdf.min.js"></script>
+<script src="../lib/pageutil.js"></script>
+<script src="../lib/resume.js"></script>
+<script src="../lib/importer.js"></script>
+<script src="welcome.js"></script>
+</body></html>

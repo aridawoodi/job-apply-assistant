@@ -1,0 +1,19 @@
+<!doctype html><html><head><title>Job Application for Data Engineer at Mockco</title>
+<style>body{font:15px/1.5 -apple-system,Segoe UI,sans-serif;max-width:720px;margin:30px auto;padding:0 20px}.field{margin:12px 0}label{display:block;font-weight:600}input,select,textarea{font:inherit;padding:7px;width:100%;box-sizing:border-box}.progress{height:8px;background:#e5e7eb;border-radius:9px}.progress i{display:block;height:100%;background:#2563eb;border-radius:9px}</style></head><body>
+<div class="job__title"><h1>Data Engineer</h1></div>
+<div id="app"></div>
+<script>
+ const STEPS = [
+  { title: 'Contact', html: `<div class="field"><label for="first_name">First Name</label><input id="first_name"></div><div class="field"><label for="last_name">Last Name</label><input id="last_name"></div><div class="field"><label for="email">Email</label><input id="email" type="email"></div><div class="field"><label for="phone">Phone</label><input id="phone" type="tel"></div>` },
+  { title: 'Questions', html: `<div class="field"><label for="auth">Are you legally authorized to work in the United States?</label><select id="auth"><option value="">Select...</option><option>Yes</option><option>No</option></select></div><div class="field"><label for="yrs">How many years of SQL experience do you have?</label><input id="yrs"></div><div class="field"><label for="why">Why do you want to join Mockco?</label><textarea id="why"></textarea></div>` },
+  { title: 'Voluntary self-identification', html: `<div class="field"><label for="gender">Gender</label><select id="gender"><option value="">Select...</option><option>Male</option><option>Female</option><option>Decline to self-identify</option></select></div><div class="field"><label for="start">When can you start?</label><input id="start"></div>` }
+ ];
+ let i = 0; window.__nextClicks = [];
+ function render() {
+  const s = STEPS[i];
+  document.getElementById('app').innerHTML = `<h2 class="step-title">Step ${i + 1} of ${STEPS.length}: ${s.title}</h2><div class="progress" role="progressbar" aria-valuenow="${i + 1}" aria-valuemin="1" aria-valuemax="${STEPS.length}"><i style="width:${(i + 1) / STEPS.length * 100}%"></i></div><form id="application-form">${s.html}<p>${i > 0 ? '<button type="button" id="back">Back</button> ' : ''}${i < STEPS.length - 1 ? '<button type="button" id="next">Next</button>' : '<button type="submit" id="submit">Submit application</button>'}</p></form>`;
+  const n = document.getElementById('next'); if (n) n.onclick = e => { window.__nextClicks.push(e.isTrusted); i++; render(); };
+  const f = document.getElementById('application-form'); f.onsubmit = e => { e.preventDefault(); document.getElementById('app').innerHTML = '<h2>Thank you for applying!</h2><p>Your application has been submitted.</p>'; };
+ }
+ render();
+</script></body></html>

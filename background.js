@@ -1,0 +1,924 @@
+/* Background service worker: talks to the local Ollama server and stores the
+ * application tracker. All model calls happen here (not in the page).
+ * Ollama rejects requests whose Origin header isn't localhost (chrome-extension:// gets 403).
+ * A declarativeNetRequest rule (installOriginRules) removes the Origin header from THIS
+ * extension's own requests to the local Ollama port, so no OLLAMA_ORIGINS setup is needed. */
+'use strict';
+importScripts('lib/defaults.js', 'lib/tailor.js');
+
+const ORIGINS_HINT =
+  'Ollama refused the request (403). The extension normally fixes this by itself. Make sure Chrome is up to date (version 110 or newer), ' +
+  'then open the extension menu → Setup → "Fix connection" for a one-time fix.';
+
+function trimUrl(u) { return String(u || '').replace(/\/+$/, ''); }
+
+async function fetchWithTimeout(url, opts, timeoutMs) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, Object.assign({}, opts, { signal: ctrl.signal }));
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function explainFetchError(err, base, timeoutSec) {
+  if (err && err.name === 'AbortError') {
+    return `Ollama took longer than ${timeoutSec}s. The first request after starting can be slow while the model loads; try again, or close other apps to free memory.`;
+  }
+  return `Can't reach Ollama at ${base}. Is the Ollama app running? (Check: open ${base} in a tab; it should say "Ollama is running".)`;
+}
+
+async function testConnection(overrides) {
+  const { settings } = await JAA.loadAll();
+  const s = Object.assign({}, settings, overrides || {});
+  const base = trimUrl(s.ollamaUrl);
+  let res;
+  try {
+    res = await fetchWithTimeout(base + '/api/tags', { method: 'GET' }, 8000);
+  } catch (e) {
+    return { ok: false, error: explainFetchError(e, base, 8) };
+  }
+  if (res.status === 403) return { ok: false, error: ORIGINS_HINT };
+  if (!res.ok) return { ok: false, error: `Ollama answered HTTP ${res.status}.` };
+  const data = await res.json().catch(() => ({}));
+  const models = (data.models || []).map(m => m.name);
+  // GET requests from the worker carry no Origin header, so they pass even when Ollama
+  // would block the real (POST) calls. Probe with a cheap POST to catch the 403 early.
+  try {
+    const probe = await fetchWithTimeout(base + '/api/show', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: s.model, name: s.model })
+    }, 8000);
+    if (probe.status === 403) return { ok: false, models, error: ORIGINS_HINT };
+  } catch (e) {
+    return { ok: false, models, error: explainFetchError(e, base, 8) };
+  }
+  const want = s.model.includes(':') ? s.model : s.model + ':latest';
+  const hasModel = models.includes(s.model) || models.includes(want);
+  return {
+    ok: hasModel,
+    models,
+    error: hasModel ? null : `Connected, but model "${s.model}" isn't downloaded. Run: ollama pull ${s.model}`
+  };
+}
+
+const KEEP_ALIVE = '30m';
+const NUM_CTX = 4096;
+const SLOW_MODEL_HINT = ' On an 8 GB Mac, qwen2.5:3b is much faster than bigger or "thinking" models: run `ollama pull qwen2.5:3b` and set it in Options → Local AI.';
+
+function profileFacts(profile, essay) {
+  const facts = JSON.parse(JSON.stringify(profile));
+  const resumeText = String(facts.resumeText || '').trim();
+  delete facts.resumeText;
+  delete facts.writingSamples; delete facts.toneNotes; // style is passed separately, for long answers only
+  delete facts.eeo;            // EEO answers are filled by rules only, never given to the model
+  delete facts.salaryExpectation;
+  // work history etc. from the resume import: compact one-liners (bullets are in resumeText for essays)
+  if (Array.isArray(facts.workHistory)) facts.workHistory = facts.workHistory.slice(0, 8).map(j => `${j.title || ''} at ${j.company || ''}${j.start || j.end ? ` (${j.start || '?'} – ${j.end || '?'})` : ''}`);
+  if (Array.isArray(facts.educationList)) { facts.educationList = facts.educationList.slice(0, 5).map(e => [e.degree, e.field, e.school, e.end].filter(Boolean).join(', ')); delete facts.education; }
+  if (Array.isArray(facts.skills)) facts.skills = facts.skills.slice(0, 40).join(', ');
+  if (Array.isArray(facts.certifications)) facts.certifications = facts.certifications.join('; ');
+  if (Array.isArray(facts.languages)) facts.languages = facts.languages.join(', ');
+  delete facts.resumeMaster;
+  // drop empty fields: smaller prompt = faster on a small machine
+  const prune = o => { for (const k of Object.keys(o)) { if (o[k] && typeof o[k] === 'object') { prune(o[k]); if (!Object.keys(o[k]).length) delete o[k]; } else if (o[k] === '' || o[k] == null) delete o[k]; } return o; };
+  prune(facts);
+  return { facts, resumeText: essay ? resumeText.slice(0, 3000) : '' };
+}
+
+// Only the saved answers relevant to this batch go into the prompt (keeps it small), plus
+// company-specific templates (with {company} filled in) as style examples for long answers.
+function relevantBank(answerBank, questions, essay, company) {
+  const scored = answerBank.filter(x => x && x.q && x.a)
+    .map(x => ({ x, s: Math.max(...questions.map(q => JAA.textSim(q.question, x.q))) }))
+    .filter(o => o.s >= 0.2 || (essay && o.x.companySpecific))
+    .sort((a, b) => b.s - a.s).slice(0, essay ? 6 : 8);
+  return scored.map(({ x }) => {
+    const fillCo = t => String(t).replace(/\{company\}/g, company || 'the company');
+    return x.companySpecific ? { q: fillCo(x.q), a: fillCo(x.a), note: 'earlier answer for another company; adapt, do not copy names' } : { q: x.q, a: x.a };
+  });
+}
+
+function styleBlock(profile) {
+  const tone = String(profile.toneNotes || '').trim().slice(0, 400);
+  const samples = String(profile.writingSamples || '').trim().slice(0, 1500);
+  return (tone ? `Tone notes from the candidate: ${tone}\n` : '') +
+    (samples ? `Writing samples by the candidate (copy the voice and rhythm only, not the content):\n---\n${samples}\n---\n` : '');
+}
+
+function buildPrompt(profile, answerBank, questions, kind, company, extra) {
+  extra = extra || {};
+  const essay = kind === 'essay';
+  const len = JAA.DRAFT_LENGTHS[extra.draftLength] || JAA.DRAFT_LENGTHS.short;
+  const { facts, resumeText } = profileFacts(profile, essay);
+  const today = new Date().toISOString().slice(0, 10);
+  const system =
+    'You fill out job application forms for the candidate described below. ' +
+    'Answer ONLY from the candidate facts, resume text and saved answers. Never invent employers, dates, numbers, ' +
+    'phone numbers, URLs, salary figures, or skills that are not in the facts. ' +
+    'If a question cannot be answered from the facts, use null. ' +
+    'When a question lists options, the answer MUST be copied exactly from the options ' +
+    '(for multi-select checkboxes return an array of option strings). ' +
+    (essay
+      ? `These are open-ended questions: write a first-person draft of ${len} each, grounded in the facts and resume, tailored to the job description, in the candidate's own voice; the candidate will edit it. `
+      : 'For short free-text questions answer in a few words. ') +
+    'Do not think out loud. Reply with JSON only: {"answers": {"<id>": <answer or null>}}.';
+  const user =
+    `Today: ${today}\n` +
+    `Candidate facts (JSON): ${JSON.stringify(facts)}\n` +
+    (resumeText ? `Resume text: ${resumeText}\n` : '') +
+    `Saved answers (relevant): ${JSON.stringify(relevantBank(answerBank, questions, essay, company))}\n` +
+    (company ? `Company being applied to: ${company}\n` : '') +
+    (essay && extra.jobTitle ? `Job title: ${extra.jobTitle}\n` : '') +
+    (essay && extra.jobDescription ? `Job description (excerpt): ${String(extra.jobDescription).slice(0, 2000)}\n` : '') +
+    (essay ? styleBlock(profile) : '') +
+    `Questions (JSON): ${JSON.stringify(questions)}\n` +
+    'Return {"answers": {...}} with one key per question id.';
+  return { system, user };
+}
+
+// Reasoning models (qwen3.x, deepseek-r1, …) may still emit <think>…</think>; drop it.
+function stripThink(text) {
+  return String(text || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^[\s\S]*?<\/think>/i, '').replace(/<think>[\s\S]*$/i, '').trim();
+}
+
+function parseModelJson(text) {
+  if (!text) return null;
+  text = stripThink(text).replace(/^```(?:json)?\s*|\s*```$/g, '');
+  try { return JSON.parse(text); } catch (_) { /* fall through */ }
+  const m = String(text).match(/\{[\s\S]*\}/);
+  if (m) { try { return JSON.parse(m[0]); } catch (_) { /* ignore */ } }
+  return null;
+}
+
+// Some Ollama builds / non-reasoning models reject the "think" field; remember and retry without it.
+let thinkUnsupported = false;
+async function postOllama(base, path, body, timeoutMs) {
+  const send = b => fetchWithTimeout(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) }, timeoutMs);
+  const b1 = Object.assign({}, body);
+  if (thinkUnsupported) delete b1.think;
+  let res = await send(b1);
+  if (res.status === 400 && 'think' in b1) {
+    const t = await res.clone().text().catch(() => '');
+    if (/think/i.test(t)) { thinkUnsupported = true; delete b1.think; res = await send(b1); }
+  }
+  return res;
+}
+
+/* Streaming: Ollama sends NDJSON lines {message:{content}, done}. Timeouts: the whole
+ * request must finish within totalMs; once tokens flow, a stall of idleMs also aborts. */
+async function streamOllama(base, path, body, { totalMs, idleMs, onDelta }) {
+  const ctrl = new AbortController();
+  let timedOut = false;
+  const total = setTimeout(() => { timedOut = true; ctrl.abort(); }, totalMs);
+  let idle = null;
+  const bump = () => { if (!idleMs) return; clearTimeout(idle); idle = setTimeout(() => { timedOut = true; ctrl.abort(); }, idleMs); };
+  const sendOnce = b => fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b), signal: ctrl.signal });
+  const b1 = Object.assign({}, body, { stream: true });
+  if (thinkUnsupported) delete b1.think;
+  let text = '';
+  try {
+    let res = await sendOnce(b1);
+    if (res.status === 400 && 'think' in b1) {
+      const tt = await res.clone().text().catch(() => '');
+      if (/think/i.test(tt)) { thinkUnsupported = true; delete b1.think; res = await sendOnce(b1); }
+    }
+    if (!res.ok) return { ok: false, status: res.status, error: await res.text().catch(() => ''), text };
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      bump();
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+        if (!line) continue;
+        let o; try { o = JSON.parse(line); } catch (_) { continue; }
+        if (o.error) return { ok: false, status: 500, error: o.error, text };
+        const d = (o.message && o.message.content) || o.response || '';
+        if (d) { text += d; if (onDelta) onDelta(d, text); }
+        if (o.done) { reader.cancel().catch(() => {}); return { ok: true, text }; }
+      }
+    }
+    return { ok: true, text };
+  } catch (e) {
+    if (timedOut || (e && e.name === 'AbortError')) return { ok: false, timeout: true, text };
+    return { ok: false, network: true, error: String(e && e.message || e), text };
+  } finally { clearTimeout(total); clearTimeout(idle); }
+}
+
+// Pull completed "id": value pairs out of a JSON reply that was cut off by a timeout.
+function salvageAnswers(text) {
+  const out = {};
+  const t = stripThink(text);
+  const re = /"(f\d+)"\s*:\s*("(?:[^"\\]|\\.)*"|null|true|false|-?\d+(?:\.\d+)?|\[(?:[^\]"]|"(?:[^"\\]|\\.)*")*\])/g;
+  let m;
+  while ((m = re.exec(t))) { try { out[m[1]] = JSON.parse(m[2]); } catch (_) { /* ignore */ } }
+  return out;
+}
+
+// Display text while streaming: drop <think> blocks (complete or still open).
+function visibleText(text) {
+  return String(text || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<think>[\s\S]*$/i, '').replace(/^\s+/, '');
+}
+
+/* Session answer cache for short questions (cleared when profile/answers/settings change). */
+const cacheKey = (model, q) => model + '|' + JAA.normText(q.question) + '|' + (q.options || []).map(JAA.normText).join('/') + '|' + (q.type || '');
+async function cacheGet() { try { return (await chrome.storage.session.get('answerCache')).answerCache || {}; } catch (_) { return {}; } }
+async function cachePut(entries) {
+  try { const c = await cacheGet(); Object.assign(c, entries); const ks = Object.keys(c); if (ks.length > 400) ks.slice(0, ks.length - 400).forEach(k => delete c[k]); await chrome.storage.session.set({ answerCache: c }); } catch (_) { /* ignore */ }
+}
+
+/* Warm-up: load the model into memory before the real request (first load on 8 GB can take a while). */
+let warm = { model: '', at: 0, promise: null };
+async function warmUp(force) {
+  const { settings } = await JAA.loadAll();
+  if (!settings.useLLM || settings.warmUp === false) return { ok: true, skipped: true };
+  if (warm.promise && warm.model === settings.model) return warm.promise;
+  if (!force && warm.model === settings.model && Date.now() - warm.at < 20 * 60 * 1000) return { ok: true, cached: true };
+  const base = trimUrl(settings.ollamaUrl);
+  warm.model = settings.model;
+  warm.promise = (async () => {
+    const t0 = Date.now();
+    try {
+      // /api/generate with no prompt just loads the model and keeps it resident
+      const res = await postOllama(base, '/api/generate', { model: settings.model, keep_alive: KEEP_ALIVE, think: false, stream: false }, Math.max(60, settings.llmFirstTimeoutSec || 180) * 1000);
+      if (res.status === 403) return { ok: false, error: ORIGINS_HINT };
+      if (res.status === 404) return { ok: false, error: `Model "${settings.model}" not found. Run: ollama pull ${settings.model}` };
+      if (!res.ok) return { ok: false, error: `Ollama warm-up HTTP ${res.status}` };
+      warm.at = Date.now();
+      return { ok: true, ms: Date.now() - t0 };
+    } catch (e) {
+      return { ok: false, error: explainFetchError(e, base, settings.llmFirstTimeoutSec || 180) };
+    } finally { warm.promise = null; }
+  })();
+  return warm.promise;
+}
+
+async function answerQuestions(questions, opts) {
+  opts = opts || {};
+  const { profile, answerBank, settings } = await JAA.loadAll();
+  if (!settings.useLLM) return { ok: false, error: 'Local AI is turned off in Options.' };
+  if (!questions || !questions.length) return { ok: true, answers: {} };
+  const kind = opts.kind === 'essay' ? 'essay' : 'short';
+  // short factual answers are cached for this browser session: the same question on the
+  // next application (or a re-fill) is answered instantly
+  const cached = {};
+  if (kind === 'short') {
+    const c = await cacheGet();
+    for (const q of questions) { const v = c[cacheKey(settings.model, q)]; if (v != null) cached[q.id] = v; }
+    questions = questions.filter(q => !(q.id in cached));
+    if (!questions.length) return { ok: true, answers: cached, cached: Object.keys(cached).length };
+  }
+  if (warm.promise) await warm.promise; // don't queue behind a model load twice
+  const base = trimUrl(settings.ollamaUrl);
+  const timeoutSec = Number(opts.timeoutSec) || settings.llmTimeoutSec || 90;
+  const { system, user } = buildPrompt(profile, answerBank, questions, kind, opts.company, { jobTitle: opts.jobTitle, jobDescription: opts.jobDescription, draftLength: settings.draftLength });
+  const perQ = kind === 'essay' ? ({ short: 220, medium: 320, long: 480 }[settings.draftLength] || 220) : 60;
+  const body = {
+    model: settings.model,
+    think: false,
+    format: 'json',
+    keep_alive: KEEP_ALIVE,
+    options: { temperature: kind === 'essay' ? 0.4 : 0.1, num_ctx: NUM_CTX, num_predict: Math.min(1536, 80 + perQ * questions.length) },
+    messages: [{ role: 'system', content: system }, { role: 'user', content: user }]
+  };
+  const t0 = Date.now();
+  const r = await streamOllama(base, '/api/chat', body, { totalMs: timeoutSec * 1000 });
+  if (r.status === 403) return { ok: false, fatal: true, error: ORIGINS_HINT };
+  if (r.status === 404) return { ok: false, fatal: true, error: `Model "${settings.model}" not found. Run: ollama pull ${settings.model}` };
+  if (r.network) return { ok: false, fatal: true, error: explainFetchError(r, base, timeoutSec) };
+  const hint = !/qwen2\.5:3b/.test(settings.model) ? SLOW_MODEL_HINT : '';
+  if (r.timeout) {
+    // keep whatever answers were complete before the timeout
+    const part = salvageAnswers(r.text);
+    const n = Object.keys(part).length;
+    const err = explainFetchError({ name: 'AbortError' }, base, timeoutSec) + hint;
+    if (n) return { ok: true, partial: true, timeout: true, answers: Object.assign(part, cached), error: err };
+    return { ok: false, timeout: true, error: err, answers: cached };
+  }
+  if (!r.ok) return { ok: false, error: `Ollama error HTTP ${r.status}: ${String(r.error || '').slice(0, 200)}` };
+  warm.at = Date.now(); warm.model = settings.model;
+  const parsed = parseModelJson(r.text);
+  if (!parsed) return { ok: false, error: 'The model reply was not valid JSON. Try again, or use qwen2.5:3b.' };
+  const answers = parsed.answers && typeof parsed.answers === 'object' ? parsed.answers : parsed;
+  if (kind === 'short') {
+    const put = {};
+    for (const q of questions) if (answers[q.id] != null && answers[q.id] !== '') put[cacheKey(settings.model, q)] = answers[q.id];
+    cachePut(put);
+  }
+  return { ok: true, answers: Object.assign({}, answers, cached), ms: Date.now() - t0 };
+}
+
+/* ---------------- chat assistant + single-answer drafts (streamed over a port) ---------------- */
+function chatPrompt(profile, ctx) {
+  const { facts, resumeText } = profileFacts(profile, true);
+  const system =
+    'You are Job Apply Assistant, a helper running locally inside the candidate\'s browser while they fill out a job application. ' +
+    'You can see the job, its description, the candidate\'s profile and resume, and the current form fields. ' +
+    'Be brief and practical (1-4 sentences) unless you are writing an answer for a field. Never invent facts that are not in the profile or resume. ' +
+    'You never submit anything and never press Next/Continue/Submit; the candidate does that himself. ' +
+    'Do not ask about, store or mention personal details unrelated to the job (pets, family, religion, health). ' +
+    'If the candidate asks you to fill, change or rewrite a form field, reply with one short sentence, then on its own last line write exactly: ' +
+    'ACTION {"action":"set_field","field":"<field id from the list>","value":"<the complete new value>"} . ' +
+    'Use only field ids from the list; for fields with options the value must be one of the options. Only one ACTION per reply. ' +
+    'Do not think out loud.';
+  const fieldsJson = JSON.stringify((ctx.fields || []).slice(0, 40));
+  const user =
+    `Job: ${ctx.title || '?'} at ${ctx.company || '?'} (${ctx.site || ''})\n` +
+    (ctx.step ? `Application step: ${ctx.step}\n` : '') +
+    (ctx.jobDescription ? `Job description (excerpt): ${String(ctx.jobDescription).slice(0, 1800)}\n` : '') +
+    `Candidate facts (JSON): ${JSON.stringify(facts)}\n` +
+    (resumeText ? `Resume text: ${resumeText.slice(0, 2000)}\n` : '') +
+    styleBlock(profile) +
+    `Form fields (JSON; status ok=filled from profile, saved=from saved answers, ai=AI draft, you=answered by the candidate, todo=still empty): ${fieldsJson}\n`;
+  const history = (ctx.history || []).slice(-8).map(m => ({ role: m.role === 'me' ? 'user' : 'assistant', content: String(m.text || '').slice(0, 1200) }));
+  return [{ role: 'system', content: system }, { role: 'user', content: user + '\n(Context above. The conversation follows.)' }, { role: 'assistant', content: 'Got it. How can I help with this application?' }]
+    .concat(history).concat([{ role: 'user', content: String(ctx.message || '').slice(0, 2000) }]);
+}
+
+function draftPrompt(profile, ctx, settings) {
+  const { facts, resumeText } = profileFacts(profile, true);
+  const len = JAA.DRAFT_LENGTHS[settings.draftLength] || JAA.DRAFT_LENGTHS.short;
+  const system =
+    `Write the candidate's answer to one job application question, in first person, in their own voice. Length: ${len}. ` +
+    'Ground every claim in the profile facts and resume text; never invent employers, numbers or skills. ' +
+    'Tailor it to the job description. Match the tone notes and the voice of the writing samples (do not copy their content). ' +
+    'Output only the answer text: no preamble, no title, no quotes, no markdown. Do not think out loud.';
+  const user =
+    `Job: ${ctx.title || '?'} at ${ctx.company || '?'}\n` +
+    (ctx.jobDescription ? `Job description (excerpt): ${String(ctx.jobDescription).slice(0, 2000)}\n` : '') +
+    `Candidate facts (JSON): ${JSON.stringify(facts)}\n` +
+    (resumeText ? `Resume text: ${resumeText.slice(0, 2500)}\n` : '') +
+    styleBlock(profile) +
+    (ctx.examples && ctx.examples.length ? `Earlier answers to similar questions (adapt, don't copy company names): ${JSON.stringify(ctx.examples.slice(0, 3))}\n` : '') +
+    `Question: ${ctx.question}\n` +
+    (ctx.previous ? `Previous draft (write a clearly different, better version): ${String(ctx.previous).slice(0, 1500)}\n` : '') +
+    (ctx.instruction ? `Instruction from the candidate: ${String(ctx.instruction).slice(0, 400)}\n` : '');
+  return [{ role: 'system', content: system }, { role: 'user', content: user }];
+}
+
+function splitAction(text) {
+  const t = stripThink(text);
+  const i = t.search(/\n?\s*ACTION\s*:?\s*\{/);
+  if (i < 0) return { reply: t.trim(), action: null };
+  const reply = t.slice(0, i).trim();
+  const m = t.slice(i).match(/\{[\s\S]*\}/);
+  let action = null;
+  if (m) { try { action = JSON.parse(m[0]); } catch (_) { const k = m[0].match(/\{[^{}]*\}/); if (k) { try { action = JSON.parse(k[0]); } catch (__) { /* ignore */ } } } }
+  return { reply, action };
+}
+
+chrome.runtime.onConnect.addListener(port => {
+  if (port.name !== 'jaa-stream') return;
+  let closed = false;
+  port.onDisconnect.addListener(() => { closed = true; });
+  const post = m => { if (!closed) try { port.postMessage(m); } catch (_) { /* gone */ } };
+  port.onMessage.addListener(async msg => {
+    const { profile, answerBank, settings } = await JAA.loadAll();
+    if (!settings.useLLM) return post({ type: 'error', error: 'Local AI is turned off in Options.' });
+    if (warm.promise) { post({ type: 'status', text: 'Loading local model…' }); await warm.promise; }
+    const base = trimUrl(settings.ollamaUrl);
+    const draft = msg.mode === 'draft';
+    if (draft && !msg.examples) {
+      msg.examples = answerBank.filter(x => x && x.q && x.a && JAA.textSim(x.q, msg.question) >= 0.35).slice(0, 3)
+        .map(x => ({ q: String(x.q).replace(/\{company\}/g, msg.company || 'the company'), a: String(x.a).replace(/\{company\}/g, msg.company || 'the company') }));
+    }
+    const messages = draft ? draftPrompt(profile, msg, settings) : chatPrompt(profile, msg);
+    const predict = draft ? ({ short: 260, medium: 380, long: 560 }[settings.draftLength] || 260) : 700;
+    const timeoutSec = (Date.now() - warm.at < 20 * 60 * 1000) ? (settings.llmTimeoutSec || 90) : (settings.llmFirstTimeoutSec || 180);
+    const r = await streamOllama(base, '/api/chat', {
+      model: settings.model, think: false, keep_alive: KEEP_ALIVE,
+      options: { temperature: draft ? 0.6 : 0.3, num_ctx: NUM_CTX, num_predict: predict },
+      messages
+    }, { totalMs: Math.max(timeoutSec, 60) * 1000 * 2, idleMs: timeoutSec * 1000, onDelta: (d, all) => post({ type: 'delta', text: visibleText(all).replace(/\n?\s*ACTION\s*:?[\s\S]*$/, '') }) });
+    if (r.status === 403) return post({ type: 'error', error: ORIGINS_HINT });
+    if (r.status === 404) return post({ type: 'error', error: `Model "${settings.model}" not found. Run: ollama pull ${settings.model}` });
+    if (r.network) return post({ type: 'error', error: explainFetchError(r, base, timeoutSec) });
+    if (!r.ok && !r.timeout) return post({ type: 'error', error: `Ollama error HTTP ${r.status}: ${String(r.error || '').slice(0, 200)}` });
+    warm.at = Date.now(); warm.model = settings.model;
+    if (draft) {
+      const txt = stripThink(r.text).replace(/^["“]|["”]$/g, '').trim();
+      return post({ type: 'done', text: txt, timeout: !!r.timeout, error: r.timeout ? 'The model stopped before finishing (timeout).' + SLOW_MODEL_HINT : '' });
+    }
+    const { reply, action } = splitAction(r.text);
+    post({ type: 'done', text: reply, action, timeout: !!r.timeout, error: r.timeout ? 'The model took too long and was cut off.' + SLOW_MODEL_HINT : '' });
+  });
+});
+
+/* ---------------- answer bank learning ---------------- */
+let bankLock = Promise.resolve();
+function learnAnswers(entries, force) {
+  const run = bankLock.then(async () => {
+    const { answerBank = [], settings = {} } = await chrome.storage.local.get(['answerBank', 'settings']);
+    if (settings.rememberAnswers === false && !force) return { ok: false, disabled: true, added: 0, updated: 0 };
+    const clean = (entries || []).filter(e => e && e.q && !JAA.NEVER_LEARN.test(JAA.normText(e.q)) && String(e.a || '').length <= 4000);
+    const r = JAA.mergeIntoBank(answerBank, clean);
+    await chrome.storage.local.set({ answerBank: r.bank });
+    return { ok: true, added: r.added, updated: r.updated };
+  });
+  bankLock = run.catch(() => {});
+  return run;
+}
+
+/* ---------------- tracker ---------------- */
+const TRACKER_VERSION = 2;
+const PENDING_TTL_MS = 30 * 60 * 1000; // a submit is "pending" for 30 min
+
+const normUrl = u => String(u || '').split('#')[0].split('?')[0].replace(/\/+$/, '');
+
+// v1 rows: {company,title,url,site,date,firstFilled,status,filled,ai,todo}
+// v2 adds: key, submittedAt, confirmedAt, errorAt, lastError, history[]
+function migrateRow(a) {
+  const row = Object.assign({ status: JAA.STATUS.FILLED, submittedAt: '', confirmedAt: '', errorAt: '', lastError: '', history: [] }, a);
+  if (!row.key) row.key = JAA.jobKey(row.formUrl || row.url);
+  if (!row.firstFilled && row.date && row.status === JAA.STATUS.FILLED) row.firstFilled = row.date;
+  if (!Array.isArray(row.history)) row.history = [];
+  return row;
+}
+
+let trackerLock = Promise.resolve();
+// Serialise read-modify-write of the tracker so near-simultaneous events don't clobber each other.
+function withTracker(fn) {
+  const run = trackerLock.then(async () => {
+    const st = await chrome.storage.local.get(['applications', 'trackerVersion', 'pendingSubmissions']);
+    let apps = (st.applications || []).map(migrateRow);
+    if ((st.trackerVersion || 1) < TRACKER_VERSION) {
+      // merge v1 duplicates that now share a key (e.g. /jobs/1 and /jobs/1/apply)
+      const seen = new Map();
+      apps = apps.filter(r => {
+        const prev = seen.get(r.key);
+        if (!prev) { seen.set(r.key, r); return true; }
+        Object.keys(r).forEach(k => { if (prev[k] === undefined || prev[k] === '') prev[k] = r[k]; });
+        return false;
+      });
+    }
+    const pending = st.pendingSubmissions || {};
+    for (const k of Object.keys(pending)) if (Date.now() - pending[k].at > PENDING_TTL_MS) delete pending[k];
+    const out = await fn(apps, pending);
+    await chrome.storage.local.set({ applications: apps, pendingSubmissions: pending, trackerVersion: TRACKER_VERSION });
+    return out;
+  });
+  trackerLock = run.catch(() => {});
+  return run;
+}
+
+function findRow(apps, entry) {
+  const key = entry.key || JAA.jobKey(entry.formUrl || entry.url);
+  let i = apps.findIndex(a => a.key === key);
+  if (i < 0 && entry.url) i = apps.findIndex(a => normUrl(a.url) === normUrl(entry.url));
+  return { i, key };
+}
+
+function upsert(apps, entry) {
+  const { i, key } = findRow(apps, entry);
+  const now = new Date().toISOString();
+  const clean = {};
+  for (const k of ['company', 'title', 'url', 'formUrl', 'site']) if (entry[k]) clean[k] = entry[k];
+  if (i >= 0) {
+    // keep a good company/title we already had (confirmation pages often have generic titles)
+    if (entry.weakInfo) {
+      for (const k of ['title', 'company', 'url', 'formUrl']) if (apps[i][k]) delete clean[k];
+    }
+    Object.assign(apps[i], clean, { key, date: now });
+    return apps[i];
+  }
+  const row = migrateRow(Object.assign({ status: JAA.STATUS.FILLED, firstFilled: '' }, clean, { key, date: now }));
+  apps.unshift(row);
+  return row;
+}
+
+async function logApplication(entry) {
+  return withTracker(apps => {
+    const isNew = findRow(apps, entry).i < 0;
+    const row = upsert(apps, entry);
+    Object.assign(row, { filled: entry.filled, ai: entry.ai, todo: entry.todo });
+    if (isNew || !row.firstFilled) row.firstFilled = row.date;
+    return { ok: true, count: apps.length };
+  });
+}
+
+const BADGE = {
+  [JAA.STATUS.SUBMITTED]: ['…', '#d97706'],
+  [JAA.STATUS.APPLIED]: ['✓', '#16a34a'],
+  [JAA.STATUS.ERROR]: ['!', '#dc2626']
+};
+async function setBadge(tabId, status) {
+  if (tabId == null || tabId < 0) return;
+  const { settings } = await JAA.loadAll();
+  if (!settings.showBadge) return;
+  const b = BADGE[status];
+  try {
+    await chrome.action.setBadgeText({ tabId, text: b ? b[0] : '' });
+    if (b) await chrome.action.setBadgeBackgroundColor({ tabId, color: b[1] });
+    await chrome.action.setTitle({ tabId, title: 'Job Apply Assistant' + (b ? ' — ' + status : '') });
+  } catch (_) { /* tab may be gone */ }
+}
+
+// event: 'submitted' | 'confirmed' | 'error'
+async function trackerEvent(msg, sender) {
+  const { settings } = await JAA.loadAll();
+  if (!settings.trackSubmissions) return { ok: false, disabled: true };
+  const tabId = sender && sender.tab ? sender.tab.id : null;
+  const res = await withTracker((apps, pending) => {
+    const entry = Object.assign({}, msg.entry);
+    // a confirmation page may only know the tab: fall back to that tab's pending submit
+    if (msg.event !== 'submitted' && !findRowExists(apps, entry)) {
+      const p = Object.values(pending).find(x => x.tabId === tabId);
+      if (p) { entry.key = p.key; entry.weakInfo = true; }
+    }
+    const row = upsert(apps, entry);
+    const now = new Date().toISOString();
+    const before = row.status;
+    const manual = JAA.MANUAL_STATUSES.includes(row.status);
+    const log = (what, detail) => { row.history.push({ at: now, event: what, detail: detail || '' }); if (row.history.length > 20) row.history.shift(); };
+    if (msg.event === 'submitted') {
+      row.submittedAt = now;
+      row.lastError = '';
+      if (!manual && row.status !== JAA.STATUS.APPLIED) row.status = JAA.STATUS.SUBMITTED;
+      pending[row.key] = { key: row.key, tabId, at: Date.now(), url: entry.url };
+      log('submitted', msg.detail);
+    } else if (msg.event === 'confirmed') {
+      row.confirmedAt = now;
+      if (!row.submittedAt) row.submittedAt = now;
+      row.lastError = '';
+      if (!manual) row.status = JAA.STATUS.APPLIED;
+      delete pending[row.key];
+      log('confirmed', msg.detail);
+    } else if (msg.event === 'error') {
+      row.errorAt = now;
+      row.lastError = String(msg.detail || 'Validation error after submit').slice(0, 300);
+      if (!manual && row.status !== JAA.STATUS.APPLIED) row.status = JAA.STATUS.ERROR;
+      log('error', row.lastError);
+    }
+    return { ok: true, changed: before !== row.status, status: row.status, row: Object.assign({}, row, { history: undefined }) };
+  });
+  await setBadge(tabId, res.status);
+  return res;
+}
+function findRowExists(apps, entry) { return findRow(apps, entry).i >= 0; }
+
+async function getPending(msg, sender) {
+  const tabId = sender && sender.tab ? sender.tab.id : null;
+  const { pendingSubmissions = {} } = await chrome.storage.local.get('pendingSubmissions');
+  const fresh = Object.values(pendingSubmissions).filter(p => Date.now() - p.at < PENDING_TTL_MS);
+  // same job first; otherwise a very recent submit from this tab (confirmation URL in another format)
+  const p = fresh.find(x => x.key === msg.key) || fresh.find(x => x.tabId === tabId && Date.now() - x.at < 10 * 60 * 1000) || null;
+  return { ok: true, pending: p };
+}
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg && V4_TYPES.has(msg.type)) return false; // answered by the v0.4 listener below
+  // the built-in practice page: nothing it does goes into the tracker or the answer bank
+  if (msg && sender && sender.url && sender.url.startsWith(chrome.runtime.getURL('practice/')) && /^(tracker:log|tracker:event|tracker:pending|bank:learn)$/.test(msg.type)) {
+    sendResponse({ ok: true, practice: true }); return false;
+  }
+  (async () => {
+    switch (msg && msg.type) {
+      case 'ollama:test': return testConnection(msg.settings);
+      case 'ollama:answer': return answerQuestions(msg.questions, { kind: msg.kind, timeoutSec: msg.timeoutSec, company: msg.company, jobTitle: msg.jobTitle, jobDescription: msg.jobDescription });
+      case 'session:get': return getSession(msg.key);
+      case 'session:update': return updateSession(msg.key, msg.patch, msg.step);
+      case 'backup:list': return listBackups();
+      case 'backup:now': return snapshot(msg.reason || 'manual', true);
+      case 'backup:restore': return restoreBackup(msg.at);
+      case 'bank:learn': return learnAnswers(msg.entries, msg.force);
+      case 'ollama:warm': return warmUp(msg.force);
+      case 'tracker:log': return logApplication(msg.entry);
+      case 'tracker:event': return trackerEvent(msg, sender);
+      case 'tracker:pending': return getPending(msg, sender);
+      case 'tracker:migrate': return withTracker(apps => ({ ok: true, count: apps.length }));
+      case 'options:open':
+        // deep link: the options page reads optionsGoto and scrolls to that section
+        await chrome.storage.local.set({ optionsGoto: { section: msg.section || 'profile', at: Date.now() } });
+        await chrome.runtime.openOptionsPage();
+        return { ok: true };
+      default: return { ok: false, error: 'Unknown message ' + (msg && msg.type) };
+    }
+  })().then(sendResponse, err => sendResponse({ ok: false, error: String(err && err.message || err) }));
+  return true; // keep the channel open for the async reply
+});
+
+/* ---------------- application sessions (multi-step / multi-page forms) ---------------- */
+const SESSION_TTL_MS = 6 * 60 * 60 * 1000;
+let sessionLock = Promise.resolve();
+async function getSession(key) {
+  const { sessions = {} } = await chrome.storage.local.get('sessions');
+  const s = sessions[key];
+  return { ok: true, session: s && Date.now() - s.updatedAt < SESSION_TTL_MS ? s : null };
+}
+function updateSession(key, patch, step) {
+  const run = sessionLock.then(async () => {
+    const { sessions = {} } = await chrome.storage.local.get('sessions');
+    const now = Date.now();
+    const s = sessions[key] && now - sessions[key].updatedAt < SESSION_TTL_MS ? sessions[key] : { key, startedAt: now, active: true, steps: {}, order: [] };
+    Object.assign(s, patch || {}, { updatedAt: now });
+    if (step && step.id) {
+      s.steps[step.id] = Object.assign(s.steps[step.id] || {}, step, { at: now });
+      if (!s.order.includes(step.id)) s.order.push(step.id);
+      s.current = step.id;
+    }
+    sessions[key] = s;
+    // keep the 40 most recent sessions
+    const keys = Object.keys(sessions).sort((a, b) => sessions[b].updatedAt - sessions[a].updatedAt);
+    keys.slice(40).forEach(k => delete sessions[k]);
+    await chrome.storage.local.set({ sessions });
+    return { ok: true, session: s };
+  });
+  sessionLock = run.catch(() => {});
+  return run;
+}
+
+/* ---------------- automatic backups (rolling last 5) ---------------- */
+const BACKUP_KEYS = ['profile', 'answerBank', 'applications', 'settings'];
+const MAX_BACKUPS = 5;
+const AUTO_BACKUP_EVERY_MS = 30 * 60 * 1000;
+function hashStr(str) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0; return h.toString(36) + ':' + str.length; }
+let backupLock = Promise.resolve();
+function snapshot(reason, force) {
+  const run = backupLock.then(async () => {
+    const st = await chrome.storage.local.get(BACKUP_KEYS.concat(['backups']));
+    if (st.settings && st.settings.autoBackup === false && !force) return { ok: false, disabled: true };
+    const data = {}; BACKUP_KEYS.forEach(k => { if (st[k] !== undefined) data[k] = st[k]; });
+    if (!data.profile && !(data.answerBank || []).length && !(data.applications || []).length) return { ok: false, empty: true };
+    const backups = st.backups || [];
+    const h = hashStr(JSON.stringify(data));
+    const last = backups[backups.length - 1];
+    if (last && last.hash === h) return { ok: true, unchanged: true, at: last.at };
+    if (!force && last && Date.now() - last.at < AUTO_BACKUP_EVERY_MS && reason === 'auto') return { ok: true, skipped: true };
+    const entry = { at: Date.now(), reason, version: chrome.runtime.getManifest().version, hash: h,
+      counts: { answers: (data.answerBank || []).length, applications: (data.applications || []).length, profile: !!data.profile }, data };
+    backups.push(entry);
+    while (backups.length > MAX_BACKUPS) backups.shift();
+    await chrome.storage.local.set({ backups });
+    return { ok: true, at: entry.at };
+  });
+  backupLock = run.catch(() => {});
+  return run;
+}
+async function listBackups() {
+  const { backups = [] } = await chrome.storage.local.get('backups');
+  return { ok: true, backups: backups.map(b => ({ at: b.at, reason: b.reason, version: b.version, counts: b.counts })) };
+}
+async function restoreBackup(at) {
+  const { backups = [] } = await chrome.storage.local.get('backups');
+  const b = backups.find(x => x.at === at);
+  if (!b) return { ok: false, error: 'Backup not found.' };
+  await snapshot('before restore', true);
+  await chrome.storage.local.set(b.data);
+  return { ok: true };
+}
+let autoTimer = null;
+chrome.storage.onChanged.addListener((ch, area) => {
+  if (area !== 'local') return;
+  if (ch.profile || ch.answerBank || ch.settings) { try { chrome.storage.session.remove('answerCache'); } catch (_) { /* ignore */ } }
+  if (ch.profile || ch.answerBank || ch.applications) { clearTimeout(autoTimer); autoTimer = setTimeout(() => snapshot('auto'), 5000); }
+});
+chrome.runtime.onStartup.addListener(() => { snapshot('browser start'); });
+
+chrome.runtime.onInstalled.addListener(async (details) => {
+  if (details.reason === 'install') chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/welcome.html') });
+  // update/reload: snapshot first, then migrate in place (data in chrome.storage.local is kept)
+  if (details.reason === 'update') await snapshot('before update to ' + chrome.runtime.getManifest().version, true);
+  await withTracker(() => null);
+  const { dataVersion } = await chrome.storage.local.get('dataVersion');
+  if ((dataVersion || 2) < 4) await migrateV4();
+  await installOriginRules();
+});
+// v0.4: keep everything; switch the old default Ollama URL to 127.0.0.1; existing users skip the setup wizard.
+async function migrateV4() {
+  const { settings, profile, onboarding } = await chrome.storage.local.get(['settings', 'profile', 'onboarding']);
+  const patch = { dataVersion: 4 };
+  if (settings && /^http:\/\/localhost:11434\/?$/.test(settings.ollamaUrl || '')) patch.settings = Object.assign({}, settings, { ollamaUrl: 'http://127.0.0.1:11434' });
+  if (!onboarding && profile && (profile.firstName || profile.email)) patch.onboarding = { done: true, migrated: true, at: Date.now() };
+  await chrome.storage.local.set(patch);
+}
+
+/* ================= v0.4: no-terminal Ollama setup ================= */
+// Ollama only accepts requests with no Origin header or a localhost Origin. Our requests carry
+// Origin: chrome-extension://<id>, which Ollama answers with 403 unless OLLAMA_ORIGINS is set.
+// This dynamic rule removes the Origin header, but ONLY on requests that this extension itself
+// makes (initiatorDomains = our id) to the local Ollama address. Web pages are not affected,
+// so Ollama keeps protecting itself from websites.
+const ORIGIN_RULE_BASE = 9100;
+function localOllamaHosts(url) {
+  const hosts = new Set(['127.0.0.1:11434', 'localhost:11434']);
+  try { const u = new URL(url); if (/^(127\.0\.0\.1|localhost|\[::1\])$/.test(u.hostname)) hosts.add(u.host || (u.hostname + ':80')); } catch (_) { /* ignore */ }
+  return Array.from(hosts);
+}
+async function installOriginRules() {
+  if (!chrome.declarativeNetRequest) return { ok: false, error: 'declarativeNetRequest not available' };
+  const { settings } = await JAA.loadAll();
+  const hosts = localOllamaHosts(settings.ollamaUrl);
+  const addRules = hosts.map((h, i) => ({
+    id: ORIGIN_RULE_BASE + i, priority: 1,
+    action: { type: 'modifyHeaders', requestHeaders: [{ header: 'origin', operation: 'remove' }] },
+    condition: { urlFilter: '|http://' + h + '/', initiatorDomains: [chrome.runtime.id], resourceTypes: ['xmlhttprequest', 'other'] }
+  }));
+  try {
+    const old = await chrome.declarativeNetRequest.getDynamicRules();
+    await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: old.map(r => r.id), addRules });
+    return { ok: true, hosts };
+  } catch (e) { return { ok: false, error: String(e && e.message || e) }; }
+}
+installOriginRules();
+chrome.storage.onChanged.addListener((ch, area) => {
+  if (area === 'local' && ch.settings && (!ch.settings.oldValue || (ch.settings.newValue || {}).ollamaUrl !== ch.settings.oldValue.ollamaUrl)) installOriginRules();
+});
+
+async function platformInfo() {
+  const info = { os: 'unknown', ramGB: 0 };
+  try { info.os = (await chrome.runtime.getPlatformInfo()).os; } catch (_) { /* ignore */ }
+  try { if (chrome.system && chrome.system.memory) info.ramGB = Math.round((await chrome.system.memory.getInfo()).capacity / 1073741824); } catch (_) { /* ignore */ }
+  return info;
+}
+// Model choice by RAM. Small machines: qwen2.5:3b (fast, ~2 GB). 16 GB+: qwen2.5:7b (better writing, ~4.7 GB).
+const MODELS = {
+  'qwen2.5:3b': { label: 'Qwen 2.5 3B (fast)', sizeGB: 1.9, minRam: 0 },
+  'qwen2.5:7b': { label: 'Qwen 2.5 7B (better writing)', sizeGB: 4.7, minRam: 15 }
+};
+function recommendModel(ramGB) { return ramGB >= 15 ? 'qwen2.5:7b' : 'qwen2.5:3b'; }
+
+async function ollamaStatus(overrideUrl) {
+  const { settings } = await JAA.loadAll();
+  const base = trimUrl(overrideUrl || settings.ollamaUrl);
+  const out = { base, reachable: false, originOk: null, version: '', models: [], model: settings.model, hasModel: false };
+  try {
+    const v = await fetchWithTimeout(base + '/api/version', { method: 'GET' }, 3000);
+    if (v.ok) { out.reachable = true; out.version = ((await v.json().catch(() => ({}))).version) || ''; }
+    else if (v.status === 403) { out.reachable = true; out.originOk = false; }
+  } catch (_) { return out; }
+  try {
+    const t = await fetchWithTimeout(base + '/api/tags', { method: 'GET' }, 4000);
+    if (t.ok) out.models = ((await t.json().catch(() => ({}))).models || []).map(m => ({ name: m.name, size: m.size }));
+    // POSTs carry an Origin header (GETs don't): this is the request that would get 403.
+    const p = await fetchWithTimeout(base + '/api/show', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: settings.model }) }, 4000);
+    out.originOk = p.status !== 403;
+  } catch (_) { /* ignore */ }
+  const want = settings.model.includes(':') ? settings.model : settings.model + ':latest';
+  out.hasModel = out.models.some(m => m.name === settings.model || m.name === want);
+  return out;
+}
+
+/* ---------- long tasks over a port: model download, resume extraction, tailoring ---------- */
+async function pullModel(base, model, post, signal) {
+  let res;
+  try { res = await fetch(base + '/api/pull', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, stream: true }), signal }); }
+  catch (e) { return post({ type: 'error', error: signal.aborted ? 'Cancelled.' : 'Can\'t reach Ollama. Is the Ollama app running?' }); }
+  if (res.status === 403) return post({ type: 'error', error: ORIGINS_HINT });
+  if (!res.ok) return post({ type: 'error', error: 'Ollama answered HTTP ' + res.status + ': ' + (await res.text().catch(() => '')).slice(0, 200) });
+  const layers = {};
+  const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+        if (!line) continue;
+        let o; try { o = JSON.parse(line); } catch (_) { continue; }
+        if (o.error) return post({ type: 'error', error: 'Download failed: ' + String(o.error).slice(0, 200) });
+        if (o.digest && o.total) layers[o.digest] = { total: o.total, completed: o.completed || (layers[o.digest] || {}).completed || 0 };
+        const total = Object.values(layers).reduce((n, l) => n + l.total, 0);
+        const completed = Object.values(layers).reduce((n, l) => n + Math.min(l.total, l.completed), 0);
+        post({ type: 'progress', status: o.status || '', total, completed, pct: total ? Math.floor(100 * completed / total) : 0 });
+        if (o.status === 'success') return post({ type: 'done', model });
+      }
+    }
+    post({ type: 'done', model });
+  } catch (e) { post({ type: 'error', error: signal.aborted ? 'Cancelled.' : 'Download interrupted: ' + String(e && e.message || e) }); }
+}
+
+function extractPrompt(text) {
+  return [
+    { role: 'system', content: 'You read a resume and return facts as JSON. Copy names, companies, titles, schools and dates EXACTLY as written in the resume. Never invent or guess anything; use "" or [] when something is not in the resume. Return only JSON.' },
+    { role: 'user', content: 'Return JSON with these keys:\n{"firstName":"","lastName":"","location":"city, state/country as written","city":"","state":"","country":"","summary":"1-2 sentence summary copied or shortened from the resume","jobs":[{"group":"gN from the marker before the job","company":"","title":"","location":"","start":"","end":"Present if current"}],"education":[{"school":"","degree":"","field":"","start":"","end":"","location":""}],"skills":["each skill as written"],"certifications":[""],"languages":["spoken languages"]}\n\nRESUME (lines starting with [gN] begin a job, project or school):\n' + text }
+  ];
+}
+// resume text with group markers, so jobs can be matched back to their bullets
+function markedResume(master) {
+  let last = '';
+  return master.blocks.map(b => {
+    const mark = b.type === 'entry' && b.group !== last ? '[' + b.group + '] ' : '';
+    if (b.type === 'entry') last = b.group;
+    return mark + (b.type === 'bullet' ? '• ' : '') + b.text.replace(/\t/g, '  ');
+  }).join('\n').slice(0, 9000);
+}
+
+async function runTask(msg, post, signal) {
+  const { settings, profile } = await JAA.loadAll();
+  const base = trimUrl(msg.ollamaUrl || settings.ollamaUrl);
+  if (msg.mode === 'pull') return pullModel(base, msg.model, post, signal);
+  if (!settings.useLLM && !msg.force) return post({ type: 'error', error: 'Local AI is turned off in Options.' });
+  let messages, opts;
+  if (msg.mode === 'extract') {
+    messages = extractPrompt(markedResume(msg.master));
+    opts = { temperature: 0, num_ctx: 8192, num_predict: 1600 };
+  } else if (msg.mode === 'tailor') {
+    messages = JAA.tailor.buildPrompt(msg.master, msg.job || {}, (settings.tailoringRules || []).concat(msg.extraRules || []), { maxBullets: 6 });
+    opts = { temperature: 0.3, num_ctx: 8192, num_predict: 1800 };
+  } else return post({ type: 'error', error: 'Unknown task' });
+  post({ type: 'status', text: 'Reading with your local AI (' + settings.model + ')…' });
+  let chars = 0;
+  const r = await streamOllama(base, '/api/chat', { model: settings.model, think: false, format: 'json', keep_alive: KEEP_ALIVE, options: opts, messages },
+    { totalMs: (msg.timeoutSec || 420) * 1000, idleMs: 120000, onDelta: (d, all) => { chars = all.length; if (chars % 40 < d.length) post({ type: 'progress', chars }); } });
+  if (r.status === 403) return post({ type: 'error', error: ORIGINS_HINT });
+  if (r.status === 404) return post({ type: 'error', error: `Model "${settings.model}" isn't downloaded yet. Open Setup to download it.` });
+  if (r.network) return post({ type: 'error', error: explainFetchError(r, base, 0) });
+  if (!r.ok && !r.timeout) return post({ type: 'error', error: 'Ollama error: ' + String(r.error || r.status).slice(0, 200) });
+  const data = parseModelJson(stripThink(r.text));
+  if (!data) return post({ type: 'error', error: r.timeout ? 'The local AI took too long. Try again, or use a smaller model.' : 'The local AI did not return usable JSON. Try again.' , raw: r.text.slice(0, 400) });
+  if (msg.mode === 'extract') {
+    // attach each job's bullets from the parsed resume (copied text, never from the model)
+    data.workHistory = (Array.isArray(data.jobs) ? data.jobs : []).map(j => {
+      const g = String(j.group || '').replace(/[^\w]/g, '');
+      const bullets = msg.master.blocks.filter(b => b.group === g && b.type === 'bullet').map(b => b.text).slice(0, 12);
+      return Object.assign({}, j, { bullets });
+    });
+    delete data.jobs;
+  }
+  post({ type: 'done', data, timeout: !!r.timeout });
+}
+
+chrome.runtime.onConnect.addListener(port => {
+  if (port.name !== 'jaa-task') return;
+  const ctrl = new AbortController();
+  let closed = false;
+  port.onDisconnect.addListener(() => { closed = true; ctrl.abort(); });
+  const post = m => { if (!closed) try { port.postMessage(m); } catch (_) { /* gone */ } };
+  port.onMessage.addListener(msg => { runTask(msg, post, ctrl.signal).catch(e => post({ type: 'error', error: String(e && e.message || e) })); });
+});
+
+/* ---------- tailored resumes library ---------- */
+async function tailorOpen(msg, sender) {
+  const id = 't' + Date.now().toString(36);
+  const job = Object.assign({}, msg.job || {}, { tabId: sender && sender.tab ? sender.tab.id : msg.tabId || null, frameId: sender ? sender.frameId : 0 });
+  const { tailorJobs = {} } = await chrome.storage.local.get('tailorJobs');
+  const keys = Object.keys(tailorJobs).sort();
+  while (keys.length > 20) delete tailorJobs[keys.shift()];
+  tailorJobs[id] = Object.assign(job, { at: Date.now() });
+  await chrome.storage.local.set({ tailorJobs });
+  await chrome.tabs.create({ url: chrome.runtime.getURL('tailor/tailor.html?job=' + id), index: sender && sender.tab ? sender.tab.index + 1 : undefined });
+  return { ok: true, id };
+}
+async function tailoredFor(key) {
+  const { tailored = [] } = await chrome.storage.local.get('tailored');
+  const hit = tailored.filter(t => t.jobKey === key).sort((a, b) => b.createdAt - a.createdAt)[0];
+  return { ok: true, entry: hit || null };
+}
+async function tailoredSave(entry) {
+  const { tailored = [] } = await chrome.storage.local.get('tailored');
+  const list = tailored.filter(t => t.id !== entry.id);
+  list.push(entry);
+  await chrome.storage.local.set({ tailored: list.slice(-60) });
+  // link to the tracker row for this job, if it was filled/logged already
+  if (entry.jobKey) {
+    await withTracker(apps => {
+      const i = apps.findIndex(a => a.key === entry.jobKey);
+      if (i >= 0) apps[i] = Object.assign({}, apps[i], { tailoredId: entry.id });
+      return null;
+    });
+  }
+  return { ok: true };
+}
+async function tailoredAttach(msg) {
+  // send the file to the application tab's content script, which puts it in the resume input
+  const { tailorJobs = {} } = await chrome.storage.local.get('tailorJobs');
+  const job = tailorJobs[msg.jobId];
+  if (!job || !job.tabId) return { ok: false, error: 'The application tab is gone. Open the job page again and press Fill.' };
+  try {
+    // the practice page is an extension page, not a content script: reach it with a runtime message
+    const r = job.url && job.url.startsWith(chrome.runtime.getURL('practice/'))
+      ? await chrome.runtime.sendMessage({ type: 'tailor:attach', entryId: msg.entryId, practice: true })
+      : await chrome.tabs.sendMessage(job.tabId, { type: 'tailor:attach', entryId: msg.entryId }, { frameId: job.frameId || 0 });
+    if (r && r.ok) { try { await chrome.tabs.update(job.tabId, { active: true }); } catch (_) { /* ignore */ } }
+    return r || { ok: false, error: 'No answer from the application page. Reload it and try again.' };
+  } catch (e) { return { ok: false, error: 'Could not reach the application page (' + String(e && e.message || e) + '). Reload it and try again.' }; }
+}
+
+const V4_TYPES = new Set(['ollama:status', 'ollama:fixOrigin', 'system:info', 'tailor:open', 'tailor:forJob', 'tailor:save', 'tailor:attach', 'onboarding:open']);
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  const handlers = {
+    'ollama:status': () => ollamaStatus(msg.url),
+    'ollama:fixOrigin': () => installOriginRules(),
+    'system:info': async () => { const info = await platformInfo(); return Object.assign(info, { recommended: recommendModel(info.ramGB), models: MODELS }); },
+    'tailor:open': () => tailorOpen(msg, sender),
+    'tailor:forJob': () => tailoredFor(msg.key),
+    'tailor:save': () => tailoredSave(msg.entry),
+    'tailor:attach': () => tailoredAttach(msg),
+    'onboarding:open': () => chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/welcome.html' + (msg.step ? '#' + msg.step : '')) }).then(() => ({ ok: true }))
+  };
+  const h = msg && handlers[msg.type];
+  if (!h) return false; // handled by the main listener
+  Promise.resolve(h()).then(sendResponse, e => sendResponse({ ok: false, error: String(e && e.message || e) }));
+  return true;
+});
+
+
+// Exported for the Node test harness.
+if (typeof module !== 'undefined') module.exports = { buildPrompt, parseModelJson, stripThink, salvageAnswers, splitAction, visibleText };

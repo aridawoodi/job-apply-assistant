@@ -1,0 +1,14 @@
+<!doctype html><html><head><title>Ashby Role @ Mockco</title></head><body>
+<h1>Ashby Role</h1>
+<div class="ashby-application-form-container"><form id="f">
+ <div><label for="_systemfield_name">Name</label><input id="_systemfield_name" required></div>
+ <div><label for="_systemfield_email">Email</label><input id="_systemfield_email" type="email" required></div>
+ <button type="submit">Submit Application</button>
+</form></div>
+<script>
+ document.getElementById('f').addEventListener('submit', async e => {
+   e.preventDefault();
+   const r = await fetch('/api/non-user-graphql?op=ApiSubmitSingleApplicationFormAction', { method: 'POST', body: '{}' });
+   if (r.ok) setTimeout(() => { document.querySelector('.ashby-application-form-container').innerHTML = '<div class="_success"><h2>Application submitted</h2><p>Your application was successfully submitted. We\'ll be in touch.</p></div>'; }, 600);
+ });
+</script></body></html>

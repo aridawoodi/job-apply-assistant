@@ -1,0 +1,19 @@
+<!doctype html><html><head><title>Senior Engineer | Mockco | LinkedIn</title><style>body{font:15px sans-serif;max-width:760px;margin:20px auto}.jobs-easy-apply-modal{position:fixed;top:40px;left:50%;transform:translateX(-50%);width:520px;background:#fff;border:1px solid #ccc;border-radius:8px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}.fb-dash-form-element{margin:10px 0}label{display:block;font-weight:600}input,select{width:100%;padding:6px}</style></head><body>
+<h1 class="job-details-jobs-unified-top-card__job-title">Senior Engineer</h1>
+<div class="job-details-jobs-unified-top-card__company-name">Mockco</div>
+<div id="job-details">Mockco is hiring a Senior Engineer to build data products with Python and SQL. You will own services end to end and partner with product teams to ship reliable features for customers.</div>
+<button id="easy" class="jobs-apply-button">Easy Apply</button>
+<script>
+ const STEPS = [
+  { t: 'Contact info', pct: 0, html: '<div class="fb-dash-form-element"><label for="li-first">First name</label><input id="li-first"></div><div class="fb-dash-form-element"><label for="li-last">Last name</label><input id="li-last"></div><div class="fb-dash-form-element"><label for="li-email">Email address</label><select id="li-email"><option>Select an option</option><option>alex.morgan@example.com</option></select></div><div class="fb-dash-form-element"><label for="li-phone">Mobile phone number</label><input id="li-phone"></div>' },
+  { t: 'Additional questions', pct: 50, html: '<div class="fb-dash-form-element"><label for="li-auth">Are you legally authorized to work in the United States?</label><select id="li-auth"><option>Select an option</option><option>Yes</option><option>No</option></select></div><div class="fb-dash-form-element"><label for="li-spon">Will you now or in the future require sponsorship for employment visa status (e.g. H-1B visa status)?</label><select id="li-spon"><option>Select an option</option><option>Yes</option><option>No</option></select></div><div class="fb-dash-form-element"><label for="li-py">How many years of work experience do you have with Python?</label><input id="li-py"></div>' },
+  { t: 'Review your application', pct: 100, html: '<p>Review and submit.</p>' }
+ ];
+ let i = 0; window.__nextClicks = [];
+ function render(m) {
+  const s = STEPS[i];
+  m.innerHTML = `<h2>Apply to Mockco</h2><div role="progressbar" aria-valuenow="${s.pct}" aria-valuemax="100" aria-label="Your job application progress is at ${s.pct} percent."></div><h3>${s.t}</h3><form>${s.html}</form><button type="button" id="li-next">${i < STEPS.length - 1 ? 'Next' : 'Submit application'}</button>`;
+  m.querySelector('#li-next').onclick = e => { window.__nextClicks.push(e.isTrusted); if (i < STEPS.length - 1) { i++; render(m); } else { m.innerHTML = '<h2>Your application was sent to Mockco!</h2>'; } };
+ }
+ document.getElementById('easy').onclick = () => { const m = document.createElement('div'); m.className = 'jobs-easy-apply-modal'; m.setAttribute('role', 'dialog'); document.body.appendChild(m); render(m); };
+</script></body></html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Practice application · Job Apply Assistant</title>
+<link rel="stylesheet" href="../lib/pages.css"><link rel="stylesheet" href="practice.css"></head>
+<body>
+<div class="top"><img src="../icons/icon48.png" width="30" height="30" alt=""><strong>Practice application</strong><span class="sp"></span><span class="pill">Nothing here is sent anywhere</span></div>
+<main>
+  <div class="card banner">This is a <b>fake job</b> on a page inside the extension, so you can safely see how filling works. Click the purple <b>Fill application</b> button (bottom right), answer the assistant's questions, try <b>"tailor my resume for this job"</b> in the chat, then press Submit yourself. Submitting here sends nothing and isn't added to your tracker.</div>
+  <section class="card">
+    <div class="muted small" id="job-company">Example Co</div>
+    <h1 id="job-title">Data Analyst</h1>
+    <div class="muted">Remote · Full-time · Practice posting</div>
+    <div id="job-description">
+      <h3>About the role</h3>
+      <p>Example Co is looking for a Data Analyst to turn product and operations data into clear decisions. You will partner with product managers and engineers, build dashboards, and investigate questions end to end.</p>
+      <h3>What you'll do</h3>
+      <ul><li>Write SQL to answer product and business questions, and automate recurring reports.</li><li>Build and maintain dashboards that teams use every day.</li><li>Design and analyze experiments, and explain results to non-technical partners.</li><li>Improve data quality by working with engineering on tracking and pipelines.</li></ul>
+      <h3>What we're looking for</h3>
+      <ul><li>2+ years of experience in analytics, data engineering or a similar role.</li><li>Strong SQL and experience with Python or R.</li><li>Clear written communication and curiosity about how the business works.</li><li>Experience with a BI tool (Looker, Tableau or similar) is a plus.</li></ul>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Apply for this job</h2>
+    <form id="application-form" novalidate>
+      <div class="grid">
+        <label class="f">First name *<input type="text" name="first_name" id="first_name" required autocomplete="off"></label>
+        <label class="f">Last name *<input type="text" name="last_name" id="last_name" required autocomplete="off"></label>
+        <label class="f">Email *<input type="email" name="email" id="email" required autocomplete="off"></label>
+        <label class="f">Phone<input type="tel" name="phone" id="phone" autocomplete="off"></label>
+        <label class="f">Location (city)<input type="text" name="location" id="location" autocomplete="off"></label>
+        <label class="f">LinkedIn profile<input type="url" name="linkedin" id="linkedin" autocomplete="off"></label>
+      </div>
+      <div class="grid" style="margin-top:12px">
+        <label class="f">Resume/CV *<input type="file" name="resume" id="resume" accept=".pdf,.docx" required></label>
+        <label class="f">Cover letter<input type="file" name="cover_letter" id="cover_letter" accept=".pdf,.docx"></label>
+      </div>
+      <div class="grid" style="margin-top:12px">
+        <label class="f">Are you legally authorized to work in the United States? *<select name="q_auth" id="q_auth" required><option value="">Select…</option><option>Yes</option><option>No</option></select></label>
+        <label class="f">Will you now or in the future require visa sponsorship? *<select name="q_sponsor" id="q_sponsor" required><option value="">Select…</option><option>Yes</option><option>No</option></select></label>
+        <label class="f">Current company<input type="text" name="current_company" id="current_company" autocomplete="off"></label>
+        <label class="f">What are your salary expectations?<input type="text" name="salary" id="salary" autocomplete="off"></label>
+      </div>
+      <label class="f" style="margin-top:12px">Why do you want to work at Example Co? *<textarea name="q_why" id="q_why" rows="4" required></textarea></label>
+      <h3>Voluntary self-identification</h3>
+      <p class="muted small">Optional. Your answers don't affect your application.</p>
+      <div class="grid">
+        <label class="f">Gender<select name="eeo_gender" id="eeo_gender"><option value="">Select…</option><option>Male</option><option>Female</option><option>Non-binary</option><option>Decline to self-identify</option></select></label>
+        <label class="f">Veteran status<select name="eeo_veteran" id="eeo_veteran"><option value="">Select…</option><option>I am not a protected veteran</option><option>I identify as one or more of the classifications of protected veteran</option><option>I don't wish to answer</option></select></label>
+      </div>
+      <label class="row consent"><input type="checkbox" name="consent" id="consent" required> I have read and agree to the (fake) privacy notice.</label>
+      <div class="row" style="margin-top:16px"><button type="submit" class="primary big" id="submit">Submit application</button><span id="sent" class="muted"></span></div>
+    </form>
+  </section>
+</main>
+<script src="practice.js"></script>
+<script src="../lib/defaults.js"></script>
+<script src="../content/core.js"></script>
+<script src="../content/sites.js"></script>
+<script src="../content/ui.js"></script>
+<script src="../content/learn.js"></script>
+<script src="../content/chat.js"></script>
+<script src="../content/steps.js"></script>
+<script src="../content/track.js"></script>
+<script src="../content/main.js"></script>
+</body></html>

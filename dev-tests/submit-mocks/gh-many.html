@@ -1,0 +1,22 @@
+<!doctype html><html><head><title>Job Application for Performance Engineer at Mockco</title></head><body>
+<div class="job__title"><h1>Performance Engineer</h1></div>
+<form id="application-form">
+ <div class="field"><label for="first_name">First Name</label><input id="first_name"></div>
+ <div class="field"><label for="last_name">Last Name</label><input id="last_name"></div>
+ <div class="field"><label for="email">Email</label><input id="email" type="email"></div>
+ <div class="field"><label for="phone">Phone</label><input id="phone" type="tel"></div>
+ <div class="field"><label for="q1">Have you used Kubernetes in production?</label><select id="q1"><option value="">Select...</option><option>Yes</option><option>No</option></select></div>
+ <div class="field"><label for="q2">Are you open to working in-person in our SF office 25% of the time?</label><select id="q2"><option value="">Select...</option><option>Yes</option><option>No</option></select></div>
+ <div class="field"><label for="q3">Have you ever interviewed at Mockco before?</label><select id="q3"><option value="">Select...</option><option>Yes</option><option>No</option></select></div>
+ <div class="field"><label for="q4">Preferred programming language</label><input id="q4"></div>
+ <div class="field"><label for="q5">How many years of Python experience do you have?</label><input id="q5"></div>
+ <div class="field"><label for="q6">Which team interests you most?</label><select id="q6"><option value="">Select...</option><option>Infrastructure</option><option>Product</option><option>Research</option></select></div>
+ <div class="field"><label for="q7">What is your favorite pet's name?</label><input id="q7"></div>
+ <div class="field"><label for="q8">Which cloud platforms have you used?</label><input id="q8"></div>
+ <div class="field"><label for="e1">Why Mockco?</label><textarea id="e1"></textarea></div>
+ <div class="field"><label for="e2">Describe the most impressive thing you've built</label><textarea id="e2"></textarea></div>
+ <div class="field"><label for="e3">Additional Information</label><textarea id="e3"></textarea></div>
+ <button type="submit" id="submit">Submit application</button>
+</form>
+<script>document.getElementById('application-form').addEventListener('submit', e => { e.preventDefault(); window.__submitted = (window.__submitted || 0) + 1; });</script>
+</body></html>

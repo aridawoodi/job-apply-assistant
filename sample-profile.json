@@ -1,0 +1,72 @@
+{
+  "_note": "Example profile with made-up data. Import it in Settings to try the extension, or (better) upload your own resume in Setup. Jordan Rivera is not a real person.",
+  "profile": {
+    "firstName": "Jordan",
+    "lastName": "Rivera",
+    "preferredName": "",
+    "pronouns": "",
+    "email": "jordan.rivera@example.com",
+    "phone": "(555) 010-0199",
+    "city": "Springfield",
+    "state": "IL",
+    "country": "United States",
+    "zip": "62701",
+    "location": "Springfield, IL",
+    "linkedin": "https://www.linkedin.com/in/jordan-rivera-example",
+    "github": "https://github.com/jordan-rivera-example",
+    "portfolio": "",
+    "website": "",
+    "workAuthorizedUS": "Yes",
+    "needsSponsorship": "No",
+    "citizenship": "",
+    "over18": "Yes",
+    "currentEmployer": "Northwind Analytics",
+    "currentTitle": "Data Engineer",
+    "currentStartDate": "2021-03",
+    "yearsExperience": "6",
+    "education": {
+      "school": "State University",
+      "degree": "Bachelor's",
+      "field": "Computer Science",
+      "location": "Springfield, IL",
+      "startYear": "2014",
+      "endYear": "2018"
+    },
+    "eeo": {
+      "gender": "",
+      "transgender": "",
+      "sexualOrientation": "",
+      "disability": "",
+      "veteran": "",
+      "ethnicity": "",
+      "hispanicLatino": ""
+    },
+    "availability": "Two weeks' notice",
+    "noticePeriod": "2 weeks",
+    "salaryExpectation": "",
+    "willingToRelocate": "Open to discussing",
+    "howDidYouHear": "",
+    "signature": "Jordan Rivera",
+    "summary": "Data engineer with 6 years of experience building reliable data pipelines and analytics tooling.",
+    "workHistory": [
+      { "company": "Northwind Analytics", "title": "Data Engineer", "location": "Springfield, IL", "start": "Mar 2021", "end": "Present", "bullets": ["Built batch and streaming pipelines in Python and SQL.", "Cut nightly job runtime by 40% by partitioning large tables."] },
+      { "company": "Contoso Retail", "title": "Software Developer", "location": "Chicago, IL", "start": "Jul 2018", "end": "Feb 2021", "bullets": ["Maintained internal reporting tools used by 200 store managers."] }
+    ],
+    "educationList": [
+      { "school": "State University", "degree": "Bachelor's", "field": "Computer Science", "location": "Springfield, IL", "startYear": "2014", "endYear": "2018" }
+    ],
+    "skills": ["Python", "SQL", "Airflow", "Spark", "AWS"],
+    "certifications": [],
+    "languages": ["English", "Spanish"]
+  },
+  "answerBank": [
+    { "q": "Are you legally authorized to work in the United States?", "a": "Yes" },
+    { "q": "Will you now or in the future require sponsorship for employment visa status (e.g. H-1B)?", "a": "No" },
+    { "q": "When can you start?", "a": "Two weeks after an offer" }
+  ],
+  "settings": {
+    "ollamaUrl": "http://127.0.0.1:11434",
+    "model": "qwen2.5:3b",
+    "useLLM": true
+  }
+}

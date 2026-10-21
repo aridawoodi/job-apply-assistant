@@ -1,0 +1,103 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Job Apply Assistant · Profile & settings</title><link rel="stylesheet" href="options.css"></head>
+<body>
+<nav>
+  <span class="brand"><img src="../icons/icon48.png" width="28" height="28" alt=""><strong>Job Apply Assistant</strong><span id="ver" class="ver"></span></span>
+  <a href="#profile">Profile</a><a href="#resume">Resume</a><a href="#tailoring">Tailoring</a><a href="#library">Saved resumes</a><a href="#style">Writing style</a><a href="#bank">Answer bank</a><a href="#ai">Local AI</a><a href="#backups">Backups</a><a href="#io">Import / export</a><a href="#tracker">Tracker</a><a href="../onboarding/welcome.html" target="_blank">Setup</a>
+  <span class="spacer"></span><span id="saved" class="muted"></span><button id="save" class="primary" type="button">Save</button>
+</nav>
+<main>
+  <section id="profile"><h2>Profile</h2><p class="muted">Stored only in this browser (chrome.storage.local). Blank fields are left for you to fill on each form.</p><div id="profileForm"></div></section>
+
+  <section id="resume"><h2>Resume</h2>
+    <p class="muted">Your master resume: attached to resume/CV upload fields, used to fill your profile, and the starting point for tailored versions. PDF or Word (.docx). Word keeps your exact layout when tailoring.</p>
+    <div class="row"><span id="resumeInfo" class="muted">No resume saved.</span>
+      <button id="resumeRemove" type="button" class="secondary">Remove</button></div>
+    <label class="check"><input id="importAI" type="checkbox" checked> Let my local AI read the details (jobs, education, skills). Off = only email, phone and links are read.</label>
+    <div id="importer" class="imp"></div>
+  </section>
+
+  <section id="tailoring"><h2>Tailoring</h2>
+    <p class="muted">Type <b>"tailor my resume for this job"</b> in the assistant chat on any job page. Your local AI suggests rewording and reordering using only facts already in your resume; you approve each change.</p>
+    <div class="grid">
+      <label>Preferred resume format<select id="s_preferredResumeFormat"><option value="both">Both (PDF + Word)</option><option value="pdf">PDF</option><option value="docx">Word (.docx)</option></select></label>
+    </div>
+    <label class="check"><input id="s_attachTailored" type="checkbox"> Attach the tailored resume for a job automatically when I fill that application (PDF if the form only takes PDF)</label>
+    <h3>My tailoring rules</h3>
+    <p class="muted small">Given to the AI every time. Rules marked <span class="tagok">checked</span> are also verified automatically; <span class="tagai">AI</span> rules are followed by the model and worth a quick look.</p>
+    <ul id="ruleList" class="rules"></ul>
+    <div class="row"><input id="ruleNew" type="text" placeholder='e.g. Keep to 2 pages' style="flex:1"><button id="ruleAdd" type="button" class="secondary">+ Add rule</button></div>
+    <div class="row small" id="ruleExamples" style="margin-top:6px"></div>
+  </section>
+
+  <section id="library"><h2>Saved resumes</h2>
+    <p class="muted">Tailored resumes you created (newest first, last 60 kept). Linked to the matching job in your tracker.</p>
+    <table class="apps"><thead><tr><th>Created</th><th>Job</th><th>Changes</th><th>Files</th><th>Tracker</th><th></th></tr></thead><tbody id="libRows"></tbody></table>
+  </section>
+
+  <section id="style"><h2>Writing style</h2>
+    <p class="muted">Used only for long answers ("Why us?", "Tell us about…") so drafts sound like you. Paste a few paragraphs you wrote yourself (cover letters, emails, posts) and describe your tone. The local model copies the voice, not the content. The drafts also use your resume text and the job description from the page.</p>
+    <div id="styleForm" class="grid"></div>
+    <div class="grid"><label>Draft length<select id="s_draftLength"><option value="short">Short: 2–4 sentences (fastest)</option><option value="medium">Medium: 4–6 sentences</option><option value="long">Long: 6–9 sentences</option></select></label></div>
+  </section>
+
+  <section id="bank"><h2>Answer bank</h2>
+    <p class="muted">Reusable answers. Questions on a form are matched to these by similar wording before anything is sent to the local AI (green, "from your saved answers"). Answers you type on job sites are learned here automatically when "Remember my answers" is on. <code>{company}</code> in a company-specific entry is replaced with the company you're applying to.</p>
+    <table class="bank"><thead><tr><th>Question</th><th>Answer</th><th>Source</th><th></th></tr></thead><tbody id="bankRows"></tbody></table>
+    <button id="bankAdd" type="button" class="secondary">+ Add answer</button>
+  </section>
+
+  <section id="ai"><h2>Local AI (Ollama)</h2>
+    <div class="grid">
+      <label>Ollama URL<input id="s_ollamaUrl" type="url" placeholder="http://127.0.0.1:11434"></label>
+      <label>Model<input id="s_model" type="text" placeholder="qwen2.5:3b"></label>
+      <label>Timeout per AI batch (seconds)<input id="s_llmTimeoutSec" type="number" min="10" max="900"></label>
+      <label>First batch / model load timeout (seconds)<input id="s_llmFirstTimeoutSec" type="number" min="30" max="900"></label>
+      <label>Questions per AI batch<input id="s_llmBatchSize" type="number" min="1" max="10"></label>
+    </div>
+    <p class="muted">With 8 GB of memory, <code>qwen2.5:3b</code> is the fastest reliable choice; with 16 GB or more, <code>qwen2.5:7b</code> writes better. Reasoning models (qwen3.x, deepseek-r1) are asked not to "think", but are still slower. Need help connecting or downloading a model? <a href="../onboarding/welcome.html#ollama" target="_blank">Run setup again</a>.</p>
+    <label class="check"><input id="s_useLLM" type="checkbox"> Send questions my profile can't answer to the local model</label>
+    <label class="check"><input id="s_warmUp" type="checkbox"> Pre-load the model when an application page opens (faster first answer)</label>
+    <label class="check"><input id="s_rememberAnswers" type="checkbox"> Remember my answers: save what I type in yellow/blue fields to the answer bank</label>
+    <label class="check"><input id="s_learnCompanySpecific" type="checkbox"> Also reuse company-specific answers ("Why {company}?") directly (off = only used as examples for the AI)</label>
+    <label class="check"><input id="s_overwriteExisting" type="checkbox"> Overwrite fields that already have a value</label>
+    <label class="check"><input id="s_showFloatingButton" type="checkbox"> Show the floating "Fill application" button on Greenhouse / Lever / Ashby</label>
+    <label class="check"><input id="s_trackSubmissions" type="checkbox"> Track my submissions automatically (Submitted → Applied / Error - not sent)</label>
+    <label class="check"><input id="s_showBadge" type="checkbox"> Show the status badge on the toolbar icon</label>
+    <label class="check"><input id="s_autoFillSteps" type="checkbox"> Auto-fill next steps of multi-step applications (Workday, LinkedIn Easy Apply, "Step 2 of 5" forms) after I press Next myself</label>
+    <label class="check"><input id="s_warnOnSubmit" type="checkbox"> Warn me (without blocking) if I press Submit while fields still need me</label>
+    <label class="check"><input id="s_chatHistory" type="checkbox"> Keep the assistant chat history for each job posting</label>
+    <p><button id="test" type="button" class="secondary">Test connection</button> <span id="testOut" class="muted"></span></p>
+  </section>
+
+  <section id="backups"><h2>Backups</h2>
+    <p class="muted">Your profile, answer bank, settings and tracker are snapshotted automatically (on updates, browser start, and at most every 30 minutes while they change). The last 5 snapshots are kept inside the extension. For safety outside the browser, save a backup file now and then. <b>Never click "Remove" on the extension in chrome://extensions</b>: that deletes all of its data, including these snapshots.</p>
+    <label class="check"><input id="s_autoBackup" type="checkbox"> Automatic snapshots (last 5)</label>
+    <p><button id="backupFile" type="button" class="primary">⬇ Backup to file</button>
+      <label class="secondary btnlike">⬆ Restore from file<input id="restoreFile" type="file" accept=".json,application/json" hidden></label>
+      <button id="backupNow" type="button" class="secondary">Snapshot now</button> <span id="backupOut" class="muted"></span></p>
+    <table class="apps"><thead><tr><th>Snapshot</th><th>Reason</th><th>Version</th><th>Contents</th><th></th></tr></thead><tbody id="backupRows"></tbody></table>
+  </section>
+
+  <section id="io"><h2>Import / export</h2>
+    <p><button id="export" type="button" class="secondary">Export profile JSON</button>
+      <label class="check inline"><input id="exportResume" type="checkbox"> include resume file</label></p>
+    <p><label class="secondary btnlike">Import profile JSON<input id="import" type="file" accept=".json,application/json" hidden></label>
+      <span class="muted">Replaces the profile and answer bank with the file's contents (resume and settings too, if present).</span></p>
+  </section>
+
+  <section id="tracker"><h2>Application tracker</h2>
+    <p class="muted">Logged when you fill an application and when you submit one yourself. <b>Submitted</b> = you pressed Submit, waiting for the site's confirmation · <b>Applied</b> = confirmation seen · <b>Error - not sent</b> = the form showed an error after Submit. Change the status by hand any time (Interview, Offer, … are never overwritten automatically).</p>
+    <p><button id="csv" type="button" class="secondary">Export CSV</button> <button id="clearApps" type="button" class="danger">Clear all</button></p>
+    <table class="apps"><thead><tr><th>Last activity</th><th>Company</th><th>Title</th><th>Site</th><th>Fields</th><th>Status</th><th>Submitted</th><th>Confirmed</th><th></th></tr></thead><tbody id="appRows"></tbody></table>
+  </section>
+</main>
+<script src="../lib/defaults.js"></script>
+<script src="../lib/vendor/jszip.min.js"></script>
+<script src="../lib/vendor/pdf.min.js"></script>
+<script src="../lib/pageutil.js"></script>
+<script src="../lib/resume.js"></script>
+<script src="../lib/tailor.js"></script>
+<script src="../lib/importer.js"></script>
+<script src="options.js"></script>
+</body></html>

@@ -1,0 +1,35 @@
+<!doctype html><html><head><title>Job Application for Backend Engineer at Mockco</title>
+<style>body{font:15px/1.5 -apple-system,Segoe UI,sans-serif;max-width:760px;margin:30px auto;color:#1f2937;padding:0 20px}.field{margin:14px 0}label{display:block;font-weight:600;margin-bottom:4px}input,select,textarea{font:inherit;padding:8px;border:1px solid #cbd5e1;border-radius:6px;width:100%;box-sizing:border-box}textarea{min-height:80px}.combo{position:relative}.combo ul{position:absolute;left:0;right:0;background:#fff;border:1px solid #cbd5e1;list-style:none;margin:0;padding:0;z-index:5}.combo li{padding:6px 10px;cursor:pointer}.chk label{display:inline;font-weight:400}.chk input{width:auto}button#submit{background:#111827;color:#fff;border:0;padding:12px 20px;border-radius:8px;font-weight:700}.job__description{background:#f8fafc;padding:12px 16px;border-radius:8px}</style></head><body>
+<div class="job__title"><h1>Backend Engineer</h1></div>
+<div class="job__description"><p>Mockco builds reliable developer infrastructure. As a Backend Engineer you will design Python services, own CI/CD pipelines, improve observability and work closely with product teams. We value clear writing, careful testing and pragmatic engineering. Experience with internal tools, data pipelines or cloud platforms is a plus.</p></div>
+<form id="application-form">
+ <div class="field"><label for="first_name">First Name</label><input id="first_name"></div>
+ <div class="field"><label for="last_name">Last Name</label><input id="last_name"></div>
+ <div class="field"><label for="email">Email</label><input id="email" type="email"></div>
+ <div class="field"><label for="phone">Phone</label><input id="phone" type="tel"></div>
+ <div class="field"><label for="website">Website</label><input id="website" type="url"></div>
+ <div class="field"><label for="resume">Resume/CV</label><input id="resume" type="file"></div>
+ <div class="field"><label for="reloc">Are you willing to relocate?</label><select id="reloc"><option value="">Select...</option><option>Yes</option><option>No</option></select></div>
+ <div class="field"><label for="hisp">Are you Hispanic/Latino?</label><select id="hisp"><option value="">Select...</option><option>Yes</option><option>No</option><option>Decline to self-identify</option></select></div>
+ <div class="field"><label id="hear-label" for="hear">How did you hear about us?</label>
+   <div class="combo" id="hear-box"><input id="hear" role="combobox" aria-autocomplete="list" aria-controls="hear-list" aria-expanded="false" aria-labelledby="hear-label" autocomplete="off"><ul id="hear-list" role="listbox" hidden></ul></div></div>
+ <div class="field"><label for="pet">What is your favorite pet's name?</label><input id="pet"></div>
+ <div class="field"><label for="team">Which team interests you most?</label><select id="team"><option value="">Select...</option><option>Infrastructure</option><option>Product</option><option>Research</option></select></div>
+ <div class="field"><label for="e1">Why Mockco?</label><textarea id="e1" aria-describedby="e1-help"></textarea><div id="e1-help" style="color:#64748b;font-size:13px">A few sentences is plenty.</div></div>
+ <div class="field"><label for="e2">Describe a project you're proud of</label><textarea id="e2"></textarea></div>
+ <div class="field chk"><input type="checkbox" id="consent"> <label for="consent">I agree to the Mockco privacy policy</label></div>
+ <button type="submit" id="submit">Submit application</button>
+</form>
+<script>
+ const OPTS = ['LinkedIn', 'Referral', 'Company website', 'Job board'];
+ const inp = document.getElementById('hear'), list = document.getElementById('hear-list');
+ function openList(filter) { list.innerHTML = ''; OPTS.filter(o => !filter || o.toLowerCase().includes(filter.toLowerCase())).forEach((o, i) => { const li = document.createElement('li'); li.setAttribute('role', 'option'); li.id = 'hear-o' + i; li.textContent = o; li.addEventListener('click', () => { inp.value = o; list.hidden = true; inp.setAttribute('aria-expanded', 'false'); }); list.appendChild(li); }); list.hidden = false; inp.setAttribute('aria-expanded', 'true'); }
+ inp.addEventListener('mousedown', () => openList(''));
+ document.getElementById('hear-box').addEventListener('mousedown', () => openList(''));
+ inp.addEventListener('keydown', e => { if (e.key === 'ArrowDown') openList(''); if (e.key === 'Escape') list.hidden = true; if (e.key === 'Enter' && !list.hidden && list.firstChild) { e.preventDefault(); list.firstChild.click(); } });
+ inp.addEventListener('input', () => openList(inp.value));
+ window.__submitted = 0; window.__submitTrusted = [];
+ document.getElementById('submit').addEventListener('click', e => window.__submitTrusted.push(e.isTrusted));
+ document.getElementById('application-form').addEventListener('submit', e => { e.preventDefault(); window.__submitted++; });
+</script>
+</body></html>
