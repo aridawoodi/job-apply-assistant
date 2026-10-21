@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cover letter · Job Apply Assistant</title>
+<link rel="stylesheet" href="../lib/pages.css">
+<style>
+  #letter{min-height:340px;font:14px/1.55 Georgia,"Times New Roman",serif;padding:14px}
+  .chk{display:flex;gap:8px;align-items:flex-start;margin:4px 0;font-size:13px}
+  .field{display:inline-block;background:#eef2ff;color:#3730a3;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:600}
+</style></head>
+<body>
+<div class="top"><img src="../icons/icon48.png" width="30" height="30" alt=""><strong>Cover letter</strong><span class="ver" id="ver"></span><span class="sp"></span><a href="../options/options.html#style" target="_blank">Writing style</a></div>
+<main>
+  <section class="card" id="jobCard">
+    <h2 id="jobTitle">Loading…</h2>
+    <div class="muted" id="jobMeta"></div>
+    <div style="margin-top:6px" id="fieldInfo"></div>
+    <details style="margin-top:8px"><summary class="muted">Job description used (<span id="jdLen">0</span> characters): check or paste it if it's missing</summary>
+      <textarea id="jd" rows="8" style="margin-top:6px"></textarea></details>
+  </section>
+
+  <section class="card" id="setupCard">
+    <div id="resumeInfo" class="muted">Loading…</div>
+    <div id="styleInfo" class="muted small" style="margin-top:4px"></div>
+    <div class="row" style="margin-top:10px"><label class="row small">Length:
+      <select id="length" style="width:auto"><option value="short">Short (~180 words)</option><option value="standard" selected>Standard (~280 words)</option><option value="long">Long (~380 words)</option></select></label>
+      <input type="text" id="extra" class="grow" placeholder="Anything to stress? (optional), e.g. Mention why I like their product"></div>
+    <p class="row" style="margin-top:14px"><button class="primary big" id="write" type="button">✍️ Write my cover letter</button><span id="status" class="muted"></span></p>
+    <p class="muted small">Written by your local AI from your resume and this job. Every name, tool and number is checked against your resume: anything new is blocked until you fix it.</p>
+  </section>
+
+  <section class="card hidden" id="draftCard">
+    <div class="row"><h2 class="grow" style="margin:0">Your cover letter</h2><span class="muted small" id="words"></span></div>
+    <textarea id="letter" spellcheck="true"></textarea>
+    <div id="checks" style="margin-top:8px"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="ghost" id="recheck" type="button">Check again</button>
+      <button class="ghost" id="regen" type="button">↻ Write another version</button>
+      <span class="grow"></span>
+      <button class="primary big" id="approve" type="button">✓ Approve this letter</button></div>
+  </section>
+
+  <section class="card hidden" id="useCard">
+    <h2 style="margin-top:0">Use it</h2>
+    <div class="row"><button class="primary" id="fillText" type="button">↧ Put it in the application's text box</button><button class="ghost" id="copy" type="button">Copy text</button><span id="fillOut" class="muted"></span></div>
+    <div class="row" style="margin-top:12px"><label class="row small">File:
+      <select id="format" style="width:auto"><option value="pdf">PDF</option><option value="docx">Word (.docx)</option><option value="both">PDF + Word</option></select></label>
+      <button class="ghost" id="makeFiles" type="button">📄 Create the file</button></div>
+    <div class="files" id="files" style="margin:10px 0"></div>
+    <div class="row"><button class="primary" id="attach" type="button" disabled>📎 Attach to the application</button><span id="attachOut" class="muted"></span></div>
+    <p class="muted small">Saved on this computer and linked to this job in your tracker. Nothing is submitted: you review the application and press Submit yourself.</p>
+  </section>
+</main>
+<script src="../lib/defaults.js"></script>
+<script src="../lib/pageutil.js"></script>
+<script src="../lib/tailor.js"></script>
+<script src="../lib/cover.js"></script>
+<script src="../lib/match.js"></script>
+<script src="cover.js"></script>
+</body></html>

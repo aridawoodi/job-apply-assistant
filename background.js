@@ -4,7 +4,7 @@
  * A declarativeNetRequest rule (installOriginRules) removes the Origin header from THIS
  * extension's own requests to the local Ollama port, so no OLLAMA_ORIGINS setup is needed. */
 'use strict';
-importScripts('lib/defaults.js', 'lib/tailor.js');
+importScripts('lib/defaults.js', 'lib/tailor.js', 'lib/cover.js');
 
 const ORIGINS_HINT =
   'Ollama refused the request (403). The extension normally fixes this by itself. Make sure Chrome is up to date (version 110 or newer), ' +
@@ -866,6 +866,9 @@ async function runTask(msg, post, signal) {
   } else if (msg.mode === 'tailor') {
     messages = JAA.tailor.buildPrompt(msg.master, msg.job || {}, (settings.tailoringRules || []).concat(msg.extraRules || []), { maxBullets: 6 });
     opts = { temperature: 0.3, num_ctx: 8192, num_predict: 1800 };
+  } else if (msg.mode === 'cover') {
+    messages = JAA.cover.buildPrompt(Object.assign({}, msg.job || {}, { resumeText: msg.resumeText, length: msg.length, extra: msg.extra, previous: msg.previous, tone: profile.toneNotes, samples: profile.writingSamples }));
+    opts = { temperature: 0.5, num_ctx: 8192, num_predict: 1100 };
   } else return post({ type: 'error', error: 'Unknown task' });
   post({ type: 'status', text: 'Reading with your local AI (' + settings.model + ')…' });
   let chars = 0;
