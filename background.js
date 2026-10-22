@@ -4,7 +4,7 @@
  * A declarativeNetRequest rule (installOriginRules) removes the Origin header from THIS
  * extension's own requests to the local Ollama port, so no OLLAMA_ORIGINS setup is needed. */
 'use strict';
-importScripts('lib/defaults.js', 'lib/tailor.js', 'lib/cover.js');
+importScripts('lib/defaults.js', 'lib/tailor.js', 'lib/cover.js', 'lib/resume.js', 'lib/extract.js');
 
 const ORIGINS_HINT =
   'Ollama refused the request (403). The extension normally fixes this by itself. Make sure Chrome is up to date (version 110 or newer), ' +
@@ -76,7 +76,9 @@ function profileFacts(profile, essay) {
   delete facts.salaryExpectation;
   // work history etc. from the resume import: compact one-liners (bullets are in resumeText for essays)
   if (Array.isArray(facts.workHistory)) facts.workHistory = facts.workHistory.slice(0, 8).map(j => `${j.title || ''} at ${j.company || ''}${j.start || j.end ? ` (${j.start || '?'} – ${j.end || '?'})` : ''}`);
-  if (Array.isArray(facts.educationList)) { facts.educationList = facts.educationList.slice(0, 5).map(e => [e.degree, e.field, e.school, e.end].filter(Boolean).join(', ')); delete facts.education; }
+  if (Array.isArray(facts.educationList) && facts.educationList.length) { facts.educationList = facts.educationList.slice(0, 6).map(e => [e.degree, e.field, e.school, [e.start, e.end].filter(Boolean).join('–'), e.status && e.status !== 'completed' ? e.status : ''].filter(Boolean).join(', ')); delete facts.education; } else delete facts.educationList;
+  // projects (v0.6): one line each; essays also get the details
+  if (Array.isArray(facts.projects)) facts.projects = facts.projects.slice(0, 6).map(x => `${x.name || ''}${x.role ? ' (' + x.role + ')' : ''}${(x.tech || []).length ? ' — ' + x.tech.slice(0, 8).join(', ') : ''}${x.description ? ': ' + x.description : ''}${essay && (x.bullets || []).length ? ' · ' + x.bullets.slice(0, 3).join(' · ').slice(0, 300) : ''}`);
   if (Array.isArray(facts.skills)) facts.skills = facts.skills.slice(0, 40).join(', ');
   if (Array.isArray(facts.certifications)) facts.certifications = facts.certifications.join('; ');
   if (Array.isArray(facts.languages)) facts.languages = facts.languages.join(', ');
@@ -857,13 +859,44 @@ function markedResume(master) {
   }).join('\n').slice(0, 9000);
 }
 
+/* v0.6 resume import: one small, strict request per section (education, work history, projects), each
+ * with a JSON schema. Skills, certifications, languages, contact details and links are read without the
+ * model. A section the model can't read is reported (the importer then uses the rule-based reading). */
+let schemaUnsupported = false;
+async function runExtract(msg, settings, base, post, signal) {
+  const sec = JAA.extract.sectionize(msg.master || {});
+  const list = JAA.extract.prompts(sec, { all: !!msg.all });
+  if (!sec.hasSections) list.push({ key: 'legacy', label: 'your resume', messages: extractPrompt(markedResume(msg.master)), maxTokens: 1600 });
+  const ai = {}, timings = {};
+  const t0 = Date.now();
+  for (let i = 0; i < list.length; i++) {
+    if (signal && signal.aborted) return;
+    const p = list[i];
+    post({ type: 'progress', section: p.key, step: i + 1, steps: list.length, text: `Your local AI is reading ${p.label} (${i + 1} of ${list.length})…` });
+    const t1 = Date.now();
+    const body = { model: settings.model, think: false, format: p.schema && !schemaUnsupported ? p.schema : 'json', keep_alive: KEEP_ALIVE, options: { temperature: 0, num_ctx: NUM_CTX, num_predict: p.maxTokens || 600 }, messages: p.messages };
+    const run = b => streamOllama(base, '/api/chat', b, { totalMs: (msg.timeoutSec || 240) * 1000, idleMs: 90000, onDelta: (d, all) => { if (all.length % 60 < d.length) post({ type: 'progress', section: p.key, step: i + 1, steps: list.length, chars: all.length }); } });
+    let r = await run(body);
+    if (!r.ok && r.status === 400 && typeof body.format === 'object') { schemaUnsupported = true; body.format = 'json'; r = await run(body); } // older Ollama: plain JSON mode
+    timings[p.key] = Math.round((Date.now() - t1) / 100) / 10;
+    // problems that will hit every section: stop and let the importer explain
+    if (r.status === 403) return post({ type: 'error', error: ORIGINS_HINT });
+    if (r.status === 404) return post({ type: 'error', error: `Model "${settings.model}" isn't downloaded yet. Open Setup to download it.` });
+    if (r.network) return post({ type: 'error', error: explainFetchError(r, base, 0) });
+    const data = r.ok || r.timeout ? parseModelJson(stripThink(r.text)) : null;
+    ai[p.key] = data || { error: r.timeout ? 'took too long' : (!r.ok ? 'Ollama error ' + String(r.error || r.status).slice(0, 120) : 'no usable JSON') };
+  }
+  post({ type: 'done', data: { ai, timings, seconds: Math.round((Date.now() - t0) / 100) / 10, model: settings.model } });
+}
+
 async function runTask(msg, post, signal) {
   const { settings, profile } = await JAA.loadAll();
   const base = trimUrl(msg.ollamaUrl || settings.ollamaUrl);
   if (msg.mode === 'pull') return pullModel(base, msg.model, post, signal);
   if (!settings.useLLM && !msg.force) return post({ type: 'error', error: 'Local AI is turned off in Options.' });
   let messages, opts;
-  if (msg.mode === 'extract') {
+  if (msg.mode === 'extract') return runExtract(msg, settings, base, post, signal);
+  if (msg.mode === 'extract-legacy') {
     messages = extractPrompt(markedResume(msg.master));
     opts = { temperature: 0, num_ctx: 8192, num_predict: 1600 };
   } else if (msg.mode === 'tailor') {
@@ -883,7 +916,7 @@ async function runTask(msg, post, signal) {
   if (!r.ok && !r.timeout) return post({ type: 'error', error: 'Ollama error: ' + String(r.error || r.status).slice(0, 200) });
   const data = parseModelJson(stripThink(r.text));
   if (!data) return post({ type: 'error', error: r.timeout ? 'The local AI took too long. Try again, or use a smaller model.' : 'The local AI did not return usable JSON. Try again.' , raw: r.text.slice(0, 400) });
-  if (msg.mode === 'extract') {
+  if (msg.mode === 'extract-legacy') {
     // attach each job's bullets from the parsed resume (copied text, never from the model)
     data.workHistory = (Array.isArray(data.jobs) ? data.jobs : []).map(j => {
       const g = String(j.group || '').replace(/[^\w]/g, '');

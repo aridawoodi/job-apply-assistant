@@ -327,6 +327,53 @@
   };
   const hasYesNo = f => (f.options || []).some(o => /^(yes|no)\b/.test(norm(o.text)));
 
+  /* v0.6: repeating sections (several schools or jobs on one form). Greenhouse uses ids like school--0 /
+   * degree--1; Workday uses education-4--schoolName and workExperience-2--jobTitle. Entry 0 gets your
+   * highest degree (then the rest of your education list in order) or your current job (then the rest
+   * of your work history). Forms with one plain education block get the highest degree as before. */
+  const EDU_IDX = /(?:^|[^a-z])(?:school|degree|discipline|field[-_]?of[-_]?study|major|start[-_]?(?:month|year|date)|end[-_]?(?:month|year|date))--(\d+)\b/i;
+  const JOB_IDX = /(?:^|[^a-z])(?:company[-_]?name|employer|job[-_]?title|title|position)--(\d+)\b/i;
+  function entryIndex(f, kind) {
+    const s = String(f.idAttr || '') + ' ' + String(f.name || '');
+    const wd = kind === 'edu' ? /\beducation-(\d+)--/i : /\bworkExperience-(\d+)--/i;
+    let m = s.match(wd);
+    if (m) {
+      const doc = f.el && f.el.ownerDocument;
+      const seen = [];
+      if (doc) doc.querySelectorAll(kind === 'edu' ? '[id^="education-"]' : '[id^="workExperience-"]').forEach(el => { const x = el.id.match(wd); if (x && !seen.includes(x[1])) seen.push(x[1]); });
+      return Math.max(0, seen.indexOf(m[1]));
+    }
+    m = s.match(kind === 'edu' ? EDU_IDX : JOB_IDX);
+    return m ? +m[1] : -1;
+  }
+  const yearOf = v => (String(v || '').match(/(19|20)\d\d/) || [''])[0];
+  function eduOrder(p) {
+    const list = JAA.educationListOf ? JAA.educationListOf(p) : [];
+    const top = JAA.highestEducation ? JAA.highestEducation(list) : list[0];
+    return top ? [top].concat(list.filter(e => e !== top)) : list;
+  }
+  // value for an education field: the k-th entry on repeating forms, else the highest degree
+  function eduVal(p, f, key) {
+    const k = entryIndex(f, 'edu');
+    const e = k < 0 ? null : eduOrder(p)[k];
+    if (k < 0 || (k === 0 && !e)) {
+      const one = p.education || {};
+      return { school: one.school, degree: one.degree, field: one.field, startYear: one.startYear, endYear: one.endYear }[key] || '';
+    }
+    if (!e) return '';
+    return { school: e.school, degree: e.degree, field: e.field, startYear: yearOf(e.start), endYear: yearOf(e.end) }[key] || '';
+  }
+  // the k-th job on a repeating work-experience form (null when the field isn't part of one)
+  function jobAt(p, f) {
+    const k = entryIndex(f, 'job');
+    if (k < 0) return null;
+    return (p.workHistory || [])[k] || {};
+  }
+  const DEGREE_ALTS = v => ({
+    Doctorate: [/\bph ?d\b|\bdoctor/], "Master's": [/\bmaster/, /\bm ?s\b|\bm ?a\b|\bmba\b/], "Bachelor's": [/\bbachelor/, /\bb ?s\b|\bb ?a\b/],
+    "Associate's": [/\bassociate/], 'High School': [/high school|secondary|\bged\b/], Certificate: [/certificat/], Bootcamp: [/boot ?camp/, /certificat/]
+  }[v] || []);
+
   // [key, label regex, value(profile, field), flags]. Order matters: specific before general.
   // flags.short: only when the label is short (avoids "...please share your email" in long custom questions)
   // flags.noLLM: if the profile value is empty, leave it for the user instead of asking the model.
@@ -352,21 +399,22 @@
     ['city', /^(current )?city\b/, p => p.city, { short: true, noLLM: true }],
     ['state', /^(state|province|state province|region)\b/, p => p.state, { short: true, noLLM: true }],
     ['country', /^(country|country of residence|current country)\b/, p => p.country, { short: true, noLLM: true }],
-    ['location', /^(location|current location|your location|city state|where are you (located|based)|address|home address)\b|\bcandidate location\b/, p => p.location || [p.city, p.state].filter(Boolean).join(', '), { short: true, noLLM: true }],
+    ['location', /^(location|current location|your location|city state|where are you (located|based)|address|home address)\b|\bcandidate location\b/, (p, f) => { const j = jobAt(p, f); return j ? j.location || '' : p.location || [p.city, p.state].filter(Boolean).join(', '); }, { short: true, noLLM: true }],
     ['over18', /\b(18 years|over the age of 18|at least 18|age of majority|legal age)\b/, p => p.over18],
     ['sponsorship', /\b(sponsor|sponsorship|h ?1 ?b|visa (status|support|transfer))\b/, (p, f, L) => foreign(L) ? null : p.needsSponsorship],
     ['workAuth', /\b(authori[sz]ed to work|legally (authori[sz]ed|eligible|permitted|able)|right to work|eligible to work|work authori[sz]ation|employment eligibility|permitted to work)\b/,
       (p, f, L) => foreign(L) ? null : p.workAuthorizedUS],
     ['citizenship', /\b(citizen|citizenship|permanent resident)\b/, (p, f, L) => foreign(L) ? '' : (hasYesNo(f) || /^(are|is) you\b/.test(norm(f.label)))
       ? (/\bu\.?s\.?\b|united states|america/i.test(p.citizenship) ? 'Yes' : null) : p.citizenship],
-    ['currentTitle', /\b(current (job )?title|current (role|position)|job title|^title$|most recent (job )?title)\b/, p => p.currentTitle, { short: true, noLLM: true }],
-    ['currentEmployer', /\b(current (company|employer)|most recent (company|employer)|^company( name)?$|^employer$|^org(anization)?$)\b/, p => p.currentEmployer, { short: true }],
+    ['currentTitle', /\b(current (job )?title|current (role|position)|job title|^title$|most recent (job )?title)\b/, (p, f) => { const j = jobAt(p, f); return j ? j.title || '' : p.currentTitle; }, { short: true, noLLM: true }],
+    ['currentEmployer', /\b(current (company|employer)|most recent (company|employer)|^company( name)?$|^employer$|^org(anization)?$)\b/, (p, f) => { const j = jobAt(p, f); return j ? j.company || '' : p.currentEmployer; }, { short: true }],
+    ['jobDescription', /^((role|job|position) )?description$|^(responsibilities|duties|role description|description of (duties|responsibilities))$/, (p, f) => { const j = jobAt(p, f); return j ? (j.bullets || []).map(b => '• ' + b).join('\n') : null; }, { short: true }],
     ['eduMonth', /\b(start|end)( date)? month\b/, () => '', { short: true, noLLM: true }],
-    ['eduStartYear', /\bstart( date)? year\b|\bstart year\b/, p => p.education.startYear, { short: true }],
-    ['eduEndYear', /\b(end( date)? year|graduation (year|date)|year of graduation|grad year)\b/, p => p.education.endYear, { short: true }],
-    ['school', /\b(school|university|college|institution)( name)?\b/, p => p.education.school],
-    ['degree', /^(degree|highest (level of )?(education|degree)|education level|level of education)\b/, p => p.education.degree, { short: true }],
-    ['discipline', /\b(discipline|field of study|major|area of study)\b/, p => p.education.field, { short: true }],
+    ['eduStartYear', /\bstart( date)? year\b|\bstart year\b|\bfirst year attended\b/, (p, f) => eduVal(p, f, 'startYear'), { short: true }],
+    ['eduEndYear', /\b(end( date)? year|graduation (year|date)|year of graduation|grad year|last year attended)\b/, (p, f) => eduVal(p, f, 'endYear'), { short: true }],
+    ['school', /\b(school|university|college|institution)( name)?\b/, (p, f) => eduVal(p, f, 'school')],
+    ['degree', /^(degree|highest (level of )?(education|degree)|education level|level of education)\b/, (p, f) => eduVal(p, f, 'degree'), { short: true, alts: DEGREE_ALTS }],
+    ['discipline', /\b(discipline|field of study|major|area of study)\b/, (p, f) => eduVal(p, f, 'field'), { short: true }],
     ['yearsExperience', /\byears of (relevant |professional |work )?experience\b/, p => p.yearsExperience],
     ['availability', /\b(when can you start|earliest (possible )?(start|available)|available (start|to start)|start date|availability|notice period|how soon)\b/, p => p.availability || p.noticePeriod],
     ['relocate', /\brelocat/, p => p.willingToRelocate],
@@ -763,5 +811,5 @@
     setTimeout(() => t.classList.remove('jaa-flash'), 2200);
   }
 
-  JAA.core = { isEeoField, pickTailored, readValue, verify, peekOptions, flash, describe, highlightTarget, comboControl, norm, similarity, cleanLabel, textOf, sleep, isVisible, collect, hasValue, chooseOption, resolve, ruleFor, bankMatch, fill, mark, clearMarks, blockSubmits, isFilling, safeClick, RULES };
+  JAA.core = { isEeoField, pickTailored, readValue, verify, peekOptions, flash, describe, highlightTarget, comboControl, norm, similarity, cleanLabel, textOf, sleep, isVisible, collect, hasValue, chooseOption, resolve, ruleFor, bankMatch, fill, mark, clearMarks, blockSubmits, isFilling, safeClick, RULES, entryIndex, eduVal, jobAt };
 })();

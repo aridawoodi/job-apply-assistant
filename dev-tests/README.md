@@ -79,3 +79,16 @@ Run from `dev-tests/` with `NODE_PATH` pointing at a folder where Playwright is 
   empty and yellow (`eeo-mocks/gh-eeo.html`), even with EEO-looking answer-bank entries and a greedy mock
   model; no EEO text reaches the model. An existing user's saved answers survive the update migration and
   the Options save, and are filled with the exact category. Screenshots `screenshots/v5/28-29`.
+
+## v0.6.0 tests
+- `node unit-v6.js` (no browser): resume import on the fake fixtures, including
+  `fixtures/sam-taylor-resume.docx/.pdf` (made-up person; several schools, a bootcamp, a project, long
+  skill lines, certifications without years). Checks sections and entries by rules, degree/field/status,
+  the fixed degree list, highest degree, projects never becoming jobs, AI answers validated against each
+  entry's text (mock answers with invented entries), the rules fallback, skills/certification splitting,
+  city/state/country, portfolio only from header links, and form fill of the Nth school/job
+  (Greenhouse `school--N`, Workday `education-N`). EEO stays empty.
+- `mock-ollama-v4.js` also answers the per-section "You read part of a resume" prompts (with invented
+  entries that must be left out). `e2e-v4.js` covers the review screen; `unit-v6.js` checks that "Read again
+  with AI" sends every section.
+- `e2e-v3.js` and `e2e-steps.js` time out at the same step on 0.5.1 and 0.6.0 (older mocks); not a 0.6 change.

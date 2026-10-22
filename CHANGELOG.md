@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.6.0 (2026-10-21): resume import that reads every school, job and project
+- **Education is a list now.** Settings → Profile shows every school as its own card: school, degree
+  (a fixed list: High School, Associate's, Bachelor's, Master's, Doctorate, Certificate, Bootcamp, Other),
+  field of study, location, start, end and status (completed / in progress / attended). You can add,
+  remove and reorder schools and mark your highest degree. Before, only one school was kept and filled.
+  Your saved school from 0.5 becomes the first entry automatically.
+- **New Projects section** (name, link, role/type, dates, description, bullets, tech). Projects are
+  imported from a Projects section, shown in Settings, used for AI answers, the answer bank, cover letters
+  and tailoring. They are never added as jobs.
+- **Faster, more accurate import.**
+  - The resume is split into sections and entries with rules first (no more merging lines across
+    schools, skills or date lines).
+  - Contact details, links, skills, certifications and languages never need the AI.
+  - Entries the rules read confidently skip the AI. The rest is sent to the local AI one section at a
+    time with a strict format: degree from the fixed list, field of study separate, jobs only from
+    Experience, projects only from Projects, and certifications kept separate.
+  - Everything the AI says is checked against that entry's own text, and anything not in your resume is
+    left out (and listed).
+  - If the AI fails or is off, rules read everything instead, and the page says so.
+  - On a typical 2-page resume this takes seconds instead of a minute or more.
+- **Review screen after import.** Every job, school and project is an editable card you can untick. Each
+  list says plainly whether it will replace what you saved ("Replace my saved schools (1) with these 4"),
+  or that nothing was found and your saved data stays. "↻ Read again with AI" re-reads every entry with
+  the AI (slower). The "Let my local AI read the details" box is read when you import, not only on page load.
+- **Form fill with several schools/jobs.** On Greenhouse and Workday, the 1st, 2nd, … education and work
+  blocks are filled from your list (highest degree first, current job first). The extension still never
+  clicks "Add another"; add the blocks yourself and fill again.
+- Small fixes:
+  - Skills: long names allowed (up to 90 characters), "Category: a, b" lines split properly, brackets
+    with lists kept together, duplicates removed.
+  - City, state and country are split from your location.
+  - Portfolio/website comes only from links in your resume header, not from a project.
+  - Bullets are capped at 25 per job and 15 per project (was 12 per job).
+  - Certifications are one per line, so "Name, 2023" stays one item.
+- EEO / self-ID answers are still never set by import, and the extension still never clicks Submit.
+- Tests: `dev-tests/unit-v6.js` (with a new made-up resume, `fixtures/sam-taylor-resume.*`).
+
 ## 0.5.1 (2026-10-21): voluntary self-ID is never pre-set
 - **EEO / self-ID answers default to empty ("Not set") for everyone.** This covers race/ethnicity,
   Hispanic/Latino, gender, transgender, sexual orientation, disability, veteran status and pronouns.

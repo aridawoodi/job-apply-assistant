@@ -8,7 +8,6 @@ const SECTIONS = [
   ['Links', [['linkedin', 'LinkedIn URL', 'url'], ['github', 'GitHub URL', 'url'], ['portfolio', 'Portfolio URL', 'url'], ['website', 'Other website', 'url']]],
   ['Work authorization', [['workAuthorizedUS', 'Authorized to work in the US?', 'select', YN], ['needsSponsorship', 'Need visa sponsorship?', 'select', YN], ['citizenship', 'Citizenship'], ['over18', 'At least 18?', 'select', YN]]],
   ['Current job', [['currentEmployer', 'Current employer'], ['currentTitle', 'Current title'], ['currentStartDate', 'Start date (YYYY-MM)'], ['yearsExperience', 'Years of experience']]],
-  ['Education', [['education.school', 'School'], ['education.degree', 'Degree'], ['education.field', 'Field of study'], ['education.location', 'School location'], ['education.startYear', 'Start year'], ['education.endYear', 'End year']]],
   ['Availability & preferences', [['availability', 'Earliest start date'], ['noticePeriod', 'Notice period'], ['salaryExpectation', 'Salary expectation (blank = you answer each time)'], ['willingToRelocate', 'Willing to relocate?', 'select', YN], ['howDidYouHear', 'Default "How did you hear about us?"']]],
   // Voluntary self-ID: "Choose…" (empty = not set) until you pick; empty fields stay yellow on forms for you.
   ['Voluntary self-identification (EEO, optional)', [['eeo.gender', 'Gender', 'eeo', JAA.EEO_CHOICES.gender], ['eeo.transgender', 'Transgender?', 'eeo', JAA.EEO_CHOICES.transgender], ['eeo.sexualOrientation', 'Sexual orientation', 'eeo', JAA.EEO_CHOICES.sexualOrientation], ['eeo.disability', 'Disability', 'eeo', JAA.EEO_CHOICES.disability], ['eeo.veteran', 'Veteran status', 'eeo', JAA.EEO_CHOICES.veteran], ['eeo.ethnicity', 'Race / ethnicity', 'eeo', JAA.EEO_CHOICES.ethnicity], ['eeo.hispanicLatino', 'Hispanic or Latino?', 'eeo', JAA.EEO_CHOICES.hispanicLatino]]],
@@ -66,6 +65,56 @@ function renderProfile() {
   renderJobs(root);
 }
 
+/* v0.6: education is a list (one entry is the highest degree, used for single "Degree" questions) */
+const EDU_FIELDS = [['school', 'School'], ['degree', 'Degree', 'degree'], ['field', 'Field of study'], ['location', 'Location'], ['start', 'Start'], ['end', 'End (or expected)'], ['status', 'Status', 'status']];
+function renderEducation(root) {
+  const p = state.profile;
+  p.educationList = JAA.educationListOf(p).map(e => Object.assign({}, e));
+  JAA.syncEducation(p);
+  const h3 = document.createElement('h3'); h3.textContent = 'Education'; root.appendChild(h3);
+  const note = document.createElement('p'); note.className = 'muted small'; note.textContent = 'Most recent first. Forms that ask for several schools get them in this order; single "School" / "Degree" questions use the one marked Highest degree.'; root.appendChild(note);
+  const box = document.createElement('div'); box.className = 'jobs'; box.id = 'eduBox'; root.appendChild(box);
+  const optList = (opts, v) => opts.map(([k, l]) => `<option value="${esc(k)}"${k === v ? ' selected' : ''}>${esc(l)}</option>`).join('') + (v && !opts.some(([k]) => k === v) ? `<option value="${esc(v)}" selected>${esc(v)}</option>` : '');
+  p.educationList.forEach((e, i) => {
+    const d = document.createElement('div'); d.className = 'jobed';
+    d.innerHTML = `<div class="grid">${EDU_FIELDS.map(([k, l, t]) => t === 'degree'
+      ? `<label>${l}<select data-edu="${i}" data-ek="${k}">${optList([['', '—']].concat(JAA.DEGREES.map(x => [x, x])), e[k] || '')}</select></label>`
+      : t === 'status' ? `<label>${l}<select data-edu="${i}" data-ek="${k}">${optList(JAA.EDU_STATUS, e[k] || 'completed')}</select></label>`
+      : `<label>${l}<input type="text" data-edu="${i}" data-ek="${k}" value="${esc(e[k] || '')}"></label>`).join('')}</div>
+      <div class="row" style="margin-top:6px;gap:12px"><label class="check inline"><input type="radio" name="eduHighest" data-eduhi="${i}"${e.highest ? ' checked' : ''}> Highest degree</label>
+      <button class="secondary" type="button" data-eduup="${i}" title="Move up"${i ? '' : ' disabled'}>↑</button><button class="secondary" type="button" data-edudown="${i}" title="Move down"${i < p.educationList.length - 1 ? '' : ' disabled'}>↓</button>
+      <button class="x" data-edudel="${i}" type="button" title="Remove this school">× remove</button></div>`;
+    box.appendChild(d);
+  });
+  const add = document.createElement('button'); add.type = 'button'; add.className = 'secondary'; add.textContent = '+ Add school';
+  add.onclick = () => { readProfile(); state.profile.educationList.push({ school: '', degree: '', field: '', location: '', start: '', end: '', status: 'completed', highest: !state.profile.educationList.length }); renderProfile(); dirty(); };
+  root.appendChild(add);
+  const move = (i, j) => { readProfile(); const L = state.profile.educationList; if (j < 0 || j >= L.length) return; [L[i], L[j]] = [L[j], L[i]]; renderProfile(); dirty(); };
+  box.querySelectorAll('[data-eduup]').forEach(b => b.onclick = () => move(+b.dataset.eduup, +b.dataset.eduup - 1));
+  box.querySelectorAll('[data-edudown]').forEach(b => b.onclick = () => move(+b.dataset.edudown, +b.dataset.edudown + 1));
+  box.querySelectorAll('[data-edudel]').forEach(b => b.onclick = () => { readProfile(); state.profile.educationList.splice(+b.dataset.edudel, 1); state.profile.educationList.forEach(e => { e.highest = false; }); JAA.syncEducation(state.profile); renderProfile(); dirty(); });
+}
+
+/* v0.6: projects (kept apart from work history; used by the AI for "tell us about a project" answers) */
+const PROJ_FIELDS = [['name', 'Name'], ['link', 'Link'], ['role', 'Role / type'], ['start', 'Start'], ['end', 'End'], ['description', 'Description']];
+function renderProjects(root) {
+  const p = state.profile;
+  const h3 = document.createElement('h3'); h3.textContent = 'Projects'; root.appendChild(h3);
+  const box = document.createElement('div'); box.className = 'jobs'; box.id = 'projBox'; root.appendChild(box);
+  (p.projects || []).forEach((x, i) => {
+    const d = document.createElement('div'); d.className = 'jobed';
+    d.innerHTML = `<div class="grid">${PROJ_FIELDS.map(([k, l]) => `<label>${l}<input type="text" data-proj="${i}" data-pk="${k}" value="${esc(x[k] || '')}"></label>`).join('')}</div>
+      <label style="margin-top:6px">Tech (comma-separated)<input type="text" data-proj="${i}" data-pk="tech" value="${esc((x.tech || []).join(', '))}"></label>
+      <label style="margin-top:6px">Bullets (one per line)<textarea rows="3" data-proj="${i}" data-pk="bullets">${esc((x.bullets || []).join('\n'))}</textarea></label>
+      <button class="x" data-projdel="${i}" type="button" title="Remove this project">× remove</button>`;
+    box.appendChild(d);
+  });
+  const add = document.createElement('button'); add.type = 'button'; add.className = 'secondary'; add.textContent = '+ Add project';
+  add.onclick = () => { readProfile(); (state.profile.projects = state.profile.projects || []).push({ name: '', link: '', role: '', start: '', end: '', description: '', tech: [], bullets: [] }); renderProfile(); dirty(); };
+  root.appendChild(add);
+  box.querySelectorAll('[data-projdel]').forEach(b => b.onclick = () => { readProfile(); state.profile.projects.splice(+b.dataset.projdel, 1); renderProfile(); dirty(); });
+}
+
 /* work history + skills (filled from your resume; editable here) */
 const JOB_FIELDS = [['title', 'Title'], ['company', 'Company'], ['location', 'Location'], ['start', 'Start'], ['end', 'End']];
 function renderJobs(root) {
@@ -83,11 +132,13 @@ function renderJobs(root) {
   add.onclick = () => { readProfile(); (state.profile.workHistory = state.profile.workHistory || []).push({ company: '', title: '', location: '', start: '', end: '', bullets: [] }); renderProfile(); dirty(); };
   root.appendChild(add);
   box.querySelectorAll('[data-jobdel]').forEach(b => b.onclick = () => { readProfile(); state.profile.workHistory.splice(+b.dataset.jobdel, 1); renderProfile(); dirty(); });
-  const h3b = document.createElement('h3'); h3b.textContent = 'Skills, certifications & languages (comma-separated)'; root.appendChild(h3b);
+  renderEducation(root);
+  renderProjects(root);
+  const h3b = document.createElement('h3'); h3b.textContent = 'Skills, certifications & languages (skills and languages comma-separated, commas inside brackets are kept; one certification per line)'; root.appendChild(h3b);
   const g = document.createElement('div'); g.className = 'grid';
   [['skills', 'Skills'], ['certifications', 'Certifications'], ['languages', 'Languages']].forEach(([k, l]) => {
     const lab = document.createElement('label'); lab.textContent = l; lab.style.gridColumn = '1 / -1';
-    const ta = document.createElement('textarea'); ta.dataset.list = k; ta.value = (p[k] || []).join(', ');
+    const ta = document.createElement('textarea'); ta.dataset.list = k; ta.value = k === 'certifications' ? JAA.splitLines((p[k] || []).join('\n')).join('\n') : (p[k] || []).join(', ');
     lab.appendChild(ta); g.appendChild(lab);
   });
   root.appendChild(g);
@@ -135,7 +186,18 @@ function readProfile() {
     const j = jobs[+el.dataset.job]; if (!j) return;
     j[el.dataset.jk] = el.dataset.jk === 'bullets' ? el.value.split('\n').map(x => x.trim()).filter(Boolean) : el.value.trim();
   });
-  document.querySelectorAll('#profileForm [data-list]').forEach(el => { state.profile[el.dataset.list] = el.value.split(',').map(x => x.trim()).filter(Boolean); });
+  document.querySelectorAll('#profileForm [data-list]').forEach(el => { state.profile[el.dataset.list] = el.dataset.list === 'certifications' ? JAA.splitLines(el.value) : JAA.splitList(el.value); });
+  const edu = state.profile.educationList = JAA.educationListOf(state.profile);
+  document.querySelectorAll('#profileForm [data-edu]').forEach(el => { const e = edu[+el.dataset.edu]; if (e) e[el.dataset.ek] = el.value.trim(); });
+  const hi = document.querySelector('#profileForm [data-eduhi]:checked');
+  if (hi) edu.forEach((e, i) => { e.highest = i === +hi.dataset.eduhi; });
+  JAA.syncEducation(state.profile);
+  const pr = state.profile.projects = state.profile.projects || [];
+  document.querySelectorAll('#profileForm [data-proj]').forEach(el => {
+    const x = pr[+el.dataset.proj]; if (!x) return;
+    const k = el.dataset.pk;
+    x[k] = k === 'bullets' ? el.value.split('\n').map(t => t.trim()).filter(Boolean) : k === 'tech' ? JAA.splitList(el.value) : el.value.trim();
+  });
 }
 
 function renderResume() {
@@ -145,7 +207,7 @@ function renderResume() {
 }
 function mountImporter() {
   JAA.importer.mount($('importer'), {
-    useAI: $('importAI').checked,
+    useAI: () => $('importAI').checked, // read when a file is imported
     onSaved: async () => { const all = await JAA.loadAll(); state.profile = all.profile; state.resume = all.resume; renderProfile(); renderResume(); $('saved').textContent = 'Profile updated from your resume'; }
   });
 }
@@ -294,6 +356,11 @@ const pageOpenedAt = new Date().toISOString();
 function dirty() { dirtyFlag = true; $('saved').textContent = 'Unsaved changes'; }
 async function save() {
   readProfile(); readSettings();
+  // drop empty "+ Add" rows
+  const filled = o => Object.entries(o).some(([k, v]) => !['highest', 'status'].includes(k) && (Array.isArray(v) ? v.length : String(v || '').trim()));
+  state.profile.educationList = (state.profile.educationList || []).filter(filled);
+  state.profile.projects = (state.profile.projects || []).filter(filled);
+  JAA.syncEducation(state.profile);
   state.answerBank = state.answerBank.filter(r => (r.q || '').trim() || (r.a || '').trim());
   // keep answers learned on a job tab while this page was open
   const { answerBank: stored = [] } = await chrome.storage.local.get('answerBank');
@@ -383,8 +450,7 @@ function initBackups() {
   await new Promise(r => chrome.runtime.sendMessage({ type: 'tracker:migrate' }, () => { void chrome.runtime.lastError; r(); }));
   state.applications = (await chrome.storage.local.get('applications')).applications || [];
   renderProfile(); renderBank(); renderSettings(); renderResume(); renderApps(); renderRules(); mountImporter(); renderLibrary(); initBehaviour();
-  $('importAI').onchange = mountImporter;
-  if (!state.settings.useLLM) $('importAI').checked = false, mountImporter();
+  if (!state.settings.useLLM) $('importAI').checked = false;
   $('ruleAdd').onclick = () => { addRule($('ruleNew').value); $('ruleNew').value = ''; };
   $('ruleNew').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('ruleAdd').click(); } };
 

@@ -114,12 +114,13 @@ manifest.json            MV3 manifest
 background.js            service worker: Ollama calls, Origin rule, model download, resume tasks, sessions, backups, tracker
 lib/defaults.js          default settings, profile schema, storage loader (shared)
 lib/resume.js            PDF/DOCX parsing (local), regex facts, model-output validation, profile mapping
+lib/extract.js           resume sections/entries by rules, per-section AI prompts, validation + merge
 lib/tailor.js            tailoring prompt, fact validation, rules, file names
 lib/cover.js             cover-letter prompt, fact checks, file name
 lib/match.js             resume ↔ job keyword match (local)
 lib/docx.js              in-place DOCX editing + DOCX template builder
 lib/pdfout.js            PDF builder (jsPDF)
-lib/importer.js          resume import + confirm checklist (setup wizard and Settings)
+lib/importer.js          resume import + editable review screen (setup wizard and Settings)
 lib/pageutil.js          helpers for extension pages; lib/pages.css shared styles
 lib/vendor/              pdf.js, JSZip, jsPDF (with licenses)
 content/                 content scripts: field detection, site adapters, chat panel + tabs (panel.js), refine toolbar,
@@ -140,6 +141,7 @@ dev-tests/               Playwright end-to-end tests, mocks, fixtures (not shipp
 ```bash
 cd dev-tests && npm i playwright && npx playwright install chromium
 node unit-v4.js                              # pure helpers, no browser
+node unit-v6.js                              # v0.6 resume import (sections, schools, jobs, projects, skills), no browser
 node e2e-v4.js                               # setup wizard, Origin rule, model pull, resume import, tailoring (mock Ollama)
 node e2e-v5.js                               # v0.5: tour, icon, progress, refine, tabs, match, cover letters, tracking, settings (ONLY=match,cover,...)
 node e2e-live-v5.js                          # live Greenhouse/Lever/Ashby, fill only (non-GET requests aborted) + performance numbers

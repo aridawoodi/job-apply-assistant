@@ -30,6 +30,18 @@ function extractAnswer(text) {
   };
 }
 
+// v0.6: one request per section ("You read part of a resume"); entries come as "[gN] text" lines.
+// The mock answers like a small model would, including invented facts that the extension must drop.
+function sectionAnswer(prompt) {
+  const ents = [...prompt.matchAll(/^\[(g\d+)\] (.*)$/gm)].map(m => ({ id: m[1], text: m[2] }));
+  if (/^EDUCATION/.test(prompt)) return { entries: ents.map(e => ({ id: e.id, kind: /certif/i.test(e.text) ? 'certification' : 'school', school: (e.text.match(/([A-Z][\w ]*(University|College|Institute|School))/) || [])[1] || '', degree: /B\.S\.|Bachelor/.test(e.text) ? "Bachelor's" : /M\.S\.|Master/.test(e.text) ? "Master's" : '', field: 'Computer Science', start: '2014', end: '2018', location: '', status: 'completed' }))
+    .concat([{ id: 'g999', kind: 'school', school: 'Imaginary University', degree: "Master's", field: 'Magic', start: '2001', end: '2002', location: '', status: 'completed' }]) };
+  if (/^WORK EXPERIENCE/.test(prompt)) return { jobs: ents.map(e => { const [tc, d] = e.text.split(' | '); const [title, company] = tc.split(/,\s+/); const [start, end] = (d || '').split(/\s+–\s+/); return { id: e.id, title, company, location: '', start: start || '', end: end || '' }; })
+    .concat([{ id: 'g998', company: 'Imaginary Corp', title: 'Chief Wizard', location: '', start: '2010', end: '2012' }]) };
+  if (/^PROJECTS/.test(prompt)) return { projects: ents.map(e => ({ id: e.id, name: e.text.split(/ — | \| /)[0], link: '', start: '', end: '', tech: ['React', 'Imaginary Framework'] })) };
+  return {};
+}
+
 function tailorAnswer(prompt) {
   const ids = {};
   for (const m of prompt.matchAll(/^\[(b\d+)\] (?:• )?(.*)$/gm)) ids[m[2]] = m[1];
@@ -85,7 +97,8 @@ function createMock(opts) {
       if (req.url === '/api/chat') {
         const sys = (j.messages || []).map(m => m.content).join('\n');
         let content;
-        if (/You read a resume/.test(sys)) content = JSON.stringify(extractAnswer(j.messages[1].content));
+        if (/You read part of a resume/.test(sys)) content = JSON.stringify(sectionAnswer(j.messages[1].content));
+        else if (/You read a resume/.test(sys)) content = JSON.stringify(extractAnswer(j.messages[1].content));
         else if (/You tailor a resume/.test(sys)) content = JSON.stringify(tailorAnswer(j.messages[1].content));
         else if (state.opts.route && (content = state.opts.route(sys, j)) != null) { /* v0.5 routes */ }
         else content = JSON.stringify({ answers: {} });
@@ -104,5 +117,5 @@ function createMock(opts) {
   });
   return new Promise(resolve => server.listen(opts.port, opts.host, () => resolve({ server, state, close: () => new Promise(r => { server.closeAllConnections && server.closeAllConnections(); server.close(r); }) })));
 }
-module.exports = { createMock, originOk, extractAnswer, tailorAnswer };
+module.exports = { createMock, originOk, extractAnswer, sectionAnswer, tailorAnswer };
 if (require.main === module) createMock({ port: +(process.argv[2] || 11434), models: ['qwen2.5:3b'] }).then(() => console.log('mock ollama v4 on', process.argv[2] || 11434));

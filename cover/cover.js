@@ -13,6 +13,7 @@
     return [job.company, job.title, [p.firstName, p.lastName].join(' '), p.location, p.city, p.state,
       (p.workHistory || []).map(j => [j.title, j.company, j.location].join(' ')).join('\n'),
       (p.educationList || []).map(e => [e.school, e.degree, e.field].join(' ')).join('\n'),
+      (p.projects || []).map(x => [x.name, x.role, x.description, (x.tech || []).join(', ')].concat(x.bullets || []).join('\n')).join('\n'),
       (p.skills || []).join(', '), (p.certifications || []).join(', ')].filter(Boolean);
   }
   async function init() {

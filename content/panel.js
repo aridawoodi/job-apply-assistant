@@ -146,7 +146,7 @@
       copyRow('Phone', p.phone), copyRow('Location', p.location || [p.city, p.state].filter(Boolean).join(', '), 'location'))));
     const links = [copyRow('LinkedIn', p.linkedin), copyRow('GitHub', p.github), copyRow('Portfolio', p.portfolio), copyRow('Website', p.website)].filter(Boolean);
     if (links.length) box.appendChild(sec('Links', h('ul', { class: 'copyl' }, links)));
-    const edu = (p.educationList && p.educationList.length ? p.educationList : (p.education && p.education.school ? [{ school: p.education.school, degree: p.education.degree, field: p.education.field, start: p.education.startYear, end: p.education.endYear }] : []));
+    const edu = JAA.educationListOf ? JAA.educationListOf(p) : (p.educationList || []);
     if (edu.length) box.appendChild(sec('Education', h('ul', { class: 'copyl' }, edu.slice(0, 6).flatMap(e => [
       copyRow('School', e.school), copyRow('Degree', [e.degree, e.field].filter(Boolean).join(', '), 'degree'), copyRow('Dates', [e.start, e.end].filter(Boolean).join(' – '), 'dates')]))));
     const jobs = p.workHistory || [];
@@ -157,6 +157,17 @@
         s.appendChild(h('div', { class: 'trow' }, h('div', { class: 't1', text: [j.title, j.company].filter(Boolean).join(' · ') }), h('div', { class: 't2', text: [j.start, j.end].filter(Boolean).join(' – ') + (j.location ? ' · ' + j.location : '') }),
           h('div', { class: 'row', style: 'justify-content:flex-start;margin-top:4px;flex-wrap:wrap' }, j.title ? cpBtn(j.title, 'title') : null, j.company ? cpBtn(j.company, 'company') : null,
             desc ? h('button', { class: 'cp', type: 'button', 'data-act': 'copy-desc', text: 'Copy description', onclick: () => copy(desc, 'description') }) : null)));
+      });
+      box.appendChild(s);
+    }
+    const projects = p.projects || [];
+    if (projects.length) {
+      const s = sec('Projects');
+      projects.slice(0, 6).forEach(x => {
+        const desc = [x.description].concat((x.bullets || []).map(b => '• ' + b)).filter(Boolean).join('\n');
+        s.appendChild(h('div', { class: 'trow' }, h('div', { class: 't1', text: x.name || '' }), h('div', { class: 't2', text: [[x.start, x.end].filter(Boolean).join(' – '), (x.tech || []).slice(0, 6).join(', ')].filter(Boolean).join(' · ') }),
+          h('div', { class: 'row', style: 'justify-content:flex-start;margin-top:4px;flex-wrap:wrap' }, x.name ? cpBtn(x.name, 'project') : null, x.link ? cpBtn(x.link, 'link') : null,
+            desc ? h('button', { class: 'cp', type: 'button', text: 'Copy description', onclick: () => copy(desc, 'description') }) : null)));
       });
       box.appendChild(s);
     }
