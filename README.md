@@ -2,10 +2,11 @@
 
 **Fill job applications in seconds, and tailor your resume to each job, with a free AI that runs on
 your own computer.** Works on Mac and Windows in Google Chrome. No account, no subscription, and your
-data never leaves your computer.
+data never leaves your computer. Choose between Chrome's built-in AI (Gemini Nano) or Ollama.
 
 - ⚡ **Fills applications** on Greenhouse, Lever and Ashby (plus basic Workday and LinkedIn Easy Apply) from your profile.
 - 💬 **Chats with you** about anything it couldn't fill, one question at a time, and drafts the "Why us?" answers in your voice.
+- 🤖 **AI engine options**: Chrome built-in AI (Gemini Nano, Chrome 138+) or Ollama, with automatic fallback. No installation needed for Chrome AI; Ollama works on any system with 8 GB+ RAM.
 - 📄 **Tailors your resume** for each job: rewords and reorders what's already in your resume (it never invents
   anything) and you approve each change. Exports Word and PDF, named `First Last - Company - Job Title`.
 - ✉️ **Writes cover letters** from your resume and the job, fact-checked, as text, PDF or Word.
@@ -21,9 +22,10 @@ data never leaves your computer.
 
 1. **Add the extension** from the Chrome Web Store: _link coming after the store review_
    (or, for now, see [Install from source](#install-from-source)).
-2. **Follow the setup page** that opens. It checks whether **Ollama** (the free app that runs the AI) is
-   installed and gives you a one-click download for your computer, then downloads the right AI model for
-   your computer's memory, with a progress bar.
+2. **Follow the setup page** that opens. It detects whether you have Chrome 138+ with built-in AI support,
+   or guides you to install **Ollama** (the free app that runs AI models). Chrome built-in AI works on
+   devices with ~16 GB RAM or a strong GPU; 8 GB machines work great with Ollama. The setup downloads
+   the right AI model for your system, with a progress bar.
 3. **Drop in your resume** (PDF or Word). The assistant reads it on your computer, fills in your profile,
    and asks a few things resumes don't say (work authorization, sponsorship, start date, salary, and the
    optional equal-opportunity questions, which you can always decline). Then try it on the built-in
@@ -64,13 +66,14 @@ original but not identical. Uploading the Word version gives the best result.
 
 ### What you need
 - Google Chrome 110 or newer (or another Chromium browser such as Edge or Brave) on macOS or Windows.
-  Linux works too.
-- About 3 GB of free disk space for Ollama and the small AI model (about 6 GB for the larger one). 8 GB of memory is enough; with 16 GB or more
-  the setup suggests a larger model that writes better.
+  Linux works too. Chrome 138+ gives you built-in AI (Gemini Nano) at no extra setup.
+- For Ollama: about 3 GB of free disk space for Ollama and the small AI model (about 6 GB for the larger one). 
+  8 GB of memory is enough; with 16 GB or more the setup suggests a larger model that writes better.
+- For Chrome built-in AI: Chrome 138+, and about 16 GB RAM or a strong GPU. 8 GB machines work better with Ollama.
 
 ### Privacy in one paragraph
 Everything (profile, resume, answers, tracker, cover letters, feedback) is stored only in your browser on your computer. No account. The AI
-runs in Ollama on your computer. The extension makes no other network requests: no analytics, no
+runs on your device: either Chrome's built-in AI (Gemini Nano) or Ollama on your computer. The extension makes no other network requests: no analytics, no
 servers, no remote code. Equal-opportunity answers and salary are never sent to the AI.
 Details: [PRIVACY.md](PRIVACY.md).
 

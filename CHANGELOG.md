@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.1 (2026-10-26): Chrome built-in AI support
+- **Chrome built-in AI (Gemini Nano) as an optional engine.** The extension now supports Chrome's on-device Prompt API (LanguageModel, available in Chrome 138+) as a primary AI engine with automatic fallback to Ollama. Chrome built-in AI requires no installation and works on devices with about 16 GB RAM or a strong GPU. On 8 GB machines, Ollama remains the recommended choice.
+- **AI engine preference** (Settings → Local AI): Auto (default: Chrome built-in → Ollama → rules-only), Chrome built-in only, or Ollama only. Auto tries Chrome's built-in AI first when available, then falls back to Ollama if Chrome AI is unavailable or fails. Settings page shows real-time status: which engines are available and which one is currently active.
+- **Chrome Rewriter API support** for polishing longer answers. When available, Chrome's Rewriter or Writer API can refine AI-drafted text (making it shorter, more technical, etc.) — this is where small Ollama models are weakest.
+- No new manifest permissions required. The LanguageModel API is available in all extension contexts (service worker, popup, side panel) without additional permissions in Chrome 138+.
+- **Hardware note in setup and Settings:** Chrome built-in AI often needs ~16 GB RAM or a strong GPU; 8 GB machines (e.g. MacBook Air) should continue using Ollama for best performance.
+- EEO fields remain empty-by-default and are never AI-filled (same as before). Extension never clicks Submit.
+- **CHROMEWEBSTORE.md** added at repo root: complete Chrome Web Store listing documentation using the Modern Web Guidance template, with version history, permission justifications, rejection history (v0.5.1 keyword spam), and brand-name disclaimer. This file is excluded from the ZIP build.
+- Existing tests pass; new tests cover Chrome AI availability checks and fallback behavior (LanguageModel API mocked in tests).
+- Privacy update: PRIVACY.md now mentions that Chrome built-in AI (when used) processes data on-device just like Ollama.
+
 ## 0.6.0 (2026-10-21): resume import that reads every school, job and project
 - **Education is a list now.** Settings → Profile shows every school as its own card: school, degree
   (a fixed list: High School, Associate's, Bachelor's, Master's, Doctorate, Certificate, Bootcamp, Other),

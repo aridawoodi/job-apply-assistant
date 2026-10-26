@@ -71,7 +71,18 @@
     <p style="margin-top:12px"><button type="button" class="secondary" id="tour">🎓 Take the practice tour</button> <span class="muted small">A 2-minute walkthrough on a fake application.</span></p>
   </section>
 
-  <section id="ai"><h2>Local AI (Ollama)</h2>
+  <section id="ai"><h2>Local AI</h2>
+    <div class="grid">
+      <label>AI engine<select id="s_aiEngine">
+        <option value="auto">Auto (Chrome built-in → Ollama → rules-only)</option>
+        <option value="chrome">Chrome built-in only</option>
+        <option value="ollama">Ollama only</option>
+      </select></label>
+    </div>
+    <p id="aiStatus" class="muted" style="margin:8px 0"></p>
+    <p class="muted" style="font-size:0.9em">Auto tries Chrome's built-in AI first (if available on your device), then falls back to Ollama. Chrome built-in AI (Gemini Nano) requires Chrome 138+ and about 16 GB RAM or a strong GPU. On 8 GB machines use Ollama.</p>
+    
+    <h3 style="margin-top:20px">Ollama settings</h3>
     <div class="grid">
       <label>Ollama URL<input id="s_ollamaUrl" type="url" placeholder="http://127.0.0.1:11434"></label>
       <label>Model<input id="s_model" type="text" placeholder="qwen2.5:3b"></label>
@@ -80,7 +91,10 @@
       <label>Questions per AI batch<input id="s_llmBatchSize" type="number" min="1" max="10"></label>
     </div>
     <p class="muted">With 8 GB of memory, <code>qwen2.5:3b</code> is the fastest reliable choice; with 16 GB or more, <code>qwen2.5:7b</code> writes better. Reasoning models (qwen3.x, deepseek-r1) are asked not to "think", but are still slower. Need help connecting or downloading a model? <a href="../onboarding/welcome.html#ollama" target="_blank">Run setup again</a>.</p>
+    
+    <h3 style="margin-top:20px">General</h3>
     <label class="check"><input id="s_useLLM" type="checkbox"> Send questions my profile can't answer to the local model</label>
+    <label class="check"><input id="s_useRewriter" type="checkbox"> Use Chrome Rewriter to polish longer answers (when available)</label>
     <label class="check"><input id="s_warmUp" type="checkbox"> Pre-load the model when an application page opens (faster first answer)</label>
     <label class="check"><input id="s_rememberAnswers" type="checkbox"> Remember my answers: save what I type in yellow/blue fields to the answer bank</label>
     <label class="check"><input id="s_learnCompanySpecific" type="checkbox"> Also reuse company-specific answers ("Why {company}?") directly (off = only used as examples for the AI)</label>

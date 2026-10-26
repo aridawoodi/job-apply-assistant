@@ -1,9 +1,10 @@
 # Privacy policy
 
-_Last updated: October 19, 2026 · applies to Job Apply Assistant v0.5.0 and later_
+_Last updated: October 26, 2026 · applies to Job Apply Assistant v0.6.1 and later_
 
 Job Apply Assistant is a browser extension that fills job applications and tailors resumes using an AI
-model that runs **on your own computer** (Ollama). It is built so that your information stays with you.
+model that runs **on your own computer**. You can choose between Chrome's built-in AI (Gemini Nano, available in Chrome 138+)
+or the free Ollama app. Both options keep your information on your device.
 
 ## What the extension stores
 On your computer, in your browser's extension storage (`chrome.storage.local`) only:
@@ -25,11 +26,13 @@ religion).
 no tracking, no ads and no remote code.
 
 The extension talks to:
-1. **Ollama on your own computer** (by default `http://127.0.0.1:11434`). Text needed for a task (for
-   example a form question, the job description and relevant parts of your profile or resume) is sent there
+1. **Chrome built-in AI or Ollama on your own computer.** When using Chrome's built-in AI (Gemini Nano), 
+   text processing happens entirely within Chrome on your device — no network requests. When using Ollama
+   (by default `http://127.0.0.1:11434`), text needed for a task (for example a form question, the job 
+   description and relevant parts of your profile or resume) is sent to the Ollama server on your own computer
    so the local AI can answer. **EEO answers, salary, SSN/date of birth and personal details are never sent
    to the AI.** If you change the Ollama address in Settings to another computer, that computer receives
-   these requests; the default is your own computer only.
+   these requests; the default is your own computer only. Chrome built-in AI is entirely on-device and makes no network requests.
 2. **The job application page you are on**, where it types your answers into the form, exactly as you
    would. It never presses Submit, Next or Apply; you do.
 
@@ -42,7 +45,9 @@ The company logo shown in the panel's job card is the image the job page itself 
 favicon service is used.
 
 When you click the Ollama download button on the setup page, your browser opens ollama.com (Ollama's own
-site, with its own privacy policy). Downloading an AI model is done by the Ollama app.
+site, with its own privacy policy). Downloading an AI model is done by the Ollama app. Chrome's built-in AI
+(when available and selected) is managed by Chrome itself and downloads the Gemini Nano model as part of Chrome's
+built-in features.
 
 ## Permissions and why they are needed
 See [store/permissions.md](store/permissions.md). In short: storage for your data, access to the job sites
