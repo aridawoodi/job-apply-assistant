@@ -1,11 +1,11 @@
-# Chrome Web Store Listing — Job Apply Assistant
+# Chrome Web Store Listing — AI Job Application Assistant
 
 > Last Updated: 2026-10-26
 
 ## Store Listing
 
 **Extension Name** [REQUIRED]
-Job Apply Assistant
+AI Job Application Assistant
 
 **Short Description** [REQUIRED]
 Fills job applications and tailors your resume with a free local AI. Private: your data stays on your computer. Never clicks Submit.
@@ -13,7 +13,7 @@ Fills job applications and tailors your resume with a free local AI. Private: yo
 **Detailed Description** [REQUIRED]
 Apply to jobs faster without giving your data to anyone.
 
-Job Apply Assistant fills job applications on Greenhouse, Lever and Ashby (and basic Workday and LinkedIn Easy Apply) from your profile, and uses a free AI that runs on your own computer (Ollama) for everything else. Nothing is uploaded: no account, no subscription, no cloud.
+AI Job Application Assistant fills job applications on Greenhouse, Lever and Ashby (and basic Workday and LinkedIn Easy Apply) from your profile, and uses a free AI that runs on your own computer (Ollama) for everything else. Nothing is uploaded: no account, no subscription, no cloud.
 
 WHAT IT DOES
 Fills the application for you: name, contact details, links, work authorization, education, your resume file and more. Every field is colour-coded so you can see what came from your profile, what the AI drafted, and what still needs you.
@@ -61,7 +61,7 @@ Open source (MIT): https://github.com/aridawoodi/job-apply-assistant
 Productivity
 
 **Single Purpose** [REQUIRED]
-Job Apply Assistant helps the user complete job applications: it fills application forms from the user's own profile and tailors the user's resume to the job, using an AI model that runs locally on the user's computer.
+AI Job Application Assistant helps the user complete job applications: it fills application forms from the user's own profile and tailors the user's resume to the job, using an AI model that runs locally on the user's computer.
 
 **Primary Language** [REQUIRED]
 English
@@ -184,7 +184,7 @@ https://github.com/aridawoodi/job-apply-assistant
 | 2026-10-20 | 0.5.0 | Keyword spam: excessive mention of brand names (Greenhouse, Lever, Ashby, Workday, LinkedIn) in store listing description | Added disclaimer that brand names are mentioned for compatibility only and do not imply affiliation. Reduced repetition: each brand name appears at most once in public descriptions. Revised text to focus on user benefits rather than technical implementation details. | 2026-10-21 (v0.5.1) |
 
 ### Chrome Web Store Brand Name Disclaimer
-This extension mentions Greenhouse, Lever, Ashby, Workday and LinkedIn only to describe compatibility with those platforms' application forms. Job Apply Assistant is an independent open-source project and is not affiliated with, endorsed by, or connected to any of these companies or services. All mentioned names are the property of their respective owners.
+This extension mentions Greenhouse, Lever, Ashby, Workday and LinkedIn only to describe compatibility with those platforms' application forms. AI Job Application Assistant is an independent open-source project and is not affiliated with, endorsed by, or connected to any of these companies or services. All mentioned names are the property of their respective owners.
 
 ### Additional Notes for Reviewers
 - The extension is open source (MIT license): https://github.com/aridawoodi/job-apply-assistant

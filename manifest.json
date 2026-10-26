@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Job Apply Assistant",
-  "short_name": "Job Apply",
-  "version": "0.6.1",
+  "name": "AI Job Application Assistant",
+  "short_name": "AI Job Apply",
+  "version": "0.6.2",
   "description": "Fills job applications and tailors your resume with a free local AI. Private: your data stays on your computer. Never clicks Submit.",
   "minimum_chrome_version": "110",
   "permissions": [
@@ -28,7 +28,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Job Apply Assistant",
+    "default_title": "AI Job Application Assistant",
     "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.png",

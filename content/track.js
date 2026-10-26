@@ -144,7 +144,7 @@
     const save = async () => {
       if (notes.value.trim() || rem.value) await send({ type: 'tracker:update', entry: ent || { key: row.key }, patch: { notes: notes.value.trim(), reminderAt: rem.value } });
       close();
-      toast('Saved to your tracker ✓', 'ok', 'Job Apply Assistant · tracker');
+      toast('Saved to your tracker ✓', 'ok', 'AI Job Application Assistant · tracker');
     };
     const m = h('div', { class: 'm', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Application tracked' },
       h('div', { class: 'ic', text: '✓' }), h('h2', { text: 'Application tracked ✓' }),

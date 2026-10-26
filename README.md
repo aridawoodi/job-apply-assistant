@@ -1,4 +1,4 @@
-# Job Apply Assistant
+# AI Job Application Assistant
 
 **Fill job applications in seconds, and tailor your resume to each job, with a free AI that runs on
 your own computer.** Works on Mac and Windows in Google Chrome. No account, no subscription, and your

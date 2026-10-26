@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping! Job Apply Assistant is plain JavaScript (Manifest V3), with no build step and no
+Thanks for helping! AI Job Application Assistant is plain JavaScript (Manifest V3), with no build step and no
 framework, so you can load the folder in Chrome and start.
 
 ## Ground rules (please keep these)

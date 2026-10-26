@@ -31,13 +31,13 @@
     <defs><marker id="a" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#4f46e5"/></marker></defs>
     <rect x="150" y="62" width="168" height="52" rx="10" fill="#fff" stroke="#cbd5e1"/>
     <g transform="translate(160,76)"><rect width="22" height="22" rx="6" fill="#6366f1"/><text x="6" y="16" font-size="13" fill="#fff" font-family="system-ui">⚡</text></g>
-    <text x="190" y="91" font-size="11.5" fill="#0f172a" font-family="system-ui">Job Apply Assistant</text>
+    <text x="190" y="91" font-size="11.5" fill="#0f172a" font-family="system-ui">AI Job Application Assistant</text>
     <text x="294" y="92" font-size="14" font-family="system-ui">📌</text>
     <circle cx="300" cy="87" r="13" fill="none" stroke="#f59e0b" stroke-width="2"/>
   </svg>`;
 
   const STEPS = [
-    { id: 'pin', title: 'Pin the assistant', html: PIN_SVG + '<p>Click the puzzle piece 🧩 in Chrome\'s toolbar, then the pin 📌 next to <b>Job Apply Assistant</b>. The icon turns <b>colorful</b> on job pages it supports and stays <b>gray</b> elsewhere.</p>' },
+    { id: 'pin', title: 'Pin the assistant', html: PIN_SVG + '<p>Click the puzzle piece 🧩 in Chrome\'s toolbar, then the pin 📌 next to <b>AI Job Application Assistant</b>. The icon turns <b>colorful</b> on job pages it supports and stays <b>gray</b> elsewhere.</p>' },
     { id: 'fill', title: 'One click to fill', target: () => jaa('.btn'), text: 'On a real application you press this button. It fills the form from your profile. Press <b>Next</b> and I\'ll press it for you here.', next: 'Fill it' },
     { id: 'progress', title: 'Watch it fill', target: () => jaa('.panel'), text: 'Each field ticks off as it\'s filled: ✓ from your profile, ✦ written by your local AI (check those). The checklists at the end jump to any field.', wait: () => JAA.chat && JAA.chat.hasRun() && !(JAA.isRunning && JAA.isRunning()), waitText: 'Filling…' },
     { id: 'saved', title: 'Saved answers', target: () => document.getElementById('q_sql').closest('label'), text: 'This answer came from your <b>saved answers</b>. Anything you type into a form can be remembered for next time (you choose), so you answer each question once.' },

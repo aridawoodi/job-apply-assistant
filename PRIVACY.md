@@ -1,8 +1,8 @@
 # Privacy policy
 
-_Last updated: October 26, 2026 · applies to Job Apply Assistant v0.6.1 and later_
+_Last updated: October 26, 2026 · applies to AI Job Application Assistant v0.6.2 and later_
 
-Job Apply Assistant is a browser extension that fills job applications and tailors resumes using an AI
+AI Job Application Assistant is a browser extension that fills job applications and tailors resumes using an AI
 model that runs **on your own computer**. You can choose between Chrome's built-in AI (Gemini Nano, available in Chrome 138+)
 or the free Ollama app. Both options keep your information on your device.
 

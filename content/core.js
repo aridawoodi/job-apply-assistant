@@ -572,7 +572,7 @@
     if (!filling) return;
     if (Date.now() - lastUserInput < 1500) return; // the user pressed Submit: let it through
     e.preventDefault(); e.stopImmediatePropagation();
-    console.warn('[Job Apply Assistant] blocked a form submit during autofill');
+    console.warn('[AI Job Application Assistant] blocked a form submit during autofill');
   };
   function blockSubmits(on) {
     filling = !!on;

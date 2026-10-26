@@ -35,7 +35,7 @@ const css = `*{box-sizing:border-box;margin:0}body{font-family:Inter,"Segoe UI",
   await p.setContent(`<style>${css}body{width:440px;height:280px;overflow:hidden;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:30px 32px}
     img{width:64px;height:64px}h1{font-size:30px;font-weight:800;margin-top:14px;letter-spacing:-.3px}p{font-size:15.5px;margin-top:8px;opacity:.94;line-height:1.35}
     .chip{display:inline-block;margin-top:14px;background:rgba(255,255,255,.18);border-radius:20px;padding:5px 12px;font-size:12.5px;font-weight:600}</style>
-    <img src="${ICON}"><h1>Job Apply Assistant</h1><p>Fills applications, tailors your resume and writes cover letters with a free AI on your computer.</p><span class="chip">Private · Free · Never clicks Submit</span>`);
+    <img src="${ICON}"><h1>AI Job Application Assistant</h1><p>Fills applications, tailors your resume and writes cover letters with a free AI on your computer.</p><span class="chip">Private · Free · Never clicks Submit</span>`);
   await p.screenshot({ path: path.join(OUT, 'promo-tile-440x280.png') });
   console.log('wrote store-assets/promo-tile-440x280.png');
   await br.close();
