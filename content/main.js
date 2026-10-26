@@ -231,7 +231,7 @@
       return summary;
     } catch (e) {
       C.blockSubmits(false);
-      console.error('[Job Apply Assistant]', e);
+      console.error('[AI Job Application Assistant]', e);
       JAA.ui.message('Something went wrong', String(e && e.message || e), true);
       return { ok: false, error: String(e && e.message || e) };
     } finally {

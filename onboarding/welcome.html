@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Set up Job Apply Assistant</title>
+<title>Set up AI Job Application Assistant</title>
 <link rel="stylesheet" href="../lib/pages.css"><link rel="stylesheet" href="welcome.css"></head>
 <body>
-<div class="top"><img src="../icons/icon48.png" width="30" height="30" alt=""><strong>Job Apply Assistant</strong><span class="ver" id="ver"></span><span class="sp"></span><a href="../options/options.html" target="_blank">Settings</a></div>
+<div class="top"><img src="../icons/icon48.png" width="30" height="30" alt=""><strong>AI Job Application Assistant</strong><span class="ver" id="ver"></span><span class="sp"></span><a href="../options/options.html" target="_blank">Settings</a></div>
 <main>
   <div class="steps" id="steps"></div>
 
   <section class="card step" data-step="welcome">
     <h1>Welcome 👋</h1>
-    <p>Job Apply Assistant fills job applications for you from your own profile, and writes answers with a free AI that runs <b>on your own computer</b>. Your data never leaves this computer.</p>
+    <p>AI Job Application Assistant fills job applications for you from your own profile, and writes answers with a free AI that runs <b>on your own computer</b>. Your data never leaves this computer.</p>
     <p class="muted">Setup takes about 5–10 minutes (most of it is a one-time download). You won't need a terminal or any commands.</p>
     <div class="status"><span class="dot ok"></span><span>Detected: <b id="osName">your computer</b><span id="ramTxt"></span></span></div>
     <p style="margin-top:18px"><button class="primary big" data-next>Let's start →</button></p>
@@ -17,7 +17,7 @@
 
   <section class="card step" data-step="ollama">
     <h2>1 · Install Ollama (the free local AI app)</h2>
-    <p class="muted">Ollama is a free app that runs AI models on your computer. Job Apply Assistant talks to it privately.</p>
+    <p class="muted">Ollama is a free app that runs AI models on your computer. AI Job Application Assistant talks to it privately.</p>
     <div id="ollamaStatus" class="status"><span class="dot wait"></span><span class="txt">Looking for Ollama on this computer…</span></div>
     <div id="installBox" class="hidden">
       <p style="margin:16px 0"><a id="dlBtn" class="btn primary big" href="https://ollama.com/download" target="_blank" rel="noopener">⬇ Download Ollama</a> <span class="muted small" id="dlNote"></span></p>

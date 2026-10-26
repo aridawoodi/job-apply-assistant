@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.2 (2026-10-26): Product rename
+- **Product name updated** from "Job Apply Assistant" to "AI Job Application Assistant" to better reflect the AI-powered capabilities. All user-facing text, documentation, and store materials updated. Extension ID, permissions, and functionality remain unchanged.
+
 ## 0.6.1 (2026-10-26): Chrome built-in AI support
 - **Chrome built-in AI (Gemini Nano) as an optional engine.** The extension now supports Chrome's on-device Prompt API (LanguageModel, available in Chrome 138+) as a primary AI engine with automatic fallback to Ollama. Chrome built-in AI requires no installation and works on devices with about 16 GB RAM or a strong GPU. On 8 GB machines, Ollama remains the recommended choice.
 - **AI engine preference** (Settings → Local AI): Auto (default: Chrome built-in → Ollama → rules-only), Chrome built-in only, or Ollama only. Auto tries Chrome's built-in AI first when available, then falls back to Ollama if Chrome AI is unavailable or fails. Settings page shows real-time status: which engines are available and which one is currently active.

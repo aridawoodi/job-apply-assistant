@@ -41,7 +41,7 @@
     bm.onclick = async () => {
       const on = !bm.classList.contains('on');
       const r = await send({ type: 'tracker:bookmark', entry: entry(), on });
-      if (r.ok) { setBm(on); JAA.ui.toast(on ? 'Saved to your tracker ★' : 'Removed the bookmark', on ? 'ok' : 'info', 'Job Apply Assistant · tracker'); }
+      if (r.ok) { setBm(on); JAA.ui.toast(on ? 'Saved to your tracker ★' : 'Removed the bookmark', on ? 'ok' : 'info', 'AI Job Application Assistant · tracker'); }
     };
     const chips = [m.location ? '📍 ' + trunc(m.location, 40) : '', m.salary ? '💰 ' + trunc(m.salary, 40) : '', m.posted ? '🕒 ' + m.posted : ''].filter(Boolean);
     return h('div', { class: 'jc', 'data-card': 'job' }, fav,
@@ -99,7 +99,7 @@
     ts.appendChild(h('div', { class: 'muted', text: mine ? `Made ${new Date(mine.createdAt).toLocaleDateString()}: ${mine.changes || 0} change(s). ${(mine.files || []).map(f => f.name).join(' · ')}` : 'A version of your resume for this job: I only reword and reorder what\'s already in it, and you approve each change.' }));
     ts.appendChild(h('div', { class: 'row', style: 'margin-top:8px' },
       h('button', { class: 'btnp', type: 'button', 'data-act': 'tailor', text: mine ? '✨ Tailor again' : '✨ Tailor my resume for this job', onclick: () => JAA.chat && JAA.chat.tailorResume() })));
-    if (mine && JAA.attachTailored) ts.appendChild(h('button', { class: 'btns', type: 'button', style: 'margin-top:6px', text: '📎 Attach it to this application', onclick: async () => { const r = await JAA.attachTailored(mine.id); JAA.ui.toast(r.ok ? 'Attached ' + r.name : r.error, r.ok ? 'ok' : 'err', 'Job Apply Assistant'); } }));
+    if (mine && JAA.attachTailored) ts.appendChild(h('button', { class: 'btns', type: 'button', style: 'margin-top:6px', text: '📎 Attach it to this application', onclick: async () => { const r = await JAA.attachTailored(mine.id); JAA.ui.toast(r.ok ? 'Attached ' + r.name : r.error, r.ok ? 'ok' : 'err', 'AI Job Application Assistant'); } }));
     box.appendChild(ts);
     // cover letter
     const cs = sec('Cover letter');
@@ -110,7 +110,7 @@
     cs.appendChild(h('div', { class: 'muted', 'data-cover-status': cf.length ? (cf[0].kind === 'file' ? 'file' : 'text') : 'none', text: status }));
     if (letter) cs.appendChild(h('div', { class: 'muted', style: 'margin-top:4px', text: `Your letter for this job: ${trunc(letter.text, 90)}` }));
     cs.appendChild(h('div', { class: 'row', style: 'margin-top:8px' }, h('button', { class: 'btnp', type: 'button', 'data-act': 'cover', text: letter ? '✍️ Rewrite the cover letter' : '✍️ Write a cover letter with my resume', onclick: () => openCover(cf[0]) })));
-    if (letter && cf.length && JAA.coverFill) cs.appendChild(h('button', { class: 'btns', type: 'button', style: 'margin-top:6px', text: cf[0].kind === 'file' ? '📎 Attach my letter' : '↧ Put my letter in the text box', onclick: async () => { const r = await JAA.coverFill(letter.id); JAA.ui.toast(r.ok ? 'Cover letter added ✓' : r.error, r.ok ? 'ok' : 'err', 'Job Apply Assistant'); } }));
+    if (letter && cf.length && JAA.coverFill) cs.appendChild(h('button', { class: 'btns', type: 'button', style: 'margin-top:6px', text: cf[0].kind === 'file' ? '📎 Attach my letter' : '↧ Put my letter in the text box', onclick: async () => { const r = await JAA.coverFill(letter.id); JAA.ui.toast(r.ok ? 'Cover letter added ✓' : r.error, r.ok ? 'ok' : 'err', 'AI Job Application Assistant'); } }));
     cs.appendChild(h('div', { class: 'muted', style: 'margin-top:6px;font-size:11px', text: 'Written by your local AI from your resume and this job, then fact-checked like tailoring. You approve it first.' }));
     box.appendChild(cs);
   }
@@ -125,7 +125,7 @@
   async function openCover(f) {
     const field = f ? { kind: f.kind === 'file' ? 'file' : 'text', accept: f.el && f.el.accept || '', required: !!f.required, label: f.label || '' } : null;
     const r = await send({ type: 'cover:open', job: jobForPages(), field });
-    if (!r.ok) JAA.ui.toast(r.error || 'Could not open the cover letter page', 'err', 'Job Apply Assistant');
+    if (!r.ok) JAA.ui.toast(r.error || 'Could not open the cover letter page', 'err', 'AI Job Application Assistant');
     else if (JAA.chat) JAA.chat.say('I opened the cover letter page in a new tab. It writes from your resume and this job, checks every fact, and waits for your approval before anything goes into the form.');
   }
 

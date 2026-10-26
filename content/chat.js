@@ -162,7 +162,7 @@
       c.appendChild(h('div', { class: 'row' }, h('label', {}, cb, ' Remember my answers'),
         h('button', { class: 'chip ghost', type: 'button', 'data-act': 'save', title: 'Save what you typed in yellow/blue fields to your answer bank', text: 'Save answers now', onclick: async () => {
           const n = JAA.learn ? await JAA.learn.flush('button', true) : 0;
-          ui().toast(n ? `Saved ${n} answer${n > 1 ? 's' : ''} to your answer bank` : 'Nothing new to save', n ? 'ok' : 'info', 'Job Apply Assistant · answer bank');
+          ui().toast(n ? `Saved ${n} answer${n > 1 ? 's' : ''} to your answer bank` : 'Nothing new to save', n ? 'ok' : 'info', 'AI Job Application Assistant · answer bank');
         } })));
       c.appendChild(h('div', { class: 'why', text: 'Green = profile / saved answers · ✦ Blue = AI draft · Teal = you · Yellow = needs you. Nothing was submitted.' }));
     }
@@ -181,13 +181,13 @@
 
   async function afterRun(s, fields, opts) {
     opts = opts || {};
-    ui().header((s.company ? s.company + ' · ' : '') + 'Job Apply Assistant', s.title || '');
+    ui().header((s.company ? s.company + ' · ' : '') + 'AI Job Application Assistant', s.title || '');
     ui().setStep(s.step);
     const need = s.items.filter(i => i.status === 'todo').length;
     const stepTxt = s.step && (s.step.n || s.step.pct != null) ? (s.step.total ? `Step ${s.step.n} of ${s.step.total}` : (s.step.n ? `Step ${s.step.n}` : `${s.step.pct}% done`)) : '';
     if (opts.source === 'step') {
       bot(`${stepTxt || 'Next step'}: filled ${s.filled + s.ai}, need ${need}.${s.ai ? ` ${s.ai} AI answer${s.ai > 1 ? 's' : ''} to check.` : ''} I never press Next or Submit: you do.`);
-      if (!ui().isOpen()) ui().toast(`${stepTxt || 'Next step'} filled: ${need} need you`, need ? 'warn' : 'ok', 'Job Apply Assistant · auto-filled this step');
+      if (!ui().isOpen()) ui().toast(`${stepTxt || 'Next step'} filled: ${need} need you`, need ? 'warn' : 'ok', 'AI Job Application Assistant · auto-filled this step');
     } else {
       remember('bot', `Filled ${s.filled}${s.ai ? `, ${s.ai} by AI` : ''}, ${need} need you${stepTxt ? ` (${stepTxt})` : ''}.`);
     }
@@ -616,7 +616,7 @@
     showOldHistory();
     const { profile } = await JAA.loadAll();
     const info = (JAA.sites.detect(location).jobInfo || (() => ({})))() || {};
-    ui().header((info.company ? info.company + ' · ' : '') + 'Job Apply Assistant', info.title || '');
+    ui().header((info.company ? info.company + ' · ' : '') + 'AI Job Application Assistant', info.title || '');
     if (JAA.panel) JAA.panel.fillTop();
     bot(`Hi${profile.firstName ? ' ' + profile.firstName : ''} 👋 I'll fill this ${info.company ? info.company + ' ' : ''}application from your profile and saved answers, then ask you about anything I couldn't fill. I never press Submit, Next or Continue — you do.`);
   }

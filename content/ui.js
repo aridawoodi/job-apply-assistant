@@ -170,9 +170,9 @@
     host.id = 'jaa-host';
     root = host.attachShadow({ mode: 'open' });
     root.innerHTML = `<style>${CSS}</style><div class="wrap">
-      <div class="panel" role="dialog" aria-label="Job Apply Assistant">
+      <div class="panel" role="dialog" aria-label="AI Job Application Assistant">
         <div class="grip" title="Drag to resize"></div>
-        <div class="head"><span class="ic">${ICON}</span><div class="tt"><div class="t1">Job Apply Assistant</div><div class="t2"></div></div>
+        <div class="head"><span class="ic">${ICON}</span><div class="tt"><div class="t1">AI Job Application Assistant</div><div class="t2"></div></div>
           <span class="busy"></span>
           <button class="hb" data-h="review" type="button" title="Review every field before you submit">Review</button>
           <button class="hb" data-h="settings" type="button" title="Settings">${GEAR}</button>
@@ -267,7 +267,7 @@
     const el = toastRoot.querySelector('.t');
     el.className = 't ' + (kind || '');
     el.textContent = text;
-    const sm = document.createElement('small'); sm.textContent = sub || 'Job Apply Assistant · tracker updated'; el.appendChild(sm);
+    const sm = document.createElement('small'); sm.textContent = sub || 'AI Job Application Assistant · tracker updated'; el.appendChild(sm);
     requestAnimationFrame(() => el.classList.add('show'));
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove('show'), kind === 'err' || kind === 'warn' ? 9000 : 6000);
@@ -299,7 +299,7 @@
     open() { ensure(); panel.classList.add('open'); if (prefs.min) { prefs.min = false; applySize(); } scrollDown(); },
     close() { if (panel) panel.classList.remove('open'); },
     isOpen() { return !!(panel && panel.classList.contains('open')); },
-    header(title, sub) { ensure(); titleEl.textContent = title || 'Job Apply Assistant'; subEl.textContent = sub || ''; },
+    header(title, sub) { ensure(); titleEl.textContent = title || 'AI Job Application Assistant'; subEl.textContent = sub || ''; },
     setStep(st) {
       ensure();
       if (!st || (!st.total && st.pct == null && !st.n)) { stepEl.hidden = true; return; }

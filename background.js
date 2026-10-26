@@ -451,7 +451,7 @@ async function answerQuestions(questions, opts) {
 function chatPrompt(profile, ctx) {
   const { facts, resumeText } = profileFacts(profile, true);
   const system =
-    'You are Job Apply Assistant, a helper running locally inside the candidate\'s browser while they fill out a job application. ' +
+    'You are AI Job Application Assistant, a helper running locally inside the candidate\'s browser while they fill out a job application. ' +
     'You can see the job, its description, the candidate\'s profile and resume, and the current form fields. ' +
     'Be brief and practical (1-4 sentences) unless you are writing an answer for a field. Never invent facts that are not in the profile or resume. ' +
     'You never submit anything and never press Next/Continue/Submit; the candidate does that himself. ' +
@@ -667,7 +667,7 @@ async function setBadge(tabId, status) {
   try {
     await chrome.action.setBadgeText({ tabId, text: b ? b[0] : '' });
     if (b) await chrome.action.setBadgeBackgroundColor({ tabId, color: b[1] });
-    await chrome.action.setTitle({ tabId, title: 'Job Apply Assistant' + (b ? ' — ' + status : '') });
+    await chrome.action.setTitle({ tabId, title: 'AI Job Application Assistant' + (b ? ' — ' + status : '') });
   } catch (_) { /* tab may be gone */ }
 }
 
@@ -1214,7 +1214,7 @@ function siteForUrl(url) {
   const hit = SUPPORTED_SITES.find(([re, , ok]) => re.test(u.hostname) && ok(u));
   return hit ? hit[1] : null;
 }
-async function setDefaultIcon() { try { await chrome.action.setIcon({ path: ICON_OFF }); await chrome.action.setTitle({ title: 'Job Apply Assistant: not a supported job page. Click for your profile, tracker and tools.' }); } catch (_) { /* ignore */ } }
+async function setDefaultIcon() { try { await chrome.action.setIcon({ path: ICON_OFF }); await chrome.action.setTitle({ title: 'AI Job Application Assistant: not a supported job page. Click for your profile, tracker and tools.' }); } catch (_) { /* ignore */ } }
 const tabState = new Map(); // tabId -> { site, kind }
 async function paintTab(tabId, site, kind) {
   if (tabId == null || tabId < 0) return;
@@ -1222,7 +1222,7 @@ async function paintTab(tabId, site, kind) {
   const what = kind === 'application' ? 'application form found: click Fill or open the assistant' : kind === 'posting' ? 'job posting: see your resume match' : 'supported job site';
   try {
     await chrome.action.setIcon({ tabId, path: on ? ICON_ON : ICON_OFF });
-    await chrome.action.setTitle({ tabId, title: on ? `Job Apply Assistant: ${site} · ${what}` : 'Job Apply Assistant: not a supported job page. Click for your profile, tracker and tools.' });
+    await chrome.action.setTitle({ tabId, title: on ? `AI Job Application Assistant: ${site} · ${what}` : 'AI Job Application Assistant: not a supported job page. Click for your profile, tracker and tools.' });
   } catch (_) { /* tab closed */ }
 }
 async function pageStatus(msg, sender) {

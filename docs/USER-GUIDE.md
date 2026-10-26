@@ -1,6 +1,6 @@
 # User guide
 
-Details for people who want to know exactly what Job Apply Assistant does. New here? Start with the
+Details for people who want to know exactly what AI Job Application Assistant does. New here? Start with the
 [README](../README.md).
 
 ## Submission tracking

@@ -206,7 +206,7 @@ const { check, sleep, chatText, waitChat, lastCard, SHOTS } = L;
   await pop.goto(`chrome-extension://${extId}/popup/popup.html`);
   await pop.waitForFunction(() => /ready|Local AI:/.test(document.getElementById('ollama').textContent), null, { timeout: 10000 });
   const ptxt = await pop.innerText('body');
-  check(/Job Apply Assistant/.test(ptxt) && new RegExp("v" + require("../manifest.json").version.replace(/\./g, "\\.")).test(ptxt) && /Greenhouse/.test(ptxt) && /Local AI ready/.test(ptxt), 'popup: name, version, site, local AI status');
+  check(/AI Job Application Assistant/.test(ptxt) && new RegExp("v" + require("../manifest.json").version.replace(/\./g, "\\.")).test(ptxt) && /Greenhouse/.test(ptxt) && /Local AI ready/.test(ptxt), 'popup: name, version, site, local AI status');
   check(await pop.locator('#gear').count() === 1, 'popup has the gear (settings) button');
   await pop.screenshot({ path: SHOTS + '/6-popup.png' });
   await pop.close();

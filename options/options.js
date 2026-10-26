@@ -475,7 +475,7 @@ async function restoreFromFile(file) {
   let data;
   try { data = JSON.parse(await file.text()); } catch (_) { alert('That file is not valid JSON.'); return; }
   const isBackup = data.kind === 'job-apply-assistant-backup' || (data.profile && (data.applications || data.answerBank));
-  if (!isBackup) { alert('That is not a Job Apply Assistant backup file. (Profile exports can be loaded under Import / export.)'); return; }
+  if (!isBackup) { alert('That is not an AI Job Application Assistant backup file. (Profile exports can be loaded under Import / export.)'); return; }
   if (!confirm(`Restore from ${file.name}? It replaces your profile, answer bank, settings and tracker. Your current data is snapshotted first.`)) return;
   await msg({ type: 'backup:now', reason: 'before restore from file' });
   const toSet = {};

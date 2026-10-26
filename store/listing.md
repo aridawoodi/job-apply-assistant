@@ -1,7 +1,7 @@
-# Chrome Web Store listing: Job Apply Assistant
+# Chrome Web Store listing: AI Job Application Assistant
 
 ## Name
-Job Apply Assistant
+AI Job Application Assistant
 
 ## Summary (short description, max 132 characters; same as manifest "description")
 Fills job applications and tailors your resume with a free local AI. Private: your data stays on your computer. Never clicks Submit.
@@ -15,7 +15,7 @@ English
 ## Detailed description
 Apply to jobs faster without giving your data to anyone.
 
-Job Apply Assistant fills job applications on Greenhouse, Lever and Ashby (and basic Workday and LinkedIn Easy Apply) from your profile, and uses a free AI that runs on your own computer (Ollama) for everything else. Nothing is uploaded: no account, no subscription, no cloud.
+AI Job Application Assistant fills job applications on Greenhouse, Lever and Ashby (and basic Workday and LinkedIn Easy Apply) from your profile, and uses a free AI that runs on your own computer (Ollama) for everything else. Nothing is uploaded: no account, no subscription, no cloud.
 
 WHAT IT DOES
 • Fills the application for you: name, contact details, links, work authorization, education, your resume file and more. Every field is colour-coded so you can see what came from your profile, what the AI drafted, and what still needs you.
@@ -47,7 +47,7 @@ REQUIREMENTS
 Open source (MIT): https://github.com/aridawoodi/job-apply-assistant
 
 ## Single purpose (Privacy practices tab)
-Job Apply Assistant helps the user complete job applications: it fills application forms from the user's own profile and tailors the user's resume to the job, using an AI model that runs locally on the user's computer.
+AI Job Application Assistant helps the user complete job applications: it fills application forms from the user's own profile and tailors the user's resume to the job, using an AI model that runs locally on the user's computer.
 
 ## Remote code (Privacy practices tab)
 No, I am not using remote code. All JavaScript is packaged in the extension (including the bundled pdf.js, JSZip and jsPDF libraries). No code is downloaded or evaluated at runtime.

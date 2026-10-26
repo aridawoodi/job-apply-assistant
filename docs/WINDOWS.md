@@ -1,6 +1,6 @@
 # Windows notes
 
-Job Apply Assistant runs the same on Windows 10/11 as on macOS. Nothing in it depends on the operating
+AI Job Application Assistant runs the same on Windows 10/11 as on macOS. Nothing in it depends on the operating
 system except the setup page's download link and the manual fallback steps.
 
 **Install Ollama.** The setup page offers `OllamaSetup.exe` from ollama.com. Run it and click *Install*.
