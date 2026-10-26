@@ -172,6 +172,56 @@ function renderSettings() {
     const el = $('s_' + k); if (!el) continue;
     if (el.type === 'checkbox') el.checked = !!state.settings[k]; else el.value = state.settings[k];
   }
+  // Check Chrome AI status
+  checkAIStatus();
+}
+
+async function checkAIStatus() {
+  const statusEl = $('aiStatus');
+  if (!statusEl) return;
+  statusEl.innerHTML = '<span style="color:#888">Checking AI engines...</span>';
+  
+  const chromeResult = await new Promise(resolve => {
+    chrome.runtime.sendMessage({ type: 'chromeai:check' }, r => {
+      void chrome.runtime.lastError;
+      resolve(r || { available: false, reason: 'no_response' });
+    });
+  });
+  
+  const ollamaResult = await new Promise(resolve => {
+    chrome.runtime.sendMessage({ type: 'ollama:test', settings: state.settings }, r => {
+      void chrome.runtime.lastError;
+      resolve(r || { ok: false });
+    });
+  });
+  
+  const parts = [];
+  if (chromeResult.available) {
+    parts.push('<span style="color:#0a0">● Chrome built-in AI available</span>');
+  } else {
+    parts.push('<span style="color:#888">○ Chrome built-in AI unavailable' + 
+      (chromeResult.reason === 'api_unavailable' ? ' (Chrome 138+ required)' : '') + '</span>');
+  }
+  
+  if (ollamaResult.ok) {
+    parts.push('<span style="color:#0a0">● Ollama connected</span>');
+  } else {
+    parts.push('<span style="color:#888">○ Ollama disconnected</span>');
+  }
+  
+  const engine = state.settings.aiEngine || 'auto';
+  let statusText = '';
+  if (engine === 'auto') {
+    if (chromeResult.available) statusText = ' → <strong>Using Chrome AI</strong>';
+    else if (ollamaResult.ok) statusText = ' → <strong>Using Ollama</strong>';
+    else statusText = ' → <strong>Using rules only</strong>';
+  } else if (engine === 'chrome') {
+    statusText = chromeResult.available ? ' → <strong>Using Chrome AI</strong>' : ' → <strong>Chrome AI unavailable</strong>';
+  } else {
+    statusText = ollamaResult.ok ? ' → <strong>Using Ollama</strong>' : ' → <strong>Ollama disconnected</strong>';
+  }
+  
+  statusEl.innerHTML = parts.join(' &nbsp; ') + statusText;
 }
 function readSettings() {
   for (const k of Object.keys(JAA.DEFAULT_SETTINGS)) {
@@ -455,7 +505,14 @@ function initBackups() {
   $('ruleNew').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('ruleAdd').click(); } };
 
   document.addEventListener('input', e => { if (e.target.closest('#profileForm, #ai, #style, #backups, #tailoring') && e.target.id !== 'ruleNew') dirty(); });
-  document.addEventListener('change', e => { if (e.target.closest('#profileForm, #ai, #style, #backups, #tailoring') && e.target.id !== 'restoreFile' && e.target.id !== 'ruleNew') dirty(); });
+  document.addEventListener('change', e => { 
+    if (e.target.closest('#profileForm, #ai, #style, #backups, #tailoring') && e.target.id !== 'restoreFile' && e.target.id !== 'ruleNew') dirty();
+    // Update AI status when engine changes
+    if (e.target.id === 's_aiEngine') {
+      readSettings();
+      checkAIStatus();
+    }
+  });
   $('ver').textContent = 'v' + chrome.runtime.getManifest().version;
   initBackups();
   // deep links: options.html#profile, or a request from the chat/popup gear button

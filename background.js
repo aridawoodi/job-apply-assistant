@@ -261,6 +261,109 @@ async function warmUp(force) {
   return warm.promise;
 }
 
+/* ---------------- Chrome built-in AI (LanguageModel API) ---------------- */
+async function checkChromeAI() {
+  if (typeof globalThis.LanguageModel === 'undefined') return { available: false, reason: 'api_unavailable' };
+  try {
+    const availability = await LanguageModel.availability({
+      expectedInputs: [{ type: 'text', languages: ['en'] }],
+      expectedOutputs: [{ type: 'text', languages: ['en'] }]
+    });
+    return { available: availability !== 'unavailable', status: availability };
+  } catch (e) {
+    return { available: false, reason: 'check_failed', error: String(e.message || e) };
+  }
+}
+
+async function answerWithChromeAI(questions, opts) {
+  opts = opts || {};
+  const { profile, answerBank } = await JAA.loadAll();
+  const kind = opts.kind === 'essay' ? 'essay' : 'short';
+  const cached = {};
+  
+  // Try session cache for short answers
+  if (kind === 'short') {
+    const c = await cacheGet();
+    const cacheKey = (q) => 'chrome|' + JAA.normText(q.question) + '|' + (q.options || []).map(JAA.normText).join('/') + '|' + (q.type || '');
+    for (const q of questions) { const v = c[cacheKey(q)]; if (v != null) cached[q.id] = v; }
+    questions = questions.filter(q => !(q.id in cached));
+    if (!questions.length) return { ok: true, answers: cached, cached: Object.keys(cached).length, engine: 'chrome' };
+  }
+
+  const { system, user } = buildPrompt(profile, answerBank, questions, kind, opts.company, { 
+    jobTitle: opts.jobTitle, jobDescription: opts.jobDescription, draftLength: opts.draftLength || 'short' 
+  });
+  
+  let session;
+  try {
+    session = await LanguageModel.create({
+      expectedInputs: [{ type: 'text', languages: ['en'] }],
+      expectedOutputs: [{ type: 'text', languages: ['en'] }],
+      initialPrompts: [{ role: 'system', content: system }],
+      temperature: kind === 'essay' ? 0.4 : 0.1,
+      topK: 40,
+      monitor(m) {
+        m.addEventListener('downloadprogress', (e) => {
+          // Download progress events - could be forwarded to UI in future
+          const pct = e.total ? Math.floor((e.loaded / e.total) * 100) : 0;
+          console.log(`Chrome AI model downloading: ${pct}%`);
+        });
+      }
+    });
+  } catch (e) {
+    return { ok: false, error: `Chrome AI session creation failed: ${String(e.message || e)}`, engine: 'chrome' };
+  }
+
+  const t0 = Date.now();
+  let text = '';
+  try {
+    text = await session.prompt(user);
+  } catch (e) {
+    session.destroy();
+    return { ok: false, error: `Chrome AI prompt failed: ${String(e.message || e)}`, engine: 'chrome' };
+  } finally {
+    session.destroy();
+  }
+
+  const parsed = parseModelJson(text);
+  if (!parsed) return { ok: false, error: 'Chrome AI reply was not valid JSON.', engine: 'chrome' };
+  const answers = parsed.answers && typeof parsed.answers === 'object' ? parsed.answers : parsed;
+  
+  if (kind === 'short') {
+    const put = {};
+    const cacheKey = (q) => 'chrome|' + JAA.normText(q.question) + '|' + (q.options || []).map(JAA.normText).join('/') + '|' + (q.type || '');
+    for (const q of questions) if (answers[q.id] != null && answers[q.id] !== '') put[cacheKey(q)] = answers[q.id];
+    cachePut(put);
+  }
+  
+  return { ok: true, answers: Object.assign({}, answers, cached), ms: Date.now() - t0, engine: 'chrome' };
+}
+
+async function polishWithRewriter(text, instruction) {
+  // Chrome Rewriter/Writer API for polishing longer text
+  if (typeof globalThis.Rewriter === 'undefined' && typeof globalThis.Writer === 'undefined') {
+    return { ok: false, unavailable: true };
+  }
+  
+  try {
+    const API = typeof globalThis.Rewriter !== 'undefined' ? globalThis.Rewriter : globalThis.Writer;
+    const availability = await API.availability({ expectedInputs: [{ type: 'text', languages: ['en'] }] });
+    if (availability === 'unavailable') return { ok: false, unavailable: true };
+    
+    const session = await API.create({
+      expectedInputs: [{ type: 'text', languages: ['en'] }],
+      tone: instruction === 'shorter' ? 'more-casual' : instruction === 'more technical' ? 'more-formal' : 'as-is',
+      length: instruction === 'shorter' ? 'shorter' : 'as-is'
+    });
+    
+    const result = await session.rewrite(text);
+    session.destroy();
+    return { ok: true, text: result };
+  } catch (e) {
+    return { ok: false, error: String(e.message || e) };
+  }
+}
+
 async function answerQuestions(questions, opts) {
   opts = opts || {};
   const { profile, answerBank, settings } = await JAA.loadAll();
@@ -268,54 +371,80 @@ async function answerQuestions(questions, opts) {
   // the model never answers (or guesses) voluntary self-identification questions
   questions = (questions || []).filter(q => !JAA.isEeoText([q.question, q.label, q.desc, q.hint].filter(Boolean).join(' '), q.options));
   if (!questions.length) return { ok: true, answers: {} };
-  const kind = opts.kind === 'essay' ? 'essay' : 'short';
-  // short factual answers are cached for this browser session: the same question on the
-  // next application (or a re-fill) is answered instantly
-  const cached = {};
-  if (kind === 'short') {
-    const c = await cacheGet();
-    for (const q of questions) { const v = c[cacheKey(settings.model, q)]; if (v != null) cached[q.id] = v; }
-    questions = questions.filter(q => !(q.id in cached));
-    if (!questions.length) return { ok: true, answers: cached, cached: Object.keys(cached).length };
+  
+  const engine = settings.aiEngine || 'auto';
+  
+  // Try Chrome built-in AI first if engine is 'auto' or 'chrome'
+  if (engine === 'auto' || engine === 'chrome') {
+    const chromeCheck = await checkChromeAI();
+    if (chromeCheck.available) {
+      const result = await answerWithChromeAI(questions, opts);
+      if (result.ok) return result;
+      // If Chrome AI failed and engine is 'chrome', return the error
+      if (engine === 'chrome') return result;
+      // If engine is 'auto', fall through to Ollama
+      console.log('Chrome AI failed, falling back to Ollama:', result.error);
+    } else if (engine === 'chrome') {
+      // User explicitly wants Chrome only, but it's not available
+      return { ok: false, error: `Chrome built-in AI is not available on this device. ${chromeCheck.reason === 'api_unavailable' ? 'Chrome 138+ required.' : ''}` };
+    }
   }
-  if (warm.promise) await warm.promise; // don't queue behind a model load twice
-  const base = trimUrl(settings.ollamaUrl);
-  const timeoutSec = Number(opts.timeoutSec) || settings.llmTimeoutSec || 90;
-  const { system, user } = buildPrompt(profile, answerBank, questions, kind, opts.company, { jobTitle: opts.jobTitle, jobDescription: opts.jobDescription, draftLength: settings.draftLength });
-  const perQ = kind === 'essay' ? ({ short: 220, medium: 320, long: 480 }[settings.draftLength] || 220) : 60;
-  const body = {
-    model: settings.model,
-    think: false,
-    format: 'json',
-    keep_alive: KEEP_ALIVE,
-    options: { temperature: kind === 'essay' ? 0.4 : 0.1, num_ctx: NUM_CTX, num_predict: Math.min(1536, 80 + perQ * questions.length) },
-    messages: [{ role: 'system', content: system }, { role: 'user', content: user }]
-  };
-  const t0 = Date.now();
-  const r = await streamOllama(base, '/api/chat', body, { totalMs: timeoutSec * 1000 });
-  if (r.status === 403) return { ok: false, fatal: true, error: ORIGINS_HINT };
-  if (r.status === 404) return { ok: false, fatal: true, error: `Model "${settings.model}" not found. Run: ollama pull ${settings.model}` };
-  if (r.network) return { ok: false, fatal: true, error: explainFetchError(r, base, timeoutSec) };
-  const hint = !/qwen2\.5:3b/.test(settings.model) ? SLOW_MODEL_HINT : '';
-  if (r.timeout) {
-    // keep whatever answers were complete before the timeout
-    const part = salvageAnswers(r.text);
-    const n = Object.keys(part).length;
-    const err = explainFetchError({ name: 'AbortError' }, base, timeoutSec) + hint;
-    if (n) return { ok: true, partial: true, timeout: true, answers: Object.assign(part, cached), error: err };
-    return { ok: false, timeout: true, error: err, answers: cached };
+  
+  // Ollama path (original implementation)
+  // Ollama path (original implementation)
+  if (engine === 'ollama' || engine === 'auto') {
+    const kind = opts.kind === 'essay' ? 'essay' : 'short';
+    // short factual answers are cached for this browser session: the same question on the
+    // next application (or a re-fill) is answered instantly
+    const cached = {};
+    if (kind === 'short') {
+      const c = await cacheGet();
+      for (const q of questions) { const v = c[cacheKey(settings.model, q)]; if (v != null) cached[q.id] = v; }
+      questions = questions.filter(q => !(q.id in cached));
+      if (!questions.length) return { ok: true, answers: cached, cached: Object.keys(cached).length, engine: 'ollama' };
+    }
+    if (warm.promise) await warm.promise; // don't queue behind a model load twice
+    const base = trimUrl(settings.ollamaUrl);
+    const timeoutSec = Number(opts.timeoutSec) || settings.llmTimeoutSec || 90;
+    const { system, user } = buildPrompt(profile, answerBank, questions, kind, opts.company, { jobTitle: opts.jobTitle, jobDescription: opts.jobDescription, draftLength: settings.draftLength });
+    const perQ = kind === 'essay' ? ({ short: 220, medium: 320, long: 480 }[settings.draftLength] || 220) : 60;
+    const body = {
+      model: settings.model,
+      think: false,
+      format: 'json',
+      keep_alive: KEEP_ALIVE,
+      options: { temperature: kind === 'essay' ? 0.4 : 0.1, num_ctx: NUM_CTX, num_predict: Math.min(1536, 80 + perQ * questions.length) },
+      messages: [{ role: 'system', content: system }, { role: 'user', content: user }]
+    };
+    const t0 = Date.now();
+    const r = await streamOllama(base, '/api/chat', body, { totalMs: timeoutSec * 1000 });
+    if (r.status === 403) return { ok: false, fatal: true, error: ORIGINS_HINT, engine: 'ollama' };
+    if (r.status === 404) return { ok: false, fatal: true, error: `Model "${settings.model}" not found. Run: ollama pull ${settings.model}`, engine: 'ollama' };
+    if (r.network) return { ok: false, fatal: true, error: explainFetchError(r, base, timeoutSec), engine: 'ollama' };
+    const hint = !/qwen2\.5:3b/.test(settings.model) ? SLOW_MODEL_HINT : '';
+    if (r.timeout) {
+      // keep whatever answers were complete before the timeout
+      const part = salvageAnswers(r.text);
+      const n = Object.keys(part).length;
+      const err = explainFetchError({ name: 'AbortError' }, base, timeoutSec) + hint;
+      if (n) return { ok: true, partial: true, timeout: true, answers: Object.assign(part, cached), error: err, engine: 'ollama' };
+      return { ok: false, timeout: true, error: err, answers: cached, engine: 'ollama' };
+    }
+    if (!r.ok) return { ok: false, error: `Ollama error HTTP ${r.status}: ${String(r.error || '').slice(0, 200)}`, engine: 'ollama' };
+    warm.at = Date.now(); warm.model = settings.model;
+    const parsed = parseModelJson(r.text);
+    if (!parsed) return { ok: false, error: 'The model reply was not valid JSON. Try again, or use qwen2.5:3b.', engine: 'ollama' };
+    const answers = parsed.answers && typeof parsed.answers === 'object' ? parsed.answers : parsed;
+    if (kind === 'short') {
+      const put = {};
+      for (const q of questions) if (answers[q.id] != null && answers[q.id] !== '') put[cacheKey(settings.model, q)] = answers[q.id];
+      cachePut(put);
+    }
+    return { ok: true, answers: Object.assign({}, answers, cached), ms: Date.now() - t0, engine: 'ollama' };
   }
-  if (!r.ok) return { ok: false, error: `Ollama error HTTP ${r.status}: ${String(r.error || '').slice(0, 200)}` };
-  warm.at = Date.now(); warm.model = settings.model;
-  const parsed = parseModelJson(r.text);
-  if (!parsed) return { ok: false, error: 'The model reply was not valid JSON. Try again, or use qwen2.5:3b.' };
-  const answers = parsed.answers && typeof parsed.answers === 'object' ? parsed.answers : parsed;
-  if (kind === 'short') {
-    const put = {};
-    for (const q of questions) if (answers[q.id] != null && answers[q.id] !== '') put[cacheKey(settings.model, q)] = answers[q.id];
-    cachePut(put);
-  }
-  return { ok: true, answers: Object.assign({}, answers, cached), ms: Date.now() - t0 };
+  
+  // If we get here, engine setting is invalid
+  return { ok: false, error: `Invalid AI engine setting: ${engine}` };
 }
 
 /* ---------------- chat assistant + single-answer drafts (streamed over a port) ---------------- */
@@ -610,6 +739,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     switch (msg && msg.type) {
       case 'ollama:test': return testConnection(msg.settings);
       case 'ollama:answer': return answerQuestions(msg.questions, { kind: msg.kind, timeoutSec: msg.timeoutSec, company: msg.company, jobTitle: msg.jobTitle, jobDescription: msg.jobDescription });
+      case 'chromeai:check': return checkChromeAI();
+      case 'chromeai:polish': return polishWithRewriter(msg.text, msg.instruction);
       case 'session:get': return getSession(msg.key);
       case 'session:update': return updateSession(msg.key, msg.patch, msg.step);
       case 'backup:list': return listBackups();
