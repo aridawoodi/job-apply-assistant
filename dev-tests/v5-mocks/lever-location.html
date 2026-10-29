@@ -1,0 +1,84 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Lever location mock</title>
+<style>
+.dropdown-container{display:none;flex-direction:column;border:1px solid #ccc;max-width:360px}
+.dropdown-location{padding:6px 10px;cursor:pointer}
+.dropdown-location:hover,.dropdown-location-active{background:#eef}
+.dropdown-loading-results,.dropdown-no-results{display:none;padding:6px 10px;color:#666}
+</style></head>
+<body>
+<form id="app" class="application">
+  <li class="application-question">
+    <div class="application-label"><div class="text">Current location <span class="required">✱</span></div></div>
+    <input class="location-input" data-qa="location-input" id="location-input" type="text" maxlength="100" name="location" required>
+    <input id="selected-location" type="hidden" name="selectedLocation">
+    <div class="dropdown-container">
+      <div class="dropdown-loading-results">Loading…</div>
+      <div class="dropdown-no-results">No results</div>
+      <div class="dropdown-results"></div>
+    </div>
+  </li>
+  <label>Full name <input id="name" name="name"></label>
+  <button type="submit">Submit application</button>
+</form>
+<script>
+// Mimic Lever retrieveLocations.js: search on keydown, clear on blur unless a suggestion was picked,
+// set selected-location JSON on mousedown/Enter.
+let searchedLocations;
+const PLACES = [
+  { name: 'Springfield, Illinois, United States', id: '1' },
+  { name: 'Springfield, Missouri, United States', id: '2' },
+  { name: 'Chicago, Illinois, United States', id: '3' }
+];
+function show(sel, on) { document.querySelector(sel).style.display = on ? 'flex' : 'none'; }
+function empty() { document.querySelector('.dropdown-results').innerHTML = ''; searchedLocations = undefined; show('.dropdown-no-results', false); show('.dropdown-loading-results', false); }
+const input = document.getElementById('location-input');
+const hid = document.getElementById('selected-location');
+let searchTimer;
+input.addEventListener('input', () => { show('.dropdown-container', true); });
+input.addEventListener('keydown', (event) => {
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') return;
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter') return;
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    empty();
+    const q = (input.value || '').toLowerCase();
+    if (!q) return;
+    show('.dropdown-container', true);
+    show('.dropdown-loading-results', true);
+    setTimeout(() => {
+      show('.dropdown-loading-results', false);
+      searchedLocations = PLACES.filter(p => p.name.toLowerCase().includes(q.split(',')[0].trim()) || q.includes('spring'));
+      if (!searchedLocations.length) searchedLocations = PLACES.filter(p => /springfield/i.test(p.name));
+      const box = document.querySelector('.dropdown-results');
+      searchedLocations.forEach((loc, i) => {
+        const d = document.createElement('div');
+        d.className = 'break-word dropdown-location width-full py1 px2';
+        d.id = 'location-' + i;
+        d.textContent = loc.name;
+        box.appendChild(d);
+      });
+      if (!searchedLocations.length) show('.dropdown-no-results', true);
+    }, 80);
+  }, 50);
+});
+input.addEventListener('blur', (event) => {
+  if (event.relatedTarget && event.relatedTarget.closest && event.relatedTarget.closest('.dropdown-location')) return;
+  if (getComputedStyle(document.querySelector('.dropdown-container')).display !== 'none') {
+    show('.dropdown-container', false);
+    empty();
+    // Lever clears both on blur without a pick — this is the bug we must not hit after a successful pick
+    if (!hid.value) { input.value = ''; }
+  }
+});
+document.addEventListener('mousedown', (event) => {
+  const t = event.target.closest && event.target.closest('.dropdown-location');
+  if (!t) return;
+  show('.dropdown-container', false);
+  input.value = t.textContent;
+  const idx = +t.id.split('-')[1];
+  hid.value = JSON.stringify(searchedLocations[idx]);
+  empty();
+});
+</script>
+</body></html>

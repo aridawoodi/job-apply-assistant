@@ -25,7 +25,7 @@ const PROFILE = {
   city: 'Springfield', state: 'IL', location: 'Springfield, IL', linkedin: 'https://www.linkedin.com/in/jordan-rivera-example',
   github: 'https://github.com/jordan-rivera-example', workAuthorizedUS: 'Yes', needsSponsorship: 'No', over18: 'Yes',
   currentEmployer: 'Northwind Analytics', currentTitle: 'Data Engineer', yearsExperience: '6',
-  eeo: { gender: 'Decline to self-identify' }, salaryExpectation: '150000',
+  eeo: { gender: 'Decline to self-identify' }, salaryExpectation: '150000', willingToRelocate: 'Open to discussing',
   summary: 'Data engineer with 6 years of experience building reliable batch and streaming pipelines.',
   workHistory: [
     { company: 'Northwind Analytics', title: 'Data Engineer', start: 'Mar 2021', end: 'Present', location: 'Springfield, IL', bullets: ['Built batch and streaming pipelines in Python and SQL that feed 40 internal dashboards', 'Modeled analytics data with dbt and PostgreSQL for Looker dashboards', 'Partnered with product managers on experiment analysis'] },
@@ -173,8 +173,9 @@ const PROFILE = {
     const body = await hostText(gp, '.body');
     check(/Required \d+ of \d+/.test(body) && /Optional \d+ of \d+/.test(body), 'checklists: ' + (body.match(/Required \d+ of \d+/) || [''])[0] + ', ' + (body.match(/Optional \d+ of \d+/) || [''])[0]);
     check(/✦/.test(body), '✦ marks the AI answer');
-    const v = await gp.evaluate(() => ({ f: first_name.value, e: email.value, ph: phone.value, why: q_why.value, auth: q_auth.value, consent: consent.checked, sub: window.__submits, res: resume.files[0] && resume.files[0].name, li: linkedin.value }));
+    const v = await gp.evaluate(() => ({ f: first_name.value, e: email.value, ph: phone.value, why: q_why.value, auth: q_auth.value, reloc: q_reloc.value, consent: consent.checked, sub: window.__submits, res: resume.files[0] && resume.files[0].name, li: linkedin.value }));
     check(v.f === 'Jordan' && v.auth === 'Yes' && v.res === 'jordan-rivera-resume.docx' && /linkedin/.test(v.li), 'profile fields filled');
+    check(v.reloc === 'Yes', 'relocate Yes/No: profile "Open to discussing" mapped to Yes (not left inventing)');
     check(v.e === 'jobs.jordan@example.com', 'separate application email used: ' + v.e);
     check(v.ph === '', 'phone turned off in Fields to fill: left empty');
     check(/Turned off/.test(await gp.evaluate(() => document.getElementById('jaa-host').shadowRoot.innerHTML)) || /turned off/i.test(body), 'turned-off field explained');
@@ -374,7 +375,7 @@ const PROFILE = {
     const fillReq = async (pg, f, l, e) => {
       await pg.fill('#first_name', f); await pg.fill('#last_name', l); await pg.fill('#email', e);
       await pg.setInputFiles('#resume', { name: 'resume.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 fake') });
-      await pg.fill('#q_why', 'I like the product.'); await pg.selectOption('#q_auth', 'Yes');
+      await pg.fill('#q_why', 'I like the product.'); await pg.selectOption('#q_auth', 'Yes'); await pg.selectOption('#q_reloc', 'Yes').catch(()=>{});
     };
     const tp = await ctx.newPage();
     await tp.goto('https://job-boards.greenhouse.io/examplehq/jobs/202');

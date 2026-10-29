@@ -143,6 +143,20 @@ const J = o => JSON.stringify(o);
   const eeoR = C.resolve(Object.assign(fld2('Race / Ethnicity'), { kind: 'select', options: [{ text: 'White' }, { text: 'Asian' }] }), data);
   check(eeoR && eeoR.missing && eeoR.eeo, 'EEO still empty by default (left for you)');
 
+
+  console.log('0.6.6 chooseOption: Yes/No intent + closed lists');
+  {
+    const yn = [{ text: 'Yes' }, { text: 'No' }];
+    check(C.chooseOption('Yes', yn).text === 'Yes', 'exact Yes');
+    check(C.chooseOption('Open to discussing', yn).text === 'Yes', 'Open to discussing → Yes');
+    check(C.chooseOption('Willing to relocate', yn).text === 'Yes', 'Willing → Yes');
+    check(C.chooseOption('No, I cannot relocate', yn).text === 'No', 'cannot → No');
+    check(C.chooseOption('25% in-person', yn) == null, 'invented "25% in-person" does not match Yes/No');
+    check(C.chooseOption('maybe weekends', yn) == null, 'unrelated free text stays unmatched');
+    check(C.isClosedYesNo(yn) && !C.isClosedYesNo([{ text: 'Yes' }, { text: 'No' }, { text: 'Maybe' }, { text: 'Other' }, { text: 'N/A' }, { text: 'Skip' }, { text: 'X' }]), 'isClosedYesNo size guard');
+    check(C.yesNoIntent('Open to discussing') === 'yes' && C.yesNoIntent('not willing') === 'no', 'yesNoIntent helpers');
+  }
+
   { // 0.6.5: a long school list with a couple of EEO-looking names is not a self-ID question (seen on a live Lever form)
     const schools = ['Aalborg University', 'Asian University of Bangladesh', 'Institute of American Indian Arts'].concat(Array.from({ length: 60 }, (_, i) => `State University ${i}`));
     check(!JAA.isEeoText('Which university are you currently attending or did you last attend?', schools), 'school dropdown with "Asian University…" is not EEO');

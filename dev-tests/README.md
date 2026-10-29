@@ -109,3 +109,9 @@ Run from `dev-tests/` with `NODE_PATH` pointing at a folder where Playwright is 
   except Ashby's read-only form GraphQL. Walks the "needs you" cards with Skip, records AI answers, hints and
   extension console errors, and checks Chrome's built-in AI availability. Output goes to `OUT` (default
   `/tmp/jaa-live-real`, outside the repo).
+
+## v0.6.6 tests
+- `unit-v6.js`: Yes/No intent mapping (`Open to discussing` → Yes; invented `25% in-person` unmatched).
+- `e2e-v5.js` fill: relocate select maps profile "Open to discussing" to Yes.
+- `node e2e-location.js`: Lever-style location autocomplete must pick a `.dropdown-location` suggestion
+  (blur without a pick clears the field — the previous failure mode).

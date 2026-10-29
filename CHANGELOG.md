@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.6 (2026-10-29): Yes/No choices + Lever location
+- **Fixed:** Yes/No (and similar closed) selects/comboboxes no longer get free-text inventions like
+  "25% in-person" or a raw profile phrase like "Open to discussing". Choice fields always map to a real
+  option (affirmative/negative intent → Yes/No), the AI is given the exact option list (peeked first for
+  react-select), and unmatched answers stay as needs-you. EEO fields stay empty-by-default.
+- **Fixed:** Lever "Current location" now picks a dropdown suggestion (mousedown) so the value sticks;
+  blur without a pick used to clear it. If no suggestion matches, a clear needs-you hint is shown.
+- Tests: unit chooseOption Yes/No intent; e2e relocate mapping on the Greenhouse mock; `e2e-location.js`
+  for the Lever-style autocomplete widget.
+
 ## 0.6.5 (2026-10-29): Fix + refreshed store screenshots
 - **Fixed:** on a cover-letter upload field, the panel's "needs you" card wrongly said "Add your resume in Options
   (gear icon) and press Fill again". It now says to attach the file on the page (with the "Write it from my resume"

@@ -290,6 +290,26 @@
 
   /* ---------------- option choosing ---------------- */
   const DECLINE = /\b(don t wish|do not wish|not wish|prefer not|decline|choose not|rather not|not to (answer|say|disclose|self identify|identify)|wish to answer)\b/;
+  // Small closed lists (Yes/No, True/False, …): map free-text intent instead of inventing a value.
+  function isClosedYesNo(options) {
+    if (!options || options.length < 2 || options.length > 6) return false;
+    const texts = options.map(o => norm(o.text));
+    return texts.some(t => /^(yes|y)\b/.test(t)) && texts.some(t => /^(no|n)\b/.test(t));
+  }
+  // -> 'yes' | 'no' | null. Used only when the field's options are a Yes/No-style pair.
+  function yesNoIntent(value) {
+    const raw = String(value || '').trim();
+    const v = norm(raw);
+    if (!v) return null;
+    if (/^(yes|y|true|1)$/.test(v)) return 'yes';
+    if (/^(no|n|false|0)$/.test(v)) return 'no';
+    // profile phrases: "Open to discussing", "Willing to relocate", …
+    if (/\b(not |un|no )(open|willing|able|interested)\b/.test(v) || /^(unable|unwilling|cannot|can t|won t|will not)\b/.test(v)) return 'no';
+    if (/^(open to|willing|able|happy to|i (am|would)|sure|ok|okay|depends|discuss)/.test(v)) return 'yes';
+    if (/\b(open to|willing|able to|happy to)\b/.test(v) && !/\bnot\b/.test(v)) return 'yes';
+    if (/^no\b|\b(not interested|prefer not)\b/.test(v)) return 'no';
+    return null;
+  }
   function chooseOption(value, options, alts) {
     if (value == null || !options || !options.length) return null;
     const v = norm(value);
@@ -303,6 +323,13 @@
     if (v === 'yes' || v === 'true') { i = texts.findIndex(t => /^yes\b/.test(t)); if (i >= 0) return options[i]; }
     if (v === 'no' || v === 'false') { i = texts.findIndex(t => /^no\b/.test(t)); if (i >= 0) return options[i]; }
     if (DECLINE.test(v)) { i = texts.findIndex(t => DECLINE.test(t)); if (i >= 0) return options[i]; }
+    // Yes/No (and similar) closed choices: map free text by intent, never invent a third value
+    if (isClosedYesNo(options)) {
+      const intent = yesNoIntent(value);
+      if (intent === 'yes') { i = texts.findIndex(t => /^yes\b/.test(t)); if (i >= 0) return options[i]; }
+      if (intent === 'no') { i = texts.findIndex(t => /^no\b/.test(t)); if (i >= 0) return options[i]; }
+      return null; // no confident match → caller leaves it as needs-you
+    }
     if (v.length >= 3) {
       i = texts.findIndex(t => t.length >= 3 && (t.startsWith(v) || v.startsWith(t)));
       if (i >= 0) return options[i];
@@ -718,6 +745,69 @@
     return new File([bytes], r.name || 'resume.pdf', { type: mime, lastModified: Date.now() });
   }
 
+  // Lever (and similar): visible location text + hidden selectedLocation JSON. Typing alone is cleared on
+  // blur unless a .dropdown-location suggestion is chosen (mousedown / Enter).
+  function isLocationAutocomplete(el) {
+    if (!el || el.tagName !== 'INPUT') return false;
+    if (el.classList && el.classList.contains('location-input')) return true;
+    if (el.id === 'location-input' || el.getAttribute('data-qa') === 'location-input') return true;
+    const hid = ownerDoc(el).getElementById('selected-location');
+    return !!(hid && (el.name === 'location' || /location/i.test(el.id || '')));
+  }
+  async function fillLocationAutocomplete(f, value) {
+    const el = f.el;
+    const doc = ownerDoc(el);
+    const hid = doc.getElementById('selected-location');
+    const clear = () => {
+      setNativeValue(el, '');
+      fire(el, 'input'); fire(el, 'change');
+      if (hid) { setNativeValue(hid, ''); fire(hid, 'input'); fire(hid, 'change'); }
+    };
+    try { el.focus({ preventScroll: true }); } catch (_) { /* ignore */ }
+    fire(el, 'focusin'); fire(el, 'focus');
+    clear();
+    const v = String(value || '').slice(0, el.maxLength > 0 ? el.maxLength : 100);
+    setNativeValue(el, v);
+    fire(el, 'input');
+    // Lever's retrieveLocations.js searches on keydown (not on input alone)
+    fire(el, 'keydown', { key: 'Unidentified', code: '', keyCode: 0 });
+    fire(el, 'keyup', { key: 'Unidentified', code: '', keyCode: 0 });
+    let opts = [];
+    const t0 = Date.now();
+    while (Date.now() - t0 < 4500) {
+      await sleep(200);
+      opts = Array.from(doc.querySelectorAll('.dropdown-location')).filter(isVisible);
+      if (opts.length) break;
+    }
+    if (!opts.length) {
+      clear(); leave(el);
+      return { ok: false, why: 'Location needs a suggestion from the list — type it on the page and pick one' };
+    }
+    const mapped = opts.map(o => ({ text: textOf(o), el: o }));
+    let pick = chooseOption(v, mapped);
+    if (!pick) {
+      let best = null, bestS = 0;
+      mapped.forEach(o => { const sc = similarity(v, o.text); if (sc > bestS) { bestS = sc; best = o; } });
+      if (bestS >= 0.35) pick = best;
+    }
+    if (!pick) {
+      clear(); leave(el);
+      return { ok: false, why: 'No location suggestion matched "' + v.slice(0, 60) + '" — pick one on the page' };
+    }
+    // Lever binds mousedown (not click) on .dropdown-location
+    fire(pick.el, 'mousedown', { button: 0 });
+    fire(pick.el, 'mouseup', { button: 0 });
+    await sleep(120);
+    const shown = (el.value || '').trim();
+    const selected = hid ? String(hid.value || '').trim() : 'ok';
+    if (!shown || !selected) {
+      clear(); leave(el);
+      return { ok: false, why: 'Location suggestion didn\'t stick — pick it on the page' };
+    }
+    leave(el);
+    return { ok: true, shown };
+  }
+
   async function fill(f, value, alts) {
     switch (f.kind) {
       case 'text': case 'textarea': {
@@ -725,6 +815,7 @@
         if (f.inputType === 'number') { const m = v.match(/-?\d+(\.\d+)?/); if (!m) return { ok: false, why: 'Not a number' }; v = m[0]; }
         if (f.inputType === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(v)) return { ok: false, why: 'Needs a date (YYYY-MM-DD)' };
         if (f.el.maxLength > 0 && v.length > f.el.maxLength) v = v.slice(0, f.el.maxLength);
+        if (isLocationAutocomplete(f.el)) return fillLocationAutocomplete(f, v);
         typeInto(f.el, v); leave(f.el);
         return { ok: true, shown: v };
       }
@@ -823,5 +914,5 @@
     setTimeout(() => t.classList.remove('jaa-flash'), 2200);
   }
 
-  JAA.core = { isEeoField, pickTailored, readValue, verify, peekOptions, flash, describe, highlightTarget, comboControl, norm, similarity, cleanLabel, textOf, sleep, isVisible, collect, hasValue, chooseOption, resolve, ruleFor, bankMatch, fill, mark, clearMarks, blockSubmits, isFilling, safeClick, RULES, entryIndex, eduVal, jobAt };
+  JAA.core = { isEeoField, pickTailored, readValue, verify, peekOptions, flash, describe, highlightTarget, comboControl, norm, similarity, cleanLabel, textOf, sleep, isVisible, collect, hasValue, chooseOption, isClosedYesNo, yesNoIntent, resolve, ruleFor, bankMatch, fill, mark, clearMarks, blockSubmits, isFilling, safeClick, isLocationAutocomplete, RULES, entryIndex, eduVal, jobAt };
 })();

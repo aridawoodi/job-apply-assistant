@@ -135,6 +135,10 @@
           if (res.unstuck) { unstuck.push(item.label); item.status = 'todo'; item.why = res.why; item.unstuck = true; C.mark(f, 'jaa-todo'); continue; }
           // option not found: EEO answers are never guessed by the model
           if (r.eeo || f.kind === 'file') { item.status = 'todo'; item.why = res.why; C.mark(f, 'jaa-todo'); continue; }
+          // Closed Yes/No (etc.): don't ask the model to invent a third value — leave for the user
+          if (f.options && f.options.length && C.isClosedYesNo(f.options)) {
+            item.status = 'todo'; item.why = 'Couldn\'t match your answer to Yes/No — pick one'; C.mark(f, 'jaa-todo'); continue;
+          }
           f.hint = r.value;
           pending.push({ f, item });
           continue;
@@ -166,6 +170,21 @@
           }
           if (cur.length) batches.push(cur);
 
+          // Closed-choice dropdowns (Greenhouse react-select, etc.) have no options until opened —
+          // peek them first so the model is constrained to the real Yes/No (or other) list.
+          JAA.ui.busy('Reading options…');
+          C.blockSubmits(true);
+          try {
+            for (const p of ordered) {
+              if ((p.f.kind === 'combobox' || p.f.kind === 'listbutton') && !(p.f.options && p.f.options.length)) {
+                try {
+                  const texts = await C.peekOptions(p.f);
+                  if (texts && texts.length) p.f.options = texts.map(t => ({ text: t, value: t }));
+                } catch (_) { /* leave without options */ }
+              }
+            }
+          } finally { C.blockSubmits(false); }
+
           JAA.ui.busy('Loading local model…');
           JAA.ui.summary(Object.assign(summarize('Loading local model… (first time can take a minute on 8 GB)'), { scanned: fields.length }), fields);
           const w = await send({ type: 'ollama:warm' });
@@ -180,8 +199,12 @@
             JAA.ui.summary(Object.assign(summarize(label), { scanned: fields.length }), fields);
             const questions = batch.map(({ f, essay }) => {
               const qd = { id: f.id, question: (f.question ? f.question + ' — ' : '') + (f.label || f.name || 'Untitled field'), type: f.kind === 'checkboxGroup' ? 'multi-select' : (essay ? 'long-text' : f.kind) };
-              if (f.options && f.options.length) qd.options = trimOptions(f, qd.question).map(o => o.text);
-              if (f.kind === 'combobox') qd.note = 'dropdown; give the most likely option text';
+              if (f.options && f.options.length) {
+                qd.options = trimOptions(f, qd.question).map(o => o.text);
+                qd.note = 'Answer MUST be copied EXACTLY from options (one of: ' + qd.options.slice(0, 12).map(t => JSON.stringify(t)).join(', ') + (qd.options.length > 12 ? ', …' : '') + '). If none fit, null.';
+              } else if (f.kind === 'combobox' || f.kind === 'listbutton') {
+                qd.note = 'dropdown; if you are not sure of the exact option text, return null';
+              }
               if (f.hint) qd.suggested = String(f.hint);
               if (f.required) qd.required = true;
               return qd;
@@ -208,10 +231,18 @@
             const answers = res.answers || {};
             for (const { f, item } of batch) {
               item.pendingAI = false;
-              const a = answers[f.id];
+              let a = answers[f.id];
               if (a == null || a === '' || (Array.isArray(a) && !a.length)) { item.why = item.why || 'AI had no answer'; continue; }
               if (!data.settings.overwriteExisting && C.hasValue(f)) { item.status = 'kept'; kept++; continue; } // the user typed it meanwhile
               if (borrowedOption(f, a, questions)) { item.why = 'AI answer didn\'t fit: it looks like an answer to another question'; continue; }
+              // Choice fields: never invent — map to an actual option or leave as needs-you
+              const choiceOpts = f.options && f.options.length ? f.options
+                : (f.kind === 'select' || f.kind === 'radio' || f.kind === 'buttons' || f.kind === 'checkboxGroup' ? f.options : null);
+              if (choiceOpts && choiceOpts.length && f.kind !== 'checkbox') {
+                const pick = C.chooseOption(Array.isArray(a) ? a[0] : a, choiceOpts);
+                if (!pick) { item.why = 'AI answer didn\'t match any option'; C.mark(f, 'jaa-todo'); item.status = 'todo'; continue; }
+                a = f.kind === 'checkboxGroup' && Array.isArray(a) ? a : pick.text;
+              }
               const out = await fillVerified(f, a);
               if (out.ok) { ai++; item.status = 'ai'; item.value = out.shown; item.source = 'ai'; item.essay = isEssay(f); C.mark(f, 'jaa-ai'); }
               else if (out.unstuck) { unstuck.push(item.label); item.why = out.why; item.unstuck = true; }
