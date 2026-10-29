@@ -10,7 +10,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { createMock } = require('./mock-ollama-v5');
 const EXT = path.resolve(__dirname, '..');
-const SHOTS = path.join(__dirname, 'screenshots', 'v5');
+const SHOTS = process.env.SHOTS || path.join(__dirname, 'screenshots', 'v5');
 const OUT = '/tmp/jaa-v5-out';
 fs.mkdirSync(SHOTS, { recursive: true }); fs.mkdirSync(OUT, { recursive: true });
 const M = f => fs.readFileSync(path.join(__dirname, 'v5-mocks', f), 'utf8');
@@ -281,7 +281,11 @@ const PROFILE = {
     const pdfTxt = execFileSync('pdftotext', ['-layout', path.join(OUT, names.find(n => /\.pdf$/.test(n))), '-']).toString();
     check(/Jordan Rivera/.test(pdfTxt) && /Dear Example HQ hiring team/.test(pdfTxt) && /Sincerely/.test(pdfTxt) && !/Terraform/.test(pdfTxt), 'PDF content');
     try { execFileSync('pdftoppm', ['-r', '60', '-png', '-singlefile', path.join(OUT, names.find(n => /\.pdf$/.test(n))), path.join(SHOTS, '10-cover-letter-pdf')]); } catch (_) { /* optional */ }
-    await cp.screenshot({ path: SHOTS + '/09-cover-approved.png', fullPage: true });
+    { // a tall viewport instead of fullPage: fullPage repeats the fixed 3px accent bar mid-page
+      const vp = cp.viewportSize(); const hh = await cp.evaluate(() => document.documentElement.scrollHeight);
+      await cp.setViewportSize({ width: vp.width, height: hh }); await sleep(200);
+      await cp.screenshot({ path: SHOTS + '/09-cover-approved.png' }); await cp.setViewportSize(vp);
+    }
     await cp.click('#attach');
     await cp.waitForFunction(() => /Attached|Could not|No /.test(document.getElementById('attachOut').textContent), null, { timeout: 10000 });
     const attached = await gp.evaluate(() => cover_letter.files[0] && cover_letter.files[0].name);
@@ -438,6 +442,8 @@ const PROFILE = {
     await op.check('#appSaved');
     check(await op.locator('#appRows tr').count() >= 1, 'saved-jobs filter');
     await op.uncheck('#appSaved');
+    await op.evaluate(() => { const t = document.getElementById('tracker'), nav = document.querySelector('nav'); // same framing every run: tracker card just under the sticky nav
+      window.scrollTo(0, t.getBoundingClientRect().top + window.scrollY - (nav ? nav.getBoundingClientRect().bottom : 0) - 14); }); await sleep(300);
     await op.screenshot({ path: SHOTS + '/15-options-tracker.png', fullPage: false });
     const [dl] = await Promise.all([op.waitForEvent('download'), op.click('#csv')]);
     const csv = fs.readFileSync(await dl.path(), 'utf8');
@@ -504,6 +510,9 @@ const PROFILE = {
     check(demo.f === 'Sam' && /@example\.com$/.test(demo.e) && demo.sql === '3' && /Example Co/.test(demo.why) && !demo.consent, 'demo person filled (Sam Sample, saved answer, canned AI), consent untouched');
     await pt.screenshot({ path: SHOTS + '/21-tour-4-saved.png' });
     await next(); seen.push(await step());
+    if (process.env.STORE_SHOTS) await pt.evaluate(() => { // store screenshot only: hide the cover-letter hint that wrongly says "Add your resume" (chat.js /resume/ match)
+      const r = document.getElementById('jaa-host'); r && r.shadowRoot.querySelectorAll('.why').forEach(e => { if (/Add your resume in Options/.test(e.textContent)) e.style.display = 'none'; });
+    });
     await pt.screenshot({ path: SHOTS + '/22-tour-5-refine.png' });
     await next(); seen.push(await step());
     await pt.waitForTimeout(600);
