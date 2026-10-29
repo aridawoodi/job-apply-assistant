@@ -476,10 +476,17 @@ const PROFILE = {
     const op2 = await ctx.newPage();
     await op2.goto(X('options/options.html#resume'));
     const fileInput = op2.locator('#importer input[type=file]');
+    // Options mounts the importer only after its async loadAll(); checking count() right after goto() raced it
+    await fileInput.waitFor({ state: 'attached', timeout: 15000 }).catch(() => {});
     if (await fileInput.count()) {
+      // Record every status line: "Found N lines" (pdf.js read the file) is replaced within milliseconds by the AI
+      // progress, so polling for it raced; and the AI step can take a while, which isn't what this check is about.
+      await op2.evaluate(() => { window.__tl = []; const t0 = performance.now(); new MutationObserver(() => { const s = document.querySelector('#importer .status'); const t = s ? s.innerText : ''; if (!window.__tl.length || window.__tl[window.__tl.length - 1][1] !== t) window.__tl.push([Math.round(performance.now() - t0), t.slice(0, 90)]); }).observe(document.getElementById('importer'), { subtree: true, childList: true, characterData: true }); });
       await fileInput.setInputFiles(path.join(__dirname, 'fixtures', 'jordan-rivera-resume.pdf'));
-      await op2.waitForFunction(() => /Found \d+ lines|Check each item|Could not/.test(document.body.innerText), null, { timeout: 30000 }).catch(() => {});
-      const ok = await op2.evaluate(() => /Found \d+ lines|Check each item/.test(document.body.innerText));
+      await op2.waitForFunction(() => /Check each item|Could not/.test(document.getElementById('importer').innerText), null, { timeout: 90000 }).catch(() => {});
+      const tl = await op2.evaluate(() => window.__tl);
+      const done = await op2.evaluate(() => /Check each item/.test(document.getElementById('importer').innerText));
+      const ok = tl.some(([, t]) => /Found \d+ lines/.test(t)) && done;
       const libs2 = await op2.evaluate(() => ['JSZip', 'pdfjsLib'].filter(k => typeof window[k] !== 'undefined'));
       check(ok && libs2.includes('pdfjsLib') && !libs2.includes('JSZip'), 'PDF import loads pdf.js on demand and reads the resume');
     } else check(false, 'importer file input not found');
@@ -510,9 +517,11 @@ const PROFILE = {
     check(demo.f === 'Sam' && /@example\.com$/.test(demo.e) && demo.sql === '3' && /Example Co/.test(demo.why) && !demo.consent, 'demo person filled (Sam Sample, saved answer, canned AI), consent untouched');
     await pt.screenshot({ path: SHOTS + '/21-tour-4-saved.png' });
     await next(); seen.push(await step());
-    if (process.env.STORE_SHOTS) await pt.evaluate(() => { // store screenshot only: hide the cover-letter hint that wrongly says "Add your resume" (chat.js /resume/ match)
-      const r = document.getElementById('jaa-host'); r && r.shadowRoot.querySelectorAll('.why').forEach(e => { if (/Add your resume in Options/.test(e.textContent)) e.style.display = 'none'; });
-    });
+    { // 0.6.5 fix: a cover-letter upload card must not say "Add your resume" (its hint mentions the Resume tab)
+      const hints = await pt.evaluate(() => { const r = document.getElementById('jaa-host'); return r ? Array.from(r.shadowRoot.querySelectorAll('.why')).map(e => e.textContent) : []; });
+      const coverCard = hints.some(t => /Cover letter upload/.test(t));
+      check(!hints.some(t => /Add your resume in Options/.test(t)) && (!coverCard || hints.some(t => /Attach the file on the page yourself/.test(t))), 'cover-letter upload card does not tell the user to add a resume' + (coverCard ? '' : ' (no cover card shown)'));
+    }
     await pt.screenshot({ path: SHOTS + '/22-tour-5-refine.png' });
     await next(); seen.push(await step());
     await pt.waitForTimeout(600);

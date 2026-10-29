@@ -60,7 +60,14 @@
     return { ok: false, unstuck: true, why: 'Didn\'t stick: the site cleared or changed it (fill it by hand)' };
   }
   JAA.fillField = fillVerified;
-  const ESSAY = /(why|describe|tell us|explain|share|what excites|what interests|most impressive|proud|cover letter|additional information|anything else|motivat|walk us through|example of)/i;
+  // Small models sometimes put another question's option under this id (seen live: a free-text "work from our
+  // office?" answered with "No - I do not consent to receiving WhatsApp messages"). Free-text fields only.
+  function borrowedOption(f, a, questions) {
+    if (typeof a !== 'string' || (f.options && f.options.length) || f.kind === 'combobox' || f.kind === 'listbutton') return false;
+    const v = C.norm(a); if (!v) return false;
+    return questions.some(q => q.id !== f.id && Array.isArray(q.options) && q.options.some(o => C.norm(o) === v && v.length > 3));
+  }
+  const ESSAY = /\b(why|describe|tell us|explain|share|what excites|what interests|most impressive|proud|cover letter|additional information|anything else|motivat|walk us through|example of)\b/i;
   const isEssay = f => (f.kind === 'textarea' || f.kind === 'text') && !f.options && (f.kind === 'textarea' || (f.label || '').length > 110 || ESSAY.test(f.label || ''));
   const MAX_OPTIONS = 40;
   // Long dropdowns (e.g. 2,000 universities) would blow the small model's context:
@@ -132,7 +139,7 @@
           pending.push({ f, item });
           continue;
         }
-        if (r && r.missing) { item.status = 'todo'; item.why = r.why || (r.missing === 'resume' ? 'Add your resume in Options' : `Not in your profile (${r.missing})`); item.eeo = !!r.eeo; C.mark(f, 'jaa-todo'); continue; }
+        if (r && r.missing) { item.status = 'todo'; item.missing = r.missing; item.why = r.why || (r.missing === 'resume' ? 'Add your resume in Options' : `Not in your profile (${r.missing})`); item.eeo = !!r.eeo; C.mark(f, 'jaa-todo'); continue; }
         if (r && r.skip) { item.status = 'todo'; item.why = r.skip; item.cover = !!r.cover; item.off = !!r.off; if (!r.off) C.mark(f, 'jaa-todo'); continue; }
         pending.push({ f, item });
       }
@@ -204,6 +211,7 @@
               const a = answers[f.id];
               if (a == null || a === '' || (Array.isArray(a) && !a.length)) { item.why = item.why || 'AI had no answer'; continue; }
               if (!data.settings.overwriteExisting && C.hasValue(f)) { item.status = 'kept'; kept++; continue; } // the user typed it meanwhile
+              if (borrowedOption(f, a, questions)) { item.why = 'AI answer didn\'t fit: it looks like an answer to another question'; continue; }
               const out = await fillVerified(f, a);
               if (out.ok) { ai++; item.status = 'ai'; item.value = out.shown; item.source = 'ai'; item.essay = isEssay(f); C.mark(f, 'jaa-ai'); }
               else if (out.unstuck) { unstuck.push(item.label); item.why = out.why; item.unstuck = true; }

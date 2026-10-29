@@ -97,3 +97,15 @@ Run from `dev-tests/` with `NODE_PATH` pointing at a folder where Playwright is 
 - `node e2e-rating.js` (Playwright): the same prompt in a real browser: counting in the worker, the popup card
   and its buttons, and the Settings "Rate this extension" link (screenshots in `screenshots/rating-*.png`).
 - `e2e-v3.js` and `e2e-steps.js` time out at the same step on 0.5.1 and 0.6.0 (older mocks); not a 0.6 change.
+
+## v0.6.5 tests
+- `e2e-v5.js` now also checks that the cover-letter upload card in the tour doesn't say "Add your resume" (the
+  store-screenshot hide hack is gone), and its PDF-import check waits for the importer to finish.
+- `unit-v6.js`: a long school dropdown with a couple of EEO-looking names ("Asian University of …") is not a
+  self-ID question; race and veteran option lists still are.
+- `node e2e-live-real-ollama.js`: live Greenhouse / Lever / Ashby (and optionally Workday) with a REAL Ollama on
+  :11434 and default `OLLAMA_ORIGINS` (so the declarativeNetRequest Origin rule is exercised), fake
+  `sample-profile.json`, no resume stored. Fill only: never presses Submit/Next, aborts every non-GET request
+  except Ashby's read-only form GraphQL. Walks the "needs you" cards with Skip, records AI answers, hints and
+  extension console errors, and checks Chrome's built-in AI availability. Output goes to `OUT` (default
+  `/tmp/jaa-live-real`, outside the repo).

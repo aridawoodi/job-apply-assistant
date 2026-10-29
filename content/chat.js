@@ -267,7 +267,7 @@
       return;
     }
     if (f.kind === 'file') {
-      card.appendChild(h('div', { class: 'why', text: /resume/i.test(item.why || '') ? 'Add your resume in Options (gear icon) and press Fill again, or attach it on the page.' : 'Attach the file on the page yourself if you want to include one.' }));
+      card.appendChild(h('div', { class: 'why', text: (item.missing === 'resume' && !item.cover) ? 'Add your resume in Options (gear icon) and press Fill again, or attach it on the page.' : 'Attach the file on the page yourself if you want to include one.' }));
       chips.append(showMe(f), skip);
       current.noText = true;
       return;

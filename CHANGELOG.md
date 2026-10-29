@@ -1,6 +1,23 @@
 # Changelog
 
-## 0.6.4 (in development): Optional rating prompt
+## 0.6.5 (2026-10-29): Fix + refreshed store screenshots
+- **Fixed:** on a cover-letter upload field, the panel's "needs you" card wrongly said "Add your resume in Options
+  (gear icon) and press Fill again". It now says to attach the file on the page (with the "Write it from my resume"
+  button as before). The resume hint only shows when the resume itself is missing.
+- **Fixed:** Greenhouse's new boards label resume/cover uploads as "Attach"; the real name ("Resume/CV", "Cover
+  Letter") is read from the surrounding group so cover letters get the cover-letter path.
+- **Fixed:** a free-text AI answer that exactly matches another question's option text is rejected (small models
+  sometimes put an SMS/WhatsApp consent option into a different field).
+- **Fixed:** the essay-field detector used a broken word-boundary (a literal backspace in the regex), so long
+  "why us"-style questions were only caught by length heuristics.
+- **Fixed:** a long school dropdown with a couple of EEO-looking names ("Asian University of …") is no longer
+  treated as a self-ID question.
+- **Store listing:** new screenshots and promo tile in the Quiet Chrome look (sample data only).
+- Tests: an e2e check for the cover-letter hint; the PDF-import check in `dev-tests/e2e-v5.js` records status
+  lines (the brief "Found N lines" was racing the AI progress text) and waits for the review screen; live
+  real-Ollama script `dev-tests/e2e-live-real-ollama.js`.
+
+## 0.6.4 (2026-10-29): Optional rating prompt
 - **A small, optional "Is AI Job Application Assistant helping your search?" card** in the toolbar popup, shown only
   after 3 applications have gone out (the site's confirmation was seen, or you moved the job to Applied or a later
   stage in the tracker) and at least 3 days after installing. Buttons: **Rate it** (opens the Chrome Web Store

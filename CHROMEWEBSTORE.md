@@ -1,6 +1,6 @@
 # Chrome Web Store Listing — AI Job Application Assistant
 
-> Last Updated: 2026-10-26
+> Last Updated: 2026-10-29
 
 ## Store Listing
 
@@ -164,8 +164,9 @@ https://github.com/aridawoodi/job-apply-assistant
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
-| 0.6.4 | 2026-10-29 | Optional rating card in the popup after 3 tracked applications (Rate it / Maybe later / No thanks, plus Send feedback); permanent "Rate this extension" link in Settings. No permission changes. | In development |
-| 0.6.3 | 2026-10-28 | New icon (resume + AI chip + check), Quiet Chrome UI polish. No permission changes. | Submitted |
+| 0.6.5 | 2026-10-29 | Fix: cover-letter upload card no longer says "Add your resume". Refreshed screenshots and promo tile (new look). No permission changes. | Ready to submit |
+| 0.6.4 | 2026-10-29 | Optional rating card in the popup after 3 tracked applications (Rate it / Maybe later / No thanks, plus Send feedback); permanent "Rate this extension" link in Settings. No permission changes. | Submitted, review cancelled for 0.6.5 |
+| 0.6.3 | 2026-10-28 | New icon (resume + AI chip + check), Quiet Chrome UI polish. No permission changes. | Submitted, review cancelled for 0.6.4 |
 | 0.6.0 | 2026-10-21 | Resume import overhaul: education list, projects section, faster parsing, review screen. Multi-school/job forms. Better skills/certifications parsing. | In development (on GitHub, not submitted to store) |
 | 0.5.1 | 2026-10-21 | EEO / self-ID answers default to empty for everyone; never pre-set, never filled from answer bank or AI. EEO questions filtered from AI requests. Pronouns no longer sent to AI. | Submitted (pending review) |
 | 0.5.0 | 2026-10-21 | Guided experience: practice tour, live progress, checklists, Refine with AI, resume match, cover letters, profile tab, tracker stages, Settings tree, performance optimizations. | Published |

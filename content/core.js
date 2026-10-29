@@ -117,6 +117,17 @@
     return cleanLabel(t);
   }
 
+  // File inputs often carry only the button's label ("Attach", "Upload"); the real name ("Resume/CV",
+  // "Cover Letter") is on the surrounding group (new Greenhouse boards: role=group + aria-labelledby).
+  function fileLabel(el, adapter) {
+    const t = labelForControl(el, adapter);
+    if (t && !/^(attach|upload|browse|choose( a)? files?|select( a)? files?|add( a)? files?|upload( a)? files?|attach( a)? files?)$/i.test(t)) return t;
+    const g = el.closest('[role="group"], fieldset');
+    const lg = g && g.querySelector('legend');
+    const gt = g ? (labelById(g) || g.getAttribute('aria-label') || (lg ? textOf(lg) : '')) : '';
+    return cleanLabel(gt || boxLabel(el, [el]) || t);
+  }
+
   function groupLabel(els) {
     const first = els[0];
     const fs = first.closest('fieldset');
@@ -176,7 +187,7 @@
       const base = { name: el.name || '', idAttr: el.id || '', required: el.required || el.getAttribute('aria-required') === 'true' };
       if (type === 'file') {
         seen.add(el);
-        push(Object.assign(base, { kind: 'file', el, label: labelForControl(el, adapter), accept: el.accept || '' }));
+        push(Object.assign(base, { kind: 'file', el, label: fileLabel(el, adapter), accept: el.accept || '' }));
         continue;
       }
       if (type === 'radio' || type === 'checkbox') {
@@ -623,6 +634,7 @@
       opts = await waitOptions(input, 600);
     }
     let pick = chooseOption(value, opts, alts);
+    const seen = opts.length; // the full menu opened (so "No options appeared" would be wrong if typing filters it to nothing)
     if (!pick) {
       // 2) type to search (async lists like school / location)
       typeInto(input, String(value).slice(0, 60));
@@ -637,7 +649,7 @@
       typeInto(input, '');
       fire(input, 'keydown', { key: 'Escape', code: 'Escape', keyCode: 27 });
       leave(input);
-      return { ok: false, why: opts.length ? 'No matching option for "' + value + '"' : 'No options appeared' };
+      return { ok: false, why: opts.length || seen ? 'No matching option for "' + String(value).slice(0, 80) + '"' : 'No options appeared' };
     }
     fire(pick.el, 'mousedown', { button: 0 });
     fire(pick.el, 'mouseup', { button: 0 });

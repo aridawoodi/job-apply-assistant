@@ -143,6 +143,13 @@ const J = o => JSON.stringify(o);
   const eeoR = C.resolve(Object.assign(fld2('Race / Ethnicity'), { kind: 'select', options: [{ text: 'White' }, { text: 'Asian' }] }), data);
   check(eeoR && eeoR.missing && eeoR.eeo, 'EEO still empty by default (left for you)');
 
+  { // 0.6.5: a long school list with a couple of EEO-looking names is not a self-ID question (seen on a live Lever form)
+    const schools = ['Aalborg University', 'Asian University of Bangladesh', 'Institute of American Indian Arts'].concat(Array.from({ length: 60 }, (_, i) => `State University ${i}`));
+    check(!JAA.isEeoText('Which university are you currently attending or did you last attend?', schools), 'school dropdown with "Asian University…" is not EEO');
+    check(JAA.isEeoText('Please choose one', ['White', 'Black or African American', 'Asian', 'Hispanic or Latino', 'Two or more races', 'I don\'t wish to answer']), 'race options still detected as EEO');
+    check(JAA.isEeoText('Status', ['I am not a protected veteran', 'I identify as one or more of the classifications of protected veteran', 'I don\'t wish to answer']), 'veteran options still detected as EEO');
+  }
+
   console.log(failures ? `\n${failures} FAILURE(S)` : '\nALL PASSED');
   process.exit(failures ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
