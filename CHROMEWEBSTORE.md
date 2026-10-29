@@ -164,6 +164,7 @@ https://github.com/aridawoodi/job-apply-assistant
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 0.6.3 | 2026-10-28 | New icon (resume + AI chip + check), Quiet Chrome UI polish. No permission changes. | Submitted |
 | 0.6.0 | 2026-10-21 | Resume import overhaul: education list, projects section, faster parsing, review screen. Multi-school/job forms. Better skills/certifications parsing. | In development (on GitHub, not submitted to store) |
 | 0.5.1 | 2026-10-21 | EEO / self-ID answers default to empty for everyone; never pre-set, never filled from answer bank or AI. EEO questions filtered from AI requests. Pronouns no longer sent to AI. | Submitted (pending review) |
 | 0.5.0 | 2026-10-21 | Guided experience: practice tour, live progress, checklists, Refine with AI, resume match, cover letters, profile tab, tracker stages, Settings tree, performance optimizations. | Published |

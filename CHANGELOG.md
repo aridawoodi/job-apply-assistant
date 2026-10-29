@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.3 (2026-10-28): Fresh look
+- **New icon:** a resume with an AI chip and a check mark, in the indigo-to-violet brand colors.
+- **Calmer, more professional UI** across the popup, settings, and on-page panel: white surfaces, a thin brand accent bar, and clearer secondary buttons. No changes to permissions or features.
+
 ## 0.6.2 (2026-10-26): Product rename
 - **Product name updated** from "Job Apply Assistant" to "AI Job Application Assistant" to better reflect the AI-powered capabilities. All user-facing text, documentation, and store materials updated. Extension ID, permissions, and functionality remain unchanged.
 
