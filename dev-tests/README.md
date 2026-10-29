@@ -91,4 +91,9 @@ Run from `dev-tests/` with `NODE_PATH` pointing at a folder where Playwright is 
 - `mock-ollama-v4.js` also answers the per-section "You read part of a resume" prompts (with invented
   entries that must be left out). `e2e-v4.js` covers the review screen; `unit-v6.js` checks that "Read again
   with AI" sends every section.
+- `node unit-rating.js` (no browser): the v0.6.4 optional rating prompt in `lib/rating.js`: shown only after 3
+  applications that went out and 3 days installed, Rate it / No thanks end it, Maybe later waits 10 more,
+  and which tracker rows count (confirmation seen or moved past Applied; not fills, bookmarks or errors).
+- `node e2e-rating.js` (Playwright): the same prompt in a real browser: counting in the worker, the popup card
+  and its buttons, and the Settings "Rate this extension" link (screenshots in `screenshots/rating-*.png`).
 - `e2e-v3.js` and `e2e-steps.js` time out at the same step on 0.5.1 and 0.6.0 (older mocks); not a 0.6 change.

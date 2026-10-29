@@ -59,3 +59,7 @@ table.apps textarea{width:100%;min-height:38px;font-size:12px}table.apps input[t
 .star{background:none;border:0;font-size:17px;cursor:pointer;color:#cbd5e1;padding:0}.star.on{color:#f59e0b}
 tr.due td{background:#fffbeb}
 .pill-st{display:inline-block;border-radius:999px;padding:2px 8px;font-size:11px;background:#f1f5f9}.pill-st.st-ok{background:#dcfce7}.pill-st.st-err{background:#fee2e2}.pill-st.st-wait{background:#fef9c3}
+
+/* v0.6.4: about footer with a permanent "Rate this extension" link */
+footer.about{max-width:980px;margin:-40px auto 0;padding:0 20px 40px;text-align:center;font-size:12px;color:#64748b}
+footer.about a{color:#4f46e5;font-weight:600;text-decoration:none}footer.about a:hover{color:#7c3aed;text-decoration:underline}

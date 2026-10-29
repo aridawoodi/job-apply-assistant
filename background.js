@@ -4,7 +4,7 @@
  * A declarativeNetRequest rule (installOriginRules) removes the Origin header from THIS
  * extension's own requests to the local Ollama port, so no OLLAMA_ORIGINS setup is needed. */
 'use strict';
-importScripts('lib/defaults.js', 'lib/tailor.js', 'lib/cover.js', 'lib/resume.js', 'lib/extract.js');
+importScripts('lib/defaults.js', 'lib/tailor.js', 'lib/cover.js', 'lib/resume.js', 'lib/extract.js', 'lib/rating.js');
 
 const ORIGINS_HINT =
   'Ollama refused the request (403). The extension normally fixes this by itself. Make sure Chrome is up to date (version 110 or newer), ' +
@@ -713,8 +713,11 @@ async function trackerEvent(msg, sender) {
       if (!manual && row.status !== JAA.STATUS.APPLIED) row.status = JAA.STATUS.ERROR;
       log('error', row.lastError);
     }
-    return { ok: true, changed: before !== row.status, status: row.status, isNew, row: Object.assign({}, row, { history: undefined }) };
+    const bump = markRatingCounted(row);
+    return { ok: true, changed: before !== row.status, status: row.status, isNew, bump, row: Object.assign({}, row, { history: undefined }) };
   });
+  if (res.bump) await ratingBump(res.bump);
+  delete res.bump;
   await setBadge(tabId, res.status);
   return res;
 }
@@ -849,6 +852,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   if ((dataVersion || 2) < 4) await migrateV4();
   if ((dataVersion || 2) < 5) await migrateV5(details.reason);
   if (details.reason === 'update') await noteWhatsNew(details.previousVersion);
+  await ratingInit();
   await installOriginRules();
   await setDefaultIcon();
 });
@@ -1115,7 +1119,7 @@ async function tailoredAttach(msg) {
   } catch (e) { return { ok: false, error: 'Could not reach the application page (' + String(e && e.message || e) + '). Reload it and try again.' }; }
 }
 
-const V4_TYPES = new Set(['tracker:update', 'tracker:bookmark', 'tracker:get', 'tracker:list', 'page:status', 'feedback:add', 'diag:info', 'tour:open', 'cover:open', 'cover:save', 'cover:fill', 'match:ai', 'whatsnew:seen', 'privacy:open', 'ollama:status', 'ollama:fixOrigin', 'system:info', 'tailor:open', 'tailor:forJob', 'tailor:save', 'tailor:attach', 'onboarding:open']);
+const V4_TYPES = new Set(['tracker:update', 'tracker:bookmark', 'tracker:get', 'tracker:list', 'page:status', 'feedback:add', 'diag:info', 'tour:open', 'cover:open', 'cover:save', 'cover:fill', 'match:ai', 'whatsnew:seen', 'privacy:open', 'ollama:status', 'ollama:fixOrigin', 'system:info', 'tailor:open', 'tailor:forJob', 'tailor:save', 'tailor:attach', 'onboarding:open', 'rating:get', 'rating:act']);
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // the practice page (and its tour) never writes to your real tracker, feedback or cover letters
   if (msg && sender && sender.url && sender.url.startsWith(chrome.runtime.getURL('practice/')) && /^(tracker:update|tracker:bookmark|feedback:add|cover:save)$/.test(msg.type)) {
@@ -1142,6 +1146,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     'cover:save': () => coverSave(msg.entry),
     'cover:fill': () => coverFill(msg),
     'match:ai': () => matchAI(msg),
+    'rating:get': () => ratingState(),
+    'rating:act': () => ratingActMsg(msg, sender),
     'privacy:open': () => chrome.tabs.create({ url: chrome.runtime.getURL('privacy/privacy.html') }).then(() => ({ ok: true })),
     'whatsnew:seen': () => chrome.storage.local.get('whatsNew').then(({ whatsNew }) => chrome.storage.local.set({ whatsNew: Object.assign({}, whatsNew || {}, { seen: true }) })).then(() => ({ ok: true }))
   };
@@ -1176,8 +1182,10 @@ async function trackerUpdate(msg) {
     if (typeof p.notes === 'string') row.notes = p.notes.slice(0, 4000);
     if (typeof p.reminderAt === 'string') row.reminderAt = p.reminderAt.slice(0, 10);
     row.date = now;
-    return { ok: true, row };
-  });
+    // you marked it Applied (or later) yourself: that counts for the rating prompt too
+    const bump = markRatingCounted(row, p.stage === 'applied');
+    return { ok: true, row, bump };
+  }).then(async r => { if (r && r.bump) await ratingBump(r.bump); if (r) delete r.bump; return r; });
 }
 async function trackerBookmark(entry, on) {
   return withTracker(apps => {
@@ -1195,6 +1203,51 @@ async function trackerBookmark(entry, on) {
     row.stage = 'saved'; row.stageDates = { saved: new Date().toISOString() };
     return { ok: true, row };
   });
+}
+
+/* ---------- v0.6.4: optional Chrome Web Store rating prompt (logic in lib/rating.js) ---------- */
+// Counts each job once, when the application really went out (see JAA_RATING.countsAsApplied). Only a
+// number and the install time are stored. All writes go through this one queue so the popup's buttons
+// and a tracker event at the same moment can't overwrite each other.
+let ratingLock = Promise.resolve();
+function withRating(fn) {
+  const run = ratingLock.then(async () => {
+    const { rating } = await chrome.storage.local.get('rating');
+    const next = fn(JAA_RATING.normalize(rating, Date.now()));
+    if (next) await chrome.storage.local.set({ rating: next });
+    return next;
+  });
+  ratingLock = run.catch(() => {});
+  return run;
+}
+function markRatingCounted(row, force) {
+  if (!row || row.ratingCounted) return 0;
+  if (!force && !JAA_RATING.countsAsApplied(row)) return 0;
+  row.ratingCounted = true;
+  return 1;
+}
+const ratingBump = n => withRating(s => JAA_RATING.increment(s, Date.now(), n));
+// install: start the clock. Update from an older version: start the clock now (so people who already
+// use it still wait 3 days) and count the applications already in the tracker.
+async function ratingInit() {
+  const { rating } = await chrome.storage.local.get('rating');
+  if (rating && rating.installedAt) return;
+  const seeded = await withTracker(apps => apps.reduce((n, r) => n + markRatingCounted(r), 0));
+  await withRating(s => JAA_RATING.increment(s, Date.now(), seeded));
+}
+async function ratingState() {
+  const { rating } = await chrome.storage.local.get('rating');
+  if (!rating) await ratingInit();
+  const st = JAA_RATING.normalize((await chrome.storage.local.get('rating')).rating, Date.now());
+  return { ok: true, eligible: JAA_RATING.eligible(st, Date.now()), state: st, reviewUrl: JAA_RATING.REVIEW_URL, feedbackUrl: JAA_RATING.FEEDBACK_URL };
+}
+async function ratingActMsg(msg, sender) {
+  // only the extension's own pages (popup, settings) can answer the card; never content scripts or the practice page
+  const ownPage = !!(sender && sender.url && sender.url.startsWith(chrome.runtime.getURL('')) && !sender.url.startsWith(chrome.runtime.getURL('practice/')));
+  if (!ownPage) return { ok: false, error: 'not allowed' };
+  if (!['rate', 'later', 'never'].includes(msg.action)) return { ok: false, error: 'unknown action' };
+  const st = await withRating(s => JAA_RATING.act(s, msg.action, Date.now()));
+  return { ok: true, state: st };
 }
 
 /* ---------- toolbar icon: colour on supported job pages, gray elsewhere ---------- */

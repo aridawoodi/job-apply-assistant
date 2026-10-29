@@ -16,6 +16,12 @@
   <button id="generic" class="secondary" type="button" hidden>Try generic fill on this page</button>
   <button id="profile" class="secondary" type="button" title="Open your details with click-to-copy on this page">👤 My profile: click to copy</button>
   <div id="result"></div>
+  <div id="rate" class="rate" role="region" aria-label="Rate the extension" hidden>
+    <p class="rate-q">Is AI Job Application Assistant helping your search?</p>
+    <p class="rate-sub muted">A quick rating helps other job seekers find it. Totally optional.</p>
+    <div class="rate-btns"><button id="rateYes" class="rate-primary" type="button">Rate it</button><button id="rateLater" class="rate-ghost" type="button">Maybe later</button><button id="rateNever" class="rate-ghost" type="button">No thanks</button></div>
+    <a href="#" id="rateFeedback" class="rate-link">Send feedback</a>
+  </div>
   <div class="status"><span class="dotx" id="odot"></span><span id="ollama" class="muted">Checking local AI…</span></div>
   <footer><a href="#" id="opts">Profile</a><a href="#" id="tracker">Tracker</a><a href="#" id="backup">Backups</a><a href="#" id="setupLink">Setup</a><a href="#" id="tourLink">Tour</a></footer>
   <script src="../lib/defaults.js"></script>

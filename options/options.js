@@ -514,6 +514,9 @@ function initBackups() {
     }
   });
   $('ver').textContent = 'v' + chrome.runtime.getManifest().version;
+  $('footVer').textContent = 'v' + chrome.runtime.getManifest().version;
+  // rating from Settings counts as answered, so the popup card won't ask again (the link itself opens normally)
+  $('rateLink').addEventListener('click', () => { sendBg({ type: 'rating:act', action: 'rate' }); });
   initBackups();
   // deep links: options.html#profile, or a request from the chat/popup gear button
   const goto = section => { const el = document.getElementById(section); if (!el) return; el.scrollIntoView({ block: 'start' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1500); const first = el.querySelector('input, textarea, select'); if (first && section === 'profile') first.focus({ preventScroll: true }); };

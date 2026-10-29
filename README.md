@@ -145,6 +145,8 @@ dev-tests/               Playwright end-to-end tests, mocks, fixtures (not shipp
 cd dev-tests && npm i playwright && npx playwright install chromium
 node unit-v4.js                              # pure helpers, no browser
 node unit-v6.js                              # v0.6 resume import (sections, schools, jobs, projects, skills), no browser
+node unit-rating.js                          # v0.6.4 optional rating prompt (when it shows, buttons, what counts), no browser
+node e2e-rating.js                           # v0.6.4 rating prompt in the browser (popup card, buttons, Settings link)
 node e2e-v4.js                               # setup wizard, Origin rule, model pull, resume import, tailoring (mock Ollama)
 node e2e-v5.js                               # v0.5: tour, icon, progress, refine, tabs, match, cover letters, tracking, settings (ONLY=match,cover,...)
 node e2e-live-v5.js                          # live Greenhouse/Lever/Ashby, fill only (non-GET requests aborted) + performance numbers

@@ -164,6 +164,7 @@ https://github.com/aridawoodi/job-apply-assistant
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 0.6.4 | 2026-10-29 | Optional rating card in the popup after 3 tracked applications (Rate it / Maybe later / No thanks, plus Send feedback); permanent "Rate this extension" link in Settings. No permission changes. | In development |
 | 0.6.3 | 2026-10-28 | New icon (resume + AI chip + check), Quiet Chrome UI polish. No permission changes. | Submitted |
 | 0.6.0 | 2026-10-21 | Resume import overhaul: education list, projects section, faster parsing, review screen. Multi-school/job forms. Better skills/certifications parsing. | In development (on GitHub, not submitted to store) |
 | 0.5.1 | 2026-10-21 | EEO / self-ID answers default to empty for everyone; never pre-set, never filled from answer bank or AI. EEO questions filtered from AI requests. Pronouns no longer sent to AI. | Submitted (pending review) |
@@ -193,4 +194,5 @@ This extension mentions Greenhouse, Lever, Ashby, Workday and LinkedIn only to d
 - EEO (equal employment opportunity) fields are handled with special care: always optional, never pre-filled, never sent to AI, explicit user consent required.
 - The extension never automatically submits forms. It fills fields and the user must click Submit themselves.
 - Test data in screenshots and developer tests uses only fictional people (Sam Taylor, Jordan Rivera, Sam Sample).
+- **Rating prompt (0.6.4):** optional and dismissible. A small card in the toolbar popup only (never on web pages or during a fill), shown after 3 tracked applications and at least 3 days after install. Every user sees the same "Rate it" button (no satisfaction gate or happy/unhappy routing), a "Send feedback" link is shown next to it, and no incentives are offered. "No thanks" or rating stops it for good; "Maybe later" waits for 10 more applications. Logic: lib/rating.js.
 - Source code includes extensive comments explaining privacy-sensitive operations (see background.js, content/main.js).

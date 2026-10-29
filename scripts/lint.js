@@ -53,7 +53,7 @@ for (const f of shipped.filter(f => f.endsWith('.html'))) {
 ok('HTML pages checked (no remote scripts/styles, no inline scripts)');
 
 console.log('no remote code');
-const ALLOWED_HOSTS = /^(127\.0\.0\.1|localhost|ollama\.com|schemas\.openxmlformats\.org|schemas\.microsoft\.com|www\.w3\.org|purl\.org|github\.com|www\.linkedin\.com|linkedin\.com|jobs\.lever\.co|jobs\.ashbyhq\.com|[a-z.-]*greenhouse\.io|[a-z.-]*myworkday(jobs|site)?\.com|example\.(com|org|test))$/;
+const ALLOWED_HOSTS = /^(127\.0\.0\.1|localhost|ollama\.com|schemas\.openxmlformats\.org|schemas\.microsoft\.com|www\.w3\.org|purl\.org|github\.com|chromewebstore\.google\.com|www\.linkedin\.com|linkedin\.com|jobs\.lever\.co|jobs\.ashbyhq\.com|[a-z.-]*greenhouse\.io|[a-z.-]*myworkday(jobs|site)?\.com|example\.(com|org|test))$/;
 for (const f of ours.filter(f => /\.(js|html|css|json)$/.test(f))) {
   const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
   for (const [, host] of src.matchAll(/https?:\/\/(?:\*\.)?([a-zA-Z0-9.-]+[a-zA-Z0-9])/g)) if (!ALLOWED_HOSTS.test(host)) fail(`${f}: unexpected URL host ${host}`);
@@ -64,7 +64,7 @@ for (const f of shipped.filter(f => f.startsWith('lib/vendor/') && f.endsWith('.
   const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
   if (/cdnjs|unpkg\.com|jsdelivr|googleapis\.com\/ajax/.test(src)) fail(f + ': references a CDN');
 }
-ok('own code: only local Ollama, job sites, ollama.com download links and XML namespaces; vendor: no CDN references');
+ok('own code: only local Ollama, job sites, ollama.com download links, the store review page and XML namespaces; vendor: no CDN references');
 
 console.log('personal data');
 const shippedText = shipped.filter(f => /\.(js|html|css|json|txt)$/.test(f) && !f.startsWith('lib/vendor/'));

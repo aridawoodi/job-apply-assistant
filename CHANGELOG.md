@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.4 (in development): Optional rating prompt
+- **A small, optional "Is AI Job Application Assistant helping your search?" card** in the toolbar popup, shown only
+  after 3 applications have gone out (the site's confirmation was seen, or you moved the job to Applied or a later
+  stage in the tracker) and at least 3 days after installing. Buttons: **Rate it** (opens the Chrome Web Store
+  reviews page), **Maybe later** (asks again after 10 more applications) and **No thanks** (never asks again), plus a
+  **Send feedback** link to GitHub issues. Never shown on job pages or while a fill is running. Nothing is offered in
+  return for a rating.
+- **"Rate this extension" link** in the Settings page footer, always available.
+- Only a counter and the install time are stored (`rating` in chrome.storage.local); no job details. No new permissions.
+
 ## 0.6.3 (2026-10-28): Fresh look
 - **New icon:** a resume with an AI chip and a check mark, in the indigo-to-violet brand colors.
 - **Calmer, more professional UI** across the popup, settings, and on-page panel: white surfaces, a thin brand accent bar, and clearer secondary buttons. No changes to permissions or features.

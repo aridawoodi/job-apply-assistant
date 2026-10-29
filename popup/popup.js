@@ -49,7 +49,24 @@ async function openPanel(tabName) {
   } catch (_) { fallback(); }
 }
 
+// v0.6.4: optional rating card. Shown only when the background says it's time (3+ applications that went
+// out, installed 3+ days, not answered yet), and hidden as soon as a fill starts so it never gets in the way.
+let filling = false;
+function initRating() {
+  chrome.runtime.sendMessage({ type: 'rating:get' }, r => {
+    if (chrome.runtime.lastError || !r || !r.ok || !r.eligible || filling) return;
+    const card = $('rate');
+    const act = action => new Promise(res => chrome.runtime.sendMessage({ type: 'rating:act', action }, () => { void chrome.runtime.lastError; res(); }));
+    $('rateYes').onclick = async () => { await act('rate'); card.hidden = true; await chrome.tabs.create({ url: r.reviewUrl }); window.close(); };
+    $('rateLater').onclick = async () => { await act('later'); card.hidden = true; };
+    $('rateNever').onclick = async () => { await act('never'); card.hidden = true; };
+    $('rateFeedback').onclick = async e => { e.preventDefault(); await chrome.tabs.create({ url: r.feedbackUrl }); window.close(); };
+    card.hidden = false;
+  });
+}
+
 async function fill(generic) {
+  filling = true; $('rate').hidden = true;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const btn = generic ? $('generic') : $('fill');
   btn.disabled = true; const old = btn.textContent; btn.textContent = 'Filling…';
@@ -100,6 +117,8 @@ async function fill(generic) {
   chrome.storage.local.get(['onboarding', 'profile']).then(({ onboarding, profile }) => {
     if (!(onboarding && onboarding.done) && !(profile && (profile.firstName || profile.email))) $('setup').hidden = false;
   });
+
+  initRating();
 
   chrome.runtime.sendMessage({ type: 'ollama:test' }, r => {
     const el = $('ollama');

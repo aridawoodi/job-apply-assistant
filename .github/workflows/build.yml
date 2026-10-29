@@ -19,7 +19,7 @@ jobs:
       - name: Lint (syntax, manifest, no remote code, no personal data)
         run: node scripts/lint.js
       - name: Unit tests
-        run: node dev-tests/unit-v4.js && node dev-tests/unit-v6.js
+        run: node dev-tests/unit-v4.js && node dev-tests/unit-v6.js && node dev-tests/unit-rating.js
       - name: Build the store zip
         run: python3 scripts/build.py
       - uses: actions/upload-artifact@v4
