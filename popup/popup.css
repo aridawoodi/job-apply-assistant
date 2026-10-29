@@ -1,23 +1,26 @@
 :root{--brand:#4f46e5;--brand2:#7c3aed}
 body{width:320px;margin:0;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#0f172a;background:#fff}
-header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff}
-header img{border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
-header .tt{flex:1;display:flex;flex-direction:column}header strong{font-size:14px}header .muted{color:#e0e7ff;font-size:11px}
-.icon{width:32px;height:32px;border:0;border-radius:9px;background:rgba(255,255,255,.18);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;margin:0}
-.icon:hover{background:rgba(255,255,255,.3)}
+.accent-bar{height:3px;background:linear-gradient(90deg,var(--brand),var(--brand2))}
+header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fff;color:#0f172a;border-bottom:1px solid #f1f5f9}
+header img{border-radius:8px}
+header .tt{flex:1;display:flex;flex-direction:column}header strong{font-size:14px}header .muted{color:#64748b;font-size:11px}
+.icon{width:32px;height:32px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;margin:0}
+.icon:hover{color:var(--brand);border-color:#c7d2fe}
 .site{padding:10px 14px 2px;display:flex;flex-direction:column;gap:6px}
 .tag{align-self:flex-start;background:#eef2ff;color:#3730a3;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700}
 .note{color:#475569;font-size:12px}
-button.primary,button.secondary{display:block;width:calc(100% - 28px);margin:8px 14px 0;border:0;border-radius:12px;padding:11px;font:700 14px/1 inherit;cursor:pointer}
-.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 6px 16px rgba(79,70,229,.3)}.primary[disabled]{opacity:.6;cursor:progress}
-.secondary{background:#eef2ff;color:#3730a3}
+button.primary,button.secondary{display:block;width:calc(100% - 28px);margin:8px 14px 0;border-radius:12px;padding:11px;font:700 14px/1 inherit;cursor:pointer}
+.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 6px 16px rgba(79,70,229,.3);border:0}.primary[disabled]{opacity:.6;cursor:progress}
+.secondary{background:#fff;color:#0f172a;border:1px solid #cbd5e1;box-shadow:none}.secondary:hover{border-color:var(--brand);color:#3730a3}
 #result{margin:8px 14px 0;font-size:12px}
-.pill{display:inline-block;border-radius:999px;padding:1px 8px;margin:2px 2px 2px 0;font-weight:600}
-.ok{background:#dcfce7;color:#166534}.ai{background:#dbeafe;color:#1e40af}.todo{background:#fef9c3;color:#854d0e}
+.pill{display:inline-block;border-radius:8px;padding:3px 8px;margin:2px 2px 2px 0;font-size:11px;font-weight:600}
+.ok{background:#f8fafc;color:#0f172a;border:1px solid #cbd5e1}.ai{background:#fff;color:#3730a3;border:1px solid #c7d2fe}.todo{background:#fffbeb;color:#854d0e;border:1px solid #fde68a}
 .status{display:flex;align-items:flex-start;gap:7px;margin:10px 14px 0;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px}
 .dotx{flex:none;width:8px;height:8px;border-radius:50%;background:#cbd5e1;margin-top:5px}.dotx.good{background:#22c55e}.dotx.bad{background:#ef4444}
 .muted{color:#64748b;font-size:12px}.bad{color:#b91c1c;font-size:12px;white-space:pre-wrap}.good{color:#15803d;font-size:12px}
-footer{display:flex;gap:14px;padding:10px 14px 12px;font-size:12px}a{color:var(--brand);text-decoration:none;font-weight:600}a:hover{text-decoration:underline}
+footer{display:grid;grid-template-columns:repeat(5,1fr);margin:12px 14px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:11px;font-weight:500;text-align:center}
+footer a{color:#64748b;text-decoration:none;padding:8px 4px;border-left:1px solid #e2e8f0}footer a:first-child{border-left:0}
+footer a:hover{background:#f8fafc;color:var(--brand)}
 
 .setup{display:block;margin:8px 0;padding:9px 11px;border-radius:10px;background:#fef9c3;color:#713f12;font-size:12px;font-weight:600;text-decoration:none}.setup:hover{background:#fef08a}
 
