@@ -115,3 +115,11 @@ Run from `dev-tests/` with `NODE_PATH` pointing at a folder where Playwright is 
 - `e2e-v5.js` fill: relocate select maps profile "Open to discussing" to Yes.
 - `node e2e-location.js`: Lever-style location autocomplete must pick a `.dropdown-location` suggestion
   (blur without a pick clears the field — the previous failure mode).
+- `node unit-exp.js` (no browser): work-experience dates and "current" (only an end date of Present/Current/Now),
+  the AI-as-hint rule, newest-first order, the single "Current job" → list migration (idempotent, never drops
+  data), the stale-tab merge, 300-job speed, and Current company/title fill rules.
+- `node e2e-exp.js`: imports `fixtures/casey-morgan-resume.pdf` (made-up, 4 jobs), checks the review cards and
+  "4 jobs found", reorder/remove/undo/validation, save → Options shows 4, toggles "I currently work here",
+  reload, a stale Options tab, 150-card render speed and debounced saving, and Fill on a Lever mock
+  (`v5-mocks/lever-exp.html`). Screenshots go to `$EXP_SHOTS` (default `/workspace/exp-fix`).
+  `python3 make-multijob.py` rebuilds the fixture.

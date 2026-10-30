@@ -407,6 +407,19 @@
     if (k < 0) return null;
     return (p.workHistory || [])[k] || {};
   }
+  // single "Current employer" / "Current title" questions: the first job marked current (its end date is
+  // Present). With no current job, a question that says "current" is left for you; "most recent" or a plain
+  // "Company" / "Job title" gets the first job in your list.
+  function nowJob(p, f, key) {
+    const j = jobAt(p, f); if (j) return j[key] || '';
+    const list = Array.isArray(p.workHistory) ? p.workHistory : [];
+    if (!list.length) return key === 'title' ? p.currentTitle : p.currentEmployer;
+    const isNow = x => x && (x.current || (JAA.isPresentEnd ? JAA.isPresentEnd(x.end) : /^present$/i.test(String(x.end || '').trim())));
+    const cur = list.find(isNow);
+    const pick = cur || (/\bcurrent\b/.test(norm(f.label)) ? null : list[0]);
+    if (!pick) return '';
+    return key === 'title' ? String(pick.title || '').split(/\s+[·|•]\s+|\s+\/\s+/)[0] : pick.company || '';
+  }
   const DEGREE_ALTS = v => ({
     Doctorate: [/\bph ?d\b|\bdoctor/], "Master's": [/\bmaster/, /\bm ?s\b|\bm ?a\b|\bmba\b/], "Bachelor's": [/\bbachelor/, /\bb ?s\b|\bb ?a\b/],
     "Associate's": [/\bassociate/], 'High School': [/high school|secondary|\bged\b/], Certificate: [/certificat/], Bootcamp: [/boot ?camp/, /certificat/]
@@ -444,8 +457,8 @@
       (p, f, L) => foreign(L) ? null : p.workAuthorizedUS],
     ['citizenship', /\b(citizen|citizenship|permanent resident)\b/, (p, f, L) => foreign(L) ? '' : (hasYesNo(f) || /^(are|is) you\b/.test(norm(f.label)))
       ? (/\bu\.?s\.?\b|united states|america/i.test(p.citizenship) ? 'Yes' : null) : p.citizenship],
-    ['currentTitle', /\b(current (job )?title|current (role|position)|job title|^title$|most recent (job )?title)\b/, (p, f) => { const j = jobAt(p, f); return j ? j.title || '' : p.currentTitle; }, { short: true, noLLM: true }],
-    ['currentEmployer', /\b(current (company|employer)|most recent (company|employer)|^company( name)?$|^employer$|^org(anization)?$)\b/, (p, f) => { const j = jobAt(p, f); return j ? j.company || '' : p.currentEmployer; }, { short: true }],
+    ['currentTitle', /\b(current (job )?title|current (role|position)|job title|^title$|most recent (job )?title)\b/, (p, f) => nowJob(p, f, 'title'), { short: true, noLLM: true }],
+    ['currentEmployer', /\b(current (company|employer)|most recent (company|employer)|^company( name)?$|^employer$|^org(anization)?$)\b/, (p, f) => nowJob(p, f, 'company'), { short: true }],
     ['jobDescription', /^((role|job|position) )?description$|^(responsibilities|duties|role description|description of (duties|responsibilities))$/, (p, f) => { const j = jobAt(p, f); return j ? (j.bullets || []).map(b => '• ' + b).join('\n') : null; }, { short: true }],
     ['eduMonth', /\b(start|end)( date)? month\b/, () => '', { short: true, noLLM: true }],
     ['eduStartYear', /\bstart( date)? year\b|\bstart year\b|\bfirst year attended\b/, (p, f) => eduVal(p, f, 'startYear'), { short: true }],

@@ -1,0 +1,49 @@
+/* v0.6.6 work-experience editor (review screen + Options → Profile). Quiet, neutral cards; indigo accent. */
+.exp{margin:6px 0 4px}
+.exp-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.exp-title{margin:14px 0 4px}
+.exp-count{font-size:12px;font-weight:600;color:#3730a3;background:#eef2ff;border-radius:999px;padding:2px 9px}
+.exp-help{margin:2px 0 6px}
+.exp-now{margin:4px 0 8px;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:7px 10px}
+.exp-list{list-style:none;margin:0;padding:0}
+.exp-card{border:1px solid #e2e8f0;border-radius:12px;background:#fff;margin:8px 0;padding:8px 12px 10px;transition:box-shadow .15s,border-color .15s}
+.exp-card:focus-within{border-color:#c7d2fe;box-shadow:0 0 0 3px rgba(99,102,241,.08)}
+.exp-card.is-current{border-left:3px solid #4f46e5}
+.exp-card.dragging{opacity:.5}
+.exp-card.drop-before{box-shadow:0 -3px 0 #6366f1}.exp-card.drop-after{box-shadow:0 3px 0 #6366f1}
+.exp-card-head{display:flex;align-items:center;gap:8px;min-height:32px}
+.exp-sumwrap{flex:1;min-width:0;display:flex;align-items:center;gap:8px}
+.exp-sum{font-weight:600;font-size:13.5px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exp-pill{flex:none;font-size:11px;font-weight:600;color:#3730a3;background:#eef2ff;border-radius:999px;padding:1px 8px}
+.exp-tools{display:flex;gap:2px}
+.exp-handle{cursor:grab;background:none;border:0;color:#94a3b8;padding:4px 6px;font-size:14px;letter-spacing:-2px;border-radius:6px;line-height:1}
+.exp-handle:active{cursor:grabbing}
+.exp-icon{background:none;border:1px solid transparent;color:#64748b;padding:4px 8px;font-size:14px;line-height:1;border-radius:6px}
+.exp-icon:hover:not([disabled]){border-color:#cbd5e1;color:#3730a3;background:#f8fafc}
+.exp-icon[disabled]{opacity:.3;cursor:default}
+.exp-del:hover:not([disabled]){color:#b91c1c;border-color:#fecaca;background:#fef2f2}
+.exp-handle:focus-visible,.exp-icon:focus-visible,.exp-check:focus-visible{outline:2px solid #6366f1;outline-offset:1px}
+.exp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 14px;margin-top:6px;align-items:start}
+@media (max-width:680px){.exp-grid{grid-template-columns:minmax(0,1fr)}}
+.exp-field{display:flex;flex-direction:column;gap:3px;min-width:0}
+.exp .exp-lbl{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;text-align:left;gap:6px;font-size:12px;color:#475569;min-height:18px;margin:0}
+.exp-req{color:#94a3b8}
+.exp-field input[type=text],.exp-field select{width:100%;box-sizing:border-box}
+.exp-date{display:grid;grid-template-columns:1.1fr 1fr;gap:6px}
+.exp-date select[disabled],.exp-date input[disabled]{background:#f1f5f9;color:#94a3b8}
+.exp-curwrap{padding-top:18px}
+.exp .exp-toggle{display:flex;flex-direction:row;align-items:center;gap:8px;font-size:13px;color:#0f172a;cursor:pointer;padding:7px 0}
+.exp-toggle input{width:16px;height:16px;margin:0;accent-color:#4f46e5}
+.exp-msg{font-size:11.5px;color:#64748b;text-align:left;line-height:1.35}
+.exp-msg:empty{display:none}
+.exp-field.has-issue input,.exp-field.has-issue select{border-color:#f59e0b}
+.exp-field.has-issue .exp-msg{color:#a16207}
+.exp-check{font-size:10.5px;font-weight:600;color:#92400e;background:#fef3c7;border-radius:999px;padding:0 7px;line-height:17px;cursor:help}
+.exp-field.needs-check input,.exp-field.needs-check select{border-color:#fcd34d;background:#fffdf5}
+.exp-bullets{margin-top:6px}.exp-bullets summary{cursor:pointer;padding:2px 0}.exp-bullets textarea{width:100%;box-sizing:border-box;margin-top:4px}
+.exp-undo{display:flex;align-items:center;gap:6px;font-size:13px;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;margin:6px 0}
+.exp-actions{margin-top:6px}
+.ghost-btn{background:none;border:0;color:#4f46e5;padding:6px 8px;font-weight:600;font-size:13px;cursor:pointer;border-radius:6px}.ghost-btn:hover{background:#eef2ff}
+.exp-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.hidden{display:none!important}
+@media (prefers-reduced-motion:reduce){.exp-card{transition:none}}

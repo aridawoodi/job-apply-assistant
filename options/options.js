@@ -7,7 +7,8 @@ const SECTIONS = [
   ['Location', [['city', 'City'], ['state', 'State'], ['zip', 'ZIP'], ['country', 'Country'], ['location', 'Location as written on forms (e.g. "Nashville, TN")']]],
   ['Links', [['linkedin', 'LinkedIn URL', 'url'], ['github', 'GitHub URL', 'url'], ['portfolio', 'Portfolio URL', 'url'], ['website', 'Other website', 'url']]],
   ['Work authorization', [['workAuthorizedUS', 'Authorized to work in the US?', 'select', YN], ['needsSponsorship', 'Need visa sponsorship?', 'select', YN], ['citizenship', 'Citizenship'], ['over18', 'At least 18?', 'select', YN]]],
-  ['Current job', [['currentEmployer', 'Current employer'], ['currentTitle', 'Current title'], ['currentStartDate', 'Start date (YYYY-MM)'], ['yearsExperience', 'Years of experience']]],
+  // v0.6.6: your jobs are one list (the editor below this section); "current" = "I currently work here"
+  ['Experience', [['yearsExperience', 'Years of experience']]],
   ['Availability & preferences', [['availability', 'Earliest start date'], ['noticePeriod', 'Notice period'], ['salaryExpectation', 'Salary expectation (blank = you answer each time)'], ['willingToRelocate', 'Willing to relocate?', 'select', YN], ['howDidYouHear', 'Default "How did you hear about us?"']]],
   // Voluntary self-ID: "Choose…" (empty = not set) until you pick; empty fields stay yellow on forms for you.
   ['Voluntary self-identification (EEO, optional)', [['eeo.gender', 'Gender', 'eeo', JAA.EEO_CHOICES.gender], ['eeo.transgender', 'Transgender?', 'eeo', JAA.EEO_CHOICES.transgender], ['eeo.sexualOrientation', 'Sexual orientation', 'eeo', JAA.EEO_CHOICES.sexualOrientation], ['eeo.disability', 'Disability', 'eeo', JAA.EEO_CHOICES.disability], ['eeo.veteran', 'Veteran status', 'eeo', JAA.EEO_CHOICES.veteran], ['eeo.ethnicity', 'Race / ethnicity', 'eeo', JAA.EEO_CHOICES.ethnicity], ['eeo.hispanicLatino', 'Hispanic or Latino?', 'eeo', JAA.EEO_CHOICES.hispanicLatino]]],
@@ -60,9 +61,9 @@ function renderProfile() {
       l.appendChild(input); grid.appendChild(l);
     }
     if (!isStyle) root.appendChild(grid);
+    if (title === 'Experience') renderJobs(root);
   }
   const ws = document.querySelector('[data-path="writingSamples"]'); if (ws) ws.rows = 8;
-  renderJobs(root);
 }
 
 /* v0.6: education is a list (one entry is the highest degree, used for single "Degree" questions) */
@@ -115,23 +116,12 @@ function renderProjects(root) {
   box.querySelectorAll('[data-projdel]').forEach(b => b.onclick = () => { readProfile(); state.profile.projects.splice(+b.dataset.projdel, 1); renderProfile(); dirty(); });
 }
 
-/* work history + skills (filled from your resume; editable here) */
-const JOB_FIELDS = [['title', 'Title'], ['company', 'Company'], ['location', 'Location'], ['start', 'Start'], ['end', 'End']];
+/* work history (v0.6.6 card editor, saved automatically), then education, projects, skills */
 function renderJobs(root) {
   const p = state.profile;
-  const h3 = document.createElement('h3'); h3.textContent = 'Work history'; root.appendChild(h3);
-  const box = document.createElement('div'); box.className = 'jobs'; box.id = 'jobsBox'; root.appendChild(box);
-  (p.workHistory || []).forEach((j, i) => {
-    const d = document.createElement('div'); d.className = 'jobed';
-    d.innerHTML = `<div class="grid">${JOB_FIELDS.map(([k, l]) => `<label>${l}<input type="text" data-job="${i}" data-jk="${k}" value="${esc(j[k] || '')}"></label>`).join('')}</div>
-      <label style="margin-top:6px">Bullets (one per line)<textarea rows="3" data-job="${i}" data-jk="bullets">${esc((j.bullets || []).join('\n'))}</textarea></label>
-      <button class="x" data-jobdel="${i}" type="button" title="Remove this job">× remove</button>`;
-    box.appendChild(d);
-  });
-  const add = document.createElement('button'); add.type = 'button'; add.className = 'secondary'; add.textContent = '+ Add job';
-  add.onclick = () => { readProfile(); (state.profile.workHistory = state.profile.workHistory || []).push({ company: '', title: '', location: '', start: '', end: '', bullets: [] }); renderProfile(); dirty(); };
-  root.appendChild(add);
-  box.querySelectorAll('[data-jobdel]').forEach(b => b.onclick = () => { readProfile(); state.profile.workHistory.splice(+b.dataset.jobdel, 1); renderProfile(); dirty(); });
+  const box = document.createElement('div'); box.id = 'jobsBox'; root.appendChild(box);
+  if (state.expEd) state.expEd.cancel(); // re-rendered from newer data; readProfile() already saved local edits
+  state.expEd = JAA.expEditor.mount(box, state.profile.workHistory || [], { mode: 'profile', debounceMs: 600, onChange: saveExperience });
   renderEducation(root);
   renderProjects(root);
   const h3b = document.createElement('h3'); h3b.textContent = 'Skills, certifications & languages (skills and languages comma-separated, commas inside brackets are kept; one certification per line)'; root.appendChild(h3b);
@@ -231,11 +221,7 @@ function readSettings() {
 }
 function readProfile() {
   document.querySelectorAll('#profileForm [data-path], #styleForm [data-path]').forEach(el => set(state.profile, el.dataset.path, el.value.trim()));
-  const jobs = state.profile.workHistory || [];
-  document.querySelectorAll('#profileForm [data-job]').forEach(el => {
-    const j = jobs[+el.dataset.job]; if (!j) return;
-    j[el.dataset.jk] = el.dataset.jk === 'bullets' ? el.value.split('\n').map(x => x.trim()).filter(Boolean) : el.value.trim();
-  });
+  if (state.expEd) { state.expEd.flush(); state.profile.workHistory = state.expEd.value(); JAA.syncCurrent(state.profile); }
   document.querySelectorAll('#profileForm [data-list]').forEach(el => { state.profile[el.dataset.list] = el.dataset.list === 'certifications' ? JAA.splitLines(el.value) : JAA.splitList(el.value); });
   const edu = state.profile.educationList = JAA.educationListOf(state.profile);
   document.querySelectorAll('#profileForm [data-edu]').forEach(el => { const e = edu[+el.dataset.edu]; if (e) e[el.dataset.ek] = el.value.trim(); });
@@ -250,6 +236,17 @@ function readProfile() {
   });
 }
 
+// another tab saved the profile: show it right away unless you are in the middle of editing it here
+// (then your edits are merged with it when you save)
+function profileChangedElsewhere(p) {
+  const a = document.activeElement;
+  const busy = dirtyFlag || (state.expEd && state.expEd.pending()) || (a && a.closest && a.closest('[data-exp]'));
+  if (busy) { $('saved').textContent = 'Your profile was updated in another tab; your changes here will be merged when you save.'; return; }
+  const y = window.scrollY;
+  setProfile(p); renderProfile(); window.scrollTo(0, y);
+  $('saved').textContent = 'Profile updated from another tab';
+}
+
 function renderResume() {
   const r = state.resume;
   $('resumeInfo').textContent = r ? `Master resume: ${r.name} (${Math.round((r.size || 0) / 1024)} KB). Drop a new file below to replace it.` : 'No resume saved yet. Drop your PDF or Word resume below.';
@@ -258,7 +255,7 @@ function renderResume() {
 function mountImporter() {
   JAA.importer.mount($('importer'), {
     useAI: () => $('importAI').checked, // read when a file is imported
-    onSaved: async () => { const all = await JAA.loadAll(); state.profile = all.profile; state.resume = all.resume; renderProfile(); renderResume(); $('saved').textContent = 'Profile updated from your resume'; }
+    onSaved: async () => { const all = await JAA.loadAll(); setProfile(all.profile); state.resume = all.resume; renderProfile(); renderResume(); $('saved').textContent = 'Profile updated from your resume'; }
   });
 }
 
@@ -403,6 +400,33 @@ function initBehaviour() {
 
 let dirtyFlag = false;
 const pageOpenedAt = new Date().toISOString();
+/* The profile can change in another tab while this page is open (the setup wizard's resume import, a second
+ * Options tab). state.base is the profile as this page last loaded or saved it; saving keeps only what you
+ * changed here and takes everything else from storage, so an old tab can't undo a newer import. */
+const clone = o => JSON.parse(JSON.stringify(o || {}));
+let lastWritten = '';
+function setProfile(p) { state.profile = JAA.migrateProfile(JAA.merge(JAA.EMPTY_PROFILE, p)); state.base = clone(state.profile); }
+async function writeProfile(mine) {
+  const { profile: stored } = await chrome.storage.local.get('profile');
+  const latest = JAA.migrateProfile(JAA.merge(JAA.EMPTY_PROFILE, stored));
+  const out = JAA.mergeEdits(state.base, mine, latest);
+  lastWritten = JSON.stringify(out);
+  await chrome.storage.local.set({ profile: out });
+  return out;
+}
+// the experience editor saves on its own (debounced), without touching other unsaved fields on the page
+let expSaving = Promise.resolve();
+function saveExperience(list) {
+  expSaving = expSaving.then(async () => {
+    const mine = Object.assign(clone(state.base), { workHistory: list });
+    JAA.syncCurrent(mine);
+    const out = await writeProfile(mine);
+    state.base.workHistory = clone(out.workHistory); ['currentEmployer', 'currentTitle', 'currentStartDate'].forEach(k => { state.base[k] = out[k]; });
+    state.profile.workHistory = clone(out.workHistory); JAA.syncCurrent(state.profile);
+    if (!dirtyFlag) $('saved').textContent = 'Experience saved ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }).catch(e => { $('saved').textContent = 'Could not save experience: ' + (e && e.message || e); });
+  return expSaving;
+}
 function dirty() { dirtyFlag = true; $('saved').textContent = 'Unsaved changes'; }
 async function save() {
   readProfile(); readSettings();
@@ -416,7 +440,10 @@ async function save() {
   const { answerBank: stored = [] } = await chrome.storage.local.get('answerBank');
   const have = new Set(state.answerBank.map(r => JAA.normText(r.q)));
   stored.filter(r => r && r.source === 'learned' && (r.updatedAt || r.createdAt) > pageOpenedAt && !have.has(JAA.normText(r.q))).forEach(r => state.answerBank.push(r));
-  await chrome.storage.local.set({ profile: state.profile, answerBank: state.answerBank, settings: state.settings });
+  await expSaving;
+  const out = await writeProfile(state.profile);
+  state.profile = clone(out); state.base = clone(out);
+  await chrome.storage.local.set({ answerBank: state.answerBank, settings: state.settings });
   dirtyFlag = false;
   $('saved').textContent = 'Saved ' + new Date().toLocaleTimeString();
   renderBank();
@@ -435,7 +462,7 @@ async function importJson(file) {
   try { data = JSON.parse(text); } catch (e) { alert('That file is not valid JSON.'); return; }
   const profile = data.profile || (data.firstName !== undefined || data.email !== undefined ? data : null);
   if (!profile) { alert('No profile found in that file.'); return; }
-  state.profile = JAA.merge(JAA.EMPTY_PROFILE, profile);
+  state.profile = JAA.migrateProfile(JAA.merge(JAA.EMPTY_PROFILE, profile));
   if (Array.isArray(data.answerBank)) state.answerBank = data.answerBank.map(r => Object.assign({}, r, { q: r.q || r.question || '', a: r.a || r.answer || '' }));
   if (data.settings) state.settings = JAA.merge(JAA.DEFAULT_SETTINGS, data.settings);
   const toSet = { profile: state.profile, answerBank: state.answerBank, settings: state.settings };
@@ -497,6 +524,11 @@ function initBackups() {
 (async function init() {
   const all = await JAA.loadAll();
   Object.assign(state, all);
+  setProfile(all.profile);
+  { // one-time: store the migrated experience list (old single "Current job" fields are kept in legacyCurrent)
+    const { profile: raw } = await chrome.storage.local.get('profile');
+    if (raw && (raw.expVersion || 0) < JAA.EXP_VERSION) { lastWritten = JSON.stringify(state.profile); await chrome.storage.local.set({ profile: state.profile }); }
+  }
   await new Promise(r => chrome.runtime.sendMessage({ type: 'tracker:migrate' }, () => { void chrome.runtime.lastError; r(); }));
   state.applications = (await chrome.storage.local.get('applications')).applications || [];
   renderProfile(); renderBank(); renderSettings(); renderResume(); renderApps(); renderRules(); mountImporter(); renderLibrary(); initBehaviour();
@@ -504,9 +536,10 @@ function initBackups() {
   $('ruleAdd').onclick = () => { addRule($('ruleNew').value); $('ruleNew').value = ''; };
   $('ruleNew').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('ruleAdd').click(); } };
 
-  document.addEventListener('input', e => { if (e.target.closest('#profileForm, #ai, #style, #backups, #tailoring') && e.target.id !== 'ruleNew') dirty(); });
+  // the experience editor ([data-exp]) saves itself; everything else waits for Save
+  document.addEventListener('input', e => { if (e.target.closest('#profileForm, #ai, #style, #backups, #tailoring') && !e.target.closest('[data-exp]') && e.target.id !== 'ruleNew') dirty(); });
   document.addEventListener('change', e => { 
-    if (e.target.closest('#profileForm, #ai, #style, #backups, #tailoring') && e.target.id !== 'restoreFile' && e.target.id !== 'ruleNew') dirty();
+    if (e.target.closest('#profileForm, #ai, #style, #backups, #tailoring') && !e.target.closest('[data-exp]') && e.target.id !== 'restoreFile' && e.target.id !== 'ruleNew') dirty();
     // Update AI status when engine changes
     if (e.target.id === 's_aiEngine') {
       readSettings();
@@ -562,5 +595,6 @@ function initBackups() {
     if (ch.applications) { state.applications = ch.applications.newValue || []; renderApps(); renderLibrary(); }
     if (ch.tailored) renderLibrary();
     if (ch.answerBank && !dirtyFlag) { state.answerBank = ch.answerBank.newValue || []; renderBank(); }
+    if (ch.profile && JSON.stringify(ch.profile.newValue) !== lastWritten) profileChangedElsewhere(ch.profile.newValue);
   });
 })();

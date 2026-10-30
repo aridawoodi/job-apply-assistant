@@ -843,6 +843,13 @@ chrome.storage.onChanged.addListener((ch, area) => {
 });
 chrome.runtime.onStartup.addListener(() => { snapshot('browser start'); });
 
+// v0.6.6: work history is one list; the old single "Current job" fields become a list entry (kept in
+// profile.legacyCurrent too) and "current" follows each job's end date. A snapshot is taken before updates.
+async function migrateExperience() {
+  const { profile } = await chrome.storage.local.get('profile');
+  if (!profile || (profile.expVersion || 0) >= JAA.EXP_VERSION) return;
+  await chrome.storage.local.set({ profile: JAA.migrateProfile(profile) });
+}
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/welcome.html') });
   // update/reload: snapshot first, then migrate in place (data in chrome.storage.local is kept)
@@ -851,6 +858,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   const { dataVersion } = await chrome.storage.local.get('dataVersion');
   if ((dataVersion || 2) < 4) await migrateV4();
   if ((dataVersion || 2) < 5) await migrateV5(details.reason);
+  await migrateExperience();
   if (details.reason === 'update') await noteWhatsNew(details.previousVersion);
   await ratingInit();
   await installOriginRules();

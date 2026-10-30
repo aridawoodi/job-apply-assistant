@@ -59,8 +59,8 @@ const fields = page => page.evaluate(() => Object.fromEntries([...document.query
     await opt.waitForFunction(() => /Check each item|could not help/.test(document.getElementById('importer').innerText), null, { timeout: 600000 });
     const v = await fields(opt);
     const txt = await opt.innerText('#importer');
-    results[kind] = { secs: Math.round((Date.now() - t0) / 1000), v, jobs: (txt.match(/Work history \((\d+)\)/) || [])[1], edu: (txt.match(/Education \((\d+)\)/) || [])[1], skills: (txt.match(/Skills \((\d+)\)/) || [])[1], dropped: (txt.match(/Left out[^\n]*/) || [''])[0], aiError: /could not help/.test(txt) };
-    console.log(`  ${kind}: ${results[kind].secs}s · ${v.firstName} ${v.lastName} · ${v.email} · ${v.phone} · ${v.location} · ${v.linkedin} · now ${v.currentTitle} @ ${v.currentEmployer} · ${v.yearsExperience} yrs · jobs ${results[kind].jobs} · edu ${results[kind].edu} · skills ${results[kind].skills}`);
+    results[kind] = { secs: Math.round((Date.now() - t0) / 1000), v, jobs: (txt.match(/(\d+) jobs? found/) || [])[1], now: (txt.match(/current employer use ([^\n(]*)/) || [])[1], edu: (txt.match(/Education \((\d+)\)/) || [])[1], skills: (txt.match(/Skills \((\d+)\)/) || [])[1], dropped: (txt.match(/Left out[^\n]*/) || [''])[0], aiError: /could not help/.test(txt) };
+    console.log(`  ${kind}: ${results[kind].secs}s · ${v.firstName} ${v.lastName} · ${v.email} · ${v.phone} · ${v.location} · ${v.linkedin} · now ${results[kind].now} · ${v.yearsExperience} yrs · jobs ${results[kind].jobs} · edu ${results[kind].edu} · skills ${results[kind].skills}`);
     if (results[kind].dropped) console.log('    ' + results[kind].dropped.slice(0, 300));
     check(!results[kind].aiError && v.firstName && v.lastName && v.email && +results[kind].jobs >= 1, `${kind}: name, email and work history extracted`);
     await opt.screenshot({ path: path.join(SHOTS, `real-import-${kind}.png`), fullPage: true });

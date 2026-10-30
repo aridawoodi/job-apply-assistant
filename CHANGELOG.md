@@ -1,6 +1,27 @@
 # Changelog
 
-## 0.6.6 (2026-10-29): Yes/No choices + Lever location
+## 0.6.6 (2026-10-29): Work history editor, Yes/No choices + Lever location
+- **Fixed:** after a resume import the profile could show a single job marked "current" even though the review
+  listed them all. An Options tab that was already open (or open next to the setup wizard) saved its old copy
+  of the whole profile over the import. Saving now keeps only what you changed on that page and takes
+  everything else from storage, and an idle Options tab refreshes itself when another page saves. This also
+  protected education and projects, which had the same overwrite.
+- **Fixed:** "current" no longer comes from guesses. A job is current only when its end date is Present /
+  Current / Now. The AI's "Present" is shown as a "Check this" hint, and the word "current" in a bullet no longer counts.
+  Several current jobs are allowed. A job line with one date ("2016") keeps it as the start date and asks
+  you for the end date.
+- **Changed:** work history is one list everywhere. The old separate "Current job" boxes (employer / title /
+  start) are gone. An existing value there becomes a job card the first time you open 0.6.6 (the old values
+  are kept in the profile as `legacyCurrent`, and a backup snapshot is taken on update). Imports are sorted
+  newest first. After that, your own order is kept.
+- **New:** an editable job card in the resume review and in Options → Profile. Each card has title, company,
+  location, start and end month/year, and "I currently work here" (which clears and disables the end date,
+  and restores it when un-ticked). You can add jobs, remove them with Undo, and reorder them with ↑ ↓,
+  Alt+↑/↓ or drag. Gentle hints flag a missing title or company, an end date before the start, and a bad
+  year. "Check this" marks fields the reader was unsure about. The review says "N jobs found" and saves
+  exactly what is shown. Options saves job edits automatically (debounced).
+- **Fixed:** "Current company" / "Current title" questions use the first job marked current. With no current
+  job they are left for you, and "most recent" questions use the first job in your list.
 - **Fixed:** Yes/No (and similar closed) selects/comboboxes no longer get free-text inventions like
   "25% in-person" or a raw profile phrase like "Open to discussing". Choice fields always map to a real
   option (affirmative/negative intent → Yes/No), the AI is given the exact option list (peeked first for
@@ -8,7 +29,9 @@
 - **Fixed:** Lever "Current location" now picks a dropdown suggestion (mousedown) so the value sticks;
   blur without a pick used to clear it. If no suggestion matches, a clear needs-you hint is shown.
 - Tests: unit chooseOption Yes/No intent; e2e relocate mapping on the Greenhouse mock; `e2e-location.js`
-  for the Lever-style autocomplete widget.
+  for the Lever-style autocomplete widget; `unit-exp.js` (dates, current, migration, stale-tab merge, fill)
+  and `e2e-exp.js` (import 4 jobs → review → profile → toggle current → reload → stale tab → Fill), on the
+  made-up `fixtures/casey-morgan-resume.*` built by `make-multijob.py`.
 
 ## 0.6.5 (2026-10-29): Fix + refreshed store screenshots
 - **Fixed:** on a cover-letter upload field, the panel's "needs you" card wrongly said "Add your resume in Options

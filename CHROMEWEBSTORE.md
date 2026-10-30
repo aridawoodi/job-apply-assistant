@@ -164,8 +164,8 @@ https://github.com/aridawoodi/job-apply-assistant
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
-| 0.6.6 | 2026-10-29 | Yes/No choice mapping (no invented values); Lever location autocomplete picks a suggestion. No permission changes. | Ready to submit, waiting for 0.6.5 approval |
-| 0.6.5 | 2026-10-29 | Fix: cover-letter upload card no longer says "Add your resume". Refreshed screenshots and promo tile (new look). No permission changes. | Submitted |
+| 0.6.6 | 2026-10-29 | Work history editor (job cards, "I currently work here", reorder, Check-this hints); fix: a resume import no longer collapses to one "current" job, and "current" comes from end dates only; Yes/No choice mapping (no invented values); Lever location autocomplete picks a suggestion. No permission changes. | Ready to submit |
+| 0.6.5 | 2026-10-29 | Fix: cover-letter upload card no longer says "Add your resume". Refreshed screenshots and promo tile (new look). No permission changes. | Published (live) |
 | 0.6.4 | 2026-10-29 | Optional rating card in the popup after 3 tracked applications (Rate it / Maybe later / No thanks, plus Send feedback); permanent "Rate this extension" link in Settings. No permission changes. | Submitted, review cancelled for 0.6.5 |
 | 0.6.3 | 2026-10-28 | New icon (resume + AI chip + check), Quiet Chrome UI polish. No permission changes. | Submitted, review cancelled for 0.6.4 |
 | 0.6.0 | 2026-10-21 | Resume import overhaul: education list, projects section, faster parsing, review screen. Multi-school/job forms. Better skills/certifications parsing. | In development (on GitHub, not submitted to store) |
