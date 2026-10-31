@@ -365,6 +365,11 @@
       attachTailored(msg.entryId).then(sendResponse);
       return true;
     }
+    if (msg.type === 'jaa:autodetect') { // the user just allowed this site: start watching for the form now
+      if (!autoStarted) { autoStarted = true; maybeShowButton(); }
+      sendResponse({ ok: true });
+      return false;
+    }
     if (msg.type === 'jaa:ping') {
       const has = frameHasForm();
       if (!has && window.top !== window) return false; // let the frame with the form answer
@@ -376,7 +381,9 @@
       if (!msg.generic && !frameHasForm() && window.top !== window) return false;
       if (!msg.generic && !frameHasForm()) {
         // top frame without a form: if the form lives in an embedded ATS iframe, let that frame answer
-        const embedded = Array.from(document.querySelectorAll('iframe')).some(f => /greenhouse\.io|lever\.co|ashbyhq\.com/.test(f.src || ''));
+        // other sites: a form in a sizeable iframe answers for itself (the popup injected it there too)
+        const generic = JAA.sites.detect(location).generic;
+        const embedded = Array.from(document.querySelectorAll('iframe')).some(f => /greenhouse\.io|lever\.co|ashbyhq\.com/.test(f.src || '') || (generic && f.offsetHeight > 150 && f.offsetWidth > 200));
         if (embedded) return false;
       }
       run(msg).then(sendResponse);
@@ -390,12 +397,16 @@
     const { settings } = await JAA.loadAll();
     if (!settings.showFloatingButton) return;
     const a = JAA.sites.detect(location);
-    if (a.generic || a.stub) return;
+    if (a.stub) return;
+    // v0.6.7: on a site the user allowed (not built in), the button appears only when the page really
+    // looks like a job application (lib/jobdetect.js). Below the bar: nothing, but popup Fill still works.
+    if (a.generic && !JAA.jobDetect) return;
+    const looksLikeApplication = () => !a.generic || JAA.jobDetect.check(document, location).ok;
     // Workday and LinkedIn open their forms later (wizard pages / Easy Apply modal): keep looking
     const patient = a.name === 'Workday' || /LinkedIn/.test(a.name);
     let tries = 0, warmed = false, statusSent = false;
     const tick = () => {
-      if (frameHasForm()) {
+      if (frameHasForm() && looksLikeApplication()) {
         JAA.ui.showButton(true);
         send({ type: 'page:status', kind: 'application', site: a.name });
         if (settings.panelAuto === 'auto' && window.top === window && JAA.chat && !JAA.ui.isOpen() && !sessionStorage.getItem('jaa-auto-opened')) {
@@ -408,10 +419,11 @@
         setInterval(() => { if (!document.getElementById('jaa-host') && frameHasForm()) JAA.ui.showButton(true); }, 2000);
         return;
       }
-      if (!statusSent && window.top === window && (statusSent = true)) send({ type: 'page:status', kind: JAA.match && JAA.match.isPosting() ? 'posting' : 'site', site: a.name });
+      if (!a.generic && !statusSent && window.top === window && (statusSent = true)) send({ type: 'page:status', kind: JAA.match && JAA.match.isPosting() ? 'posting' : 'site', site: a.name });
       if (patient || ++tries < 20) setTimeout(tick, patient ? 2500 : 1500);
     };
     tick();
   }
-  if (!window.__JAA_INJECTED_BY_POPUP__) maybeShowButton();
+  let autoStarted = false;
+  if (!window.__JAA_INJECTED_BY_POPUP__) { autoStarted = true; maybeShowButton(); }
 })();

@@ -15,6 +15,13 @@
   <button id="generic" class="secondary" type="button" hidden>Try generic fill on this page</button>
   <button id="profile" class="secondary" type="button" title="Open your details with click-to-copy on this page">👤 My profile: click to copy</button>
   <div id="result"></div>
+  <div id="siteCard" class="rate sitecard" role="region" aria-label="Use on this site automatically" hidden>
+    <p class="rate-q">Use on <span id="scHost"></span> automatically?</p>
+    <p class="rate-sub muted">The Fill button will appear by itself on job applications on this site. Chrome asks you to confirm. You can remove it any time in Settings → Sites.</p>
+    <div class="rate-btns"><button id="scAllow" class="rate-primary" type="button">Allow on this site</button><button id="scLater" class="rate-ghost" type="button">Not now</button></div>
+    <p id="scOut" class="rate-sub muted" hidden></p>
+  </div>
+  <p id="siteOn" class="siteon" hidden><span class="dotx good"></span><span>Automatic on this site</span><a href="#" id="siteManage">Manage sites</a></p>
   <div id="checklist" class="act act-popup" hidden></div>
   <div id="rate" class="rate" role="region" aria-label="Rate the extension" hidden>
     <p class="rate-q">Is AI Job Application Assistant helping your search?</p>

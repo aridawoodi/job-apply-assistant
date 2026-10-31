@@ -36,8 +36,17 @@ const missing = refs.filter(f => !exists(f));
 missing.length ? fail('missing files: ' + missing.join(', ')) : ok(refs.length + ' referenced files exist');
 m.manifest_version === 3 ? ok('Manifest V3') : fail('not MV3');
 m.description.length <= 132 ? ok('description ' + m.description.length + '/132 chars') : fail('description too long: ' + m.description.length);
+// permissions: required hosts stay the built-in job sites + the local AI (a new required host would make
+// Chrome disable the extension for current users until they accept); any other site is optional, per site
+const REQUIRED_HOSTS = ['http://127.0.0.1/*', 'http://localhost/*', 'https://*.greenhouse.io/*', 'https://jobs.lever.co/*', 'https://jobs.ashbyhq.com/*', 'https://*.myworkdayjobs.com/*', 'https://*.myworkday.com/*', 'https://*.myworkdaysite.com/*', 'https://www.linkedin.com/*'];
+JSON.stringify(m.host_permissions) === JSON.stringify(REQUIRED_HOSTS) ? ok('required host permissions unchanged (' + REQUIRED_HOSTS.length + ')') : fail('required host_permissions changed: ' + JSON.stringify(m.host_permissions));
+!JSON.stringify(m.host_permissions || []).includes('<all_urls>') && !(m.host_permissions || []).some(h => /^(\*|https?):\/\/\*\//.test(h)) ? ok('no broad required host access') : fail('broad required host access');
+JSON.stringify(m.optional_host_permissions || []) === JSON.stringify(['https://*/*', 'http://*/*']) ? ok('optional host permissions: any site, granted per site by the user') : fail('unexpected optional_host_permissions: ' + JSON.stringify(m.optional_host_permissions));
+JSON.stringify(m.permissions) === JSON.stringify(['storage', 'unlimitedStorage', 'activeTab', 'scripting', 'declarativeNetRequestWithHostAccess', 'system.memory']) ? ok('API permissions unchanged') : fail('API permissions changed: ' + JSON.stringify(m.permissions));
 const defaults = fs.readFileSync(path.join(ROOT, 'lib/defaults.js'), 'utf8');
 defaults.includes(`VERSION: '${m.version}'`) ? ok('version ' + m.version + ' matches lib/defaults.js') : fail('lib/defaults.js VERSION differs from manifest ' + m.version);
+{ const cf = (defaults.match(/CONTENT_FILES = (\[[^\]]*\])/) || [])[1]; const main = m.content_scripts.find(c => c.js.includes('content/main.js'));
+  cf && main && JSON.stringify(JSON.parse(cf.replace(/'/g, '"'))) === JSON.stringify(main.js) ? ok('in-page bundle: manifest = JAA.CONTENT_FILES (popup + allowed sites)') : fail('manifest content_scripts js differs from JAA.CONTENT_FILES'); }
 const bgImports = (fs.readFileSync(path.join(ROOT, m.background.service_worker), 'utf8').match(/importScripts\(([^)]*)\)/g) || []).join(',').match(/'[^']+'/g) || [];
 const badImp = bgImports.map(s => s.slice(1, -1)).filter(f => !exists(f));
 badImp.length ? fail('importScripts missing: ' + badImp.join(', ')) : ok('importScripts targets exist');

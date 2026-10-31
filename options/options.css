@@ -63,3 +63,15 @@ tr.due td{background:#fffbeb}
 /* v0.6.4: about footer with a permanent "Rate this extension" link */
 footer.about{max-width:980px;margin:-40px auto 0;padding:0 20px 40px;text-align:center;font-size:12px;color:#64748b}
 footer.about a{color:#4f46e5;font-weight:600;text-decoration:none}footer.about a:hover{color:#7c3aed;text-decoration:underline}
+
+/* v0.6.7 Sites */
+.sites-h{font-size:13px;margin:16px 0 6px;color:#334155}
+.sites{list-style:none;margin:0;padding:0;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden}
+.sites:empty{display:none}
+.sites li{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid #f1f5f9;font-size:13px}
+.sites li:first-child{border-top:0}
+.sites .host{font-weight:600;color:#0f172a}.sites .meta{color:#64748b;font-size:12px}
+.sites .sp{flex:1}
+.sites-ro li{padding:7px 12px}.sites-ro .host{font-weight:500}
+.site-ic{flex:none;width:8px;height:8px;border-radius:50%;background:#22c55e}.site-ic.off{background:#cbd5e1}
+.small-btn{padding:6px 10px;font-size:12px}

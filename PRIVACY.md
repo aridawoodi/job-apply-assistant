@@ -54,6 +54,11 @@ See [store/permissions.md](store/permissions.md). In short: storage for your dat
 it fills, access to `127.0.0.1`/`localhost` to talk to Ollama, and a header rule so Ollama accepts the
 extension's requests without a terminal setting.
 
+**Other sites are only ever opened up by you, one site at a time.** On a site outside the built-in list the
+extension reads the page only when you click its toolbar button on that tab, or on a site where you clicked
+"Allow on this site" (Chrome asks you to confirm). It never asks for access to all sites. You can see and remove
+allowed sites any time in **Settings → Sites**; the list stays in your browser.
+
 ## Your control
 - Edit or delete anything in **Settings** (profile, answer bank, tracker, saved resumes, chat history).
 - **Backups → Backup to file** exports everything as a JSON file you keep.

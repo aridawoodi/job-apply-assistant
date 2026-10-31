@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Apply · Data Analyst</title>
+<style>body{font:14px/1.45 Arial,sans-serif;max-width:760px;margin:24px auto;color:#1d2330}.q{margin:14px 0}.lbl{display:block;font-weight:600;margin-bottom:4px}input,textarea{width:100%;padding:8px;border:1px solid #c5ccd6;border-radius:6px;box-sizing:border-box}[role=listbox]{list-style:none;margin:2px 0;padding:4px;border:1px solid #c5ccd6;border-radius:6px;background:#fff}[role=option]{padding:6px;cursor:pointer}[role=option]:hover{background:#eef}.dd{width:100%;text-align:left;padding:8px;border:1px solid #c5ccd6;border-radius:6px;background:#fff}.btns{margin-top:20px;display:flex;gap:10px}</style></head>
+<body><!-- a hosted-application style: aria-labelledby, placeholder-only inputs, bracketed names, a custom listbox dropdown, Yes/No radios in a role=radiogroup, a "Next" button -->
+<header><h1>Data Analyst</h1><div>Example Company · Remote</div></header>
+<main><h2>Your application</h2>
+<form id="app" onsubmit="window.__submitted=(window.__submitted||0)+1;return false">
+  <div class="q"><span class="lbl" id="l-first">Given name</span><input name="candidate[first_name]" aria-labelledby="l-first"></div>
+  <div class="q"><span class="lbl" id="l-last">Family name</span><input name="candidate[last_name]" aria-labelledby="l-last"></div>
+  <div class="q"><input name="candidate[email]" type="email" placeholder="Email"></div>
+  <div class="q"><input name="candidate[phone]" placeholder="Phone" autocomplete="tel"></div>
+  <div class="q"><input name="candidateCity" autocomplete="address-level2"></div>
+  <div class="q"><span class="lbl">Upload your resume</span><input type="file" name="resume_upload" aria-label="Resume"></div>
+  <div class="q"><span class="lbl" id="l-auth">Are you legally authorized to work in the United States?</span>
+    <div role="radiogroup" aria-labelledby="l-auth"><label><input type="radio" name="q_auth" value="1"> Yes</label> <label><input type="radio" name="q_auth" value="0"> No</label></div></div>
+  <div class="q"><span class="lbl" id="l-spon">Will you require sponsorship for employment visa status?</span>
+    <button type="button" class="dd" id="spon" aria-haspopup="listbox" aria-labelledby="l-spon" aria-expanded="false">Select…</button>
+    <ul role="listbox" id="spon-list" hidden><li role="option" data-v="Yes">Yes</li><li role="option" data-v="No">No</li></ul></div>
+  <div class="q"><span class="lbl" id="l-why">Why are you interested in this role?</span><textarea aria-labelledby="l-why" rows="4"></textarea></div>
+  <div class="btns"><button type="button" id="next">Next</button><button type="submit" id="submit">Submit application</button></div>
+</form></main>
+<script>
+const b = document.getElementById('spon'), l = document.getElementById('spon-list');
+b.addEventListener('click', () => { l.hidden = !l.hidden; b.setAttribute('aria-expanded', String(!l.hidden)); });
+l.querySelectorAll('[role=option]').forEach(o => o.addEventListener('click', () => { b.textContent = o.dataset.v; b.dataset.value = o.dataset.v; l.hidden = true; }));
+document.getElementById('next').addEventListener('click', () => { window.__next = (window.__next || 0) + 1; });
+</script></body></html>

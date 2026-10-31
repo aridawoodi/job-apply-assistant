@@ -39,3 +39,9 @@ footer a:hover{background:#f8fafc;color:var(--brand)}
 .rate-primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border:0;box-shadow:0 2px 6px rgba(79,70,229,.25)}
 .rate-ghost{background:#fff;color:#64748b;border:1px solid #e2e8f0}.rate-ghost:hover{color:#3730a3;border-color:#c7d2fe}
 .rate-link{display:inline-block;margin-top:7px;font-size:11.5px;color:#64748b;text-decoration:underline;text-underline-offset:2px}.rate-link:hover{color:var(--brand)}
+
+/* v0.6.7 any site */
+.sitecard .rate-q span{color:#3730a3;word-break:break-all}
+.siteon{display:flex;align-items:center;gap:7px;margin:8px 14px 0;font-size:12px;color:#475569}.siteon[hidden]{display:none}
+.siteon .dotx{margin-top:0}.siteon a{margin-left:auto;color:#64748b;font-size:11.5px}.siteon a:hover{color:var(--brand)}
+[hidden]{display:none!important}

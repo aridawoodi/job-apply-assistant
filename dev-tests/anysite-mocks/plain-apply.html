@@ -1,0 +1,24 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Support Engineer · Example Company Careers</title>
+<style>body{font:15px/1.5 Georgia,serif;max-width:720px;margin:30px auto;color:#222}label{display:block;margin:12px 0 4px;font-weight:bold}input,select,textarea{width:100%;padding:7px;font:inherit;box-sizing:border-box}fieldset{margin:14px 0;border:1px solid #bbb}fieldset label{display:inline;font-weight:normal;margin-right:14px}fieldset input{width:auto}button{margin-top:18px;padding:10px 20px}</style></head>
+<body><!-- a plain, hand-written careers page: label[for], fieldsets, native selects -->
+<h1>Support Engineer</h1><p>Example Company · Lakeview, OR · Full-time</p>
+<h2>Apply for this position</h2>
+<form id="app" action="/apply/submit" method="post" onsubmit="window.__submitted=(window.__submitted||0)+1;return false">
+  <label for="fn">First name *</label><input id="fn" name="fn" required>
+  <label for="ln">Last name *</label><input id="ln" name="ln" required>
+  <label for="em">Email address *</label><input id="em" name="em" type="email" required>
+  <label for="ph">Phone number</label><input id="ph" name="ph" type="tel">
+  <label for="loc">Location (city)</label><input id="loc" name="loc">
+  <label for="li">LinkedIn profile URL</label><input id="li" name="li" type="url">
+  <label for="cv">Resume / CV</label><input id="cv" name="cv" type="file" accept=".pdf,.doc,.docx">
+  <label for="emp">Current employer</label><input id="emp" name="emp">
+  <fieldset><legend>Are you legally authorized to work in the United States?</legend>
+    <label><input type="radio" name="auth" value="yes"> Yes</label><label><input type="radio" name="auth" value="no"> No</label></fieldset>
+  <label for="spon">Will you now or in the future require visa sponsorship?</label>
+  <select id="spon" name="spon"><option value="">Please select</option><option>Yes</option><option>No</option></select>
+  <label for="cl">Cover letter</label><textarea id="cl" name="cl" rows="5"></textarea>
+  <h3>Voluntary self-identification</h3>
+  <label for="g">Gender</label><select id="g" name="g"><option value="">Select</option><option>Male</option><option>Female</option><option>I don't wish to answer</option></select>
+  <label for="vet">Veteran status</label><select id="vet" name="vet"><option value="">Select</option><option>I am not a protected veteran</option><option>I identify as one or more of the classifications of protected veteran</option><option>I don't wish to answer</option></select>
+  <button type="submit" id="submit">Submit application</button>
+</form></body></html>

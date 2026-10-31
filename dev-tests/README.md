@@ -136,3 +136,15 @@ Run from `dev-tests/` with `NODE_PATH` pointing at a folder where Playwright is 
   dismiss when complete. Screenshots go to `$ACT_SHOTS` (default `/workspace/activation`).
 - `e2e-v4.js` follows the new welcome order (resume first, AI helper after the questions).
 
+## v0.6.7 tests: any site
+- `node unit-jobdetect.js` (no browser): job-application scoring (`lib/jobdetect.js`), threshold, negatives
+  (contact, newsletter, login, checkout, job search), URL hints.
+- `node e2e-anysite.js` (no network needed; every host is a Playwright route, local-AI calls get a 503):
+  (a) manual Fill from the real popup on non-listed hosts: plain form, ATS-like aria/placeholder/autocomplete
+  form with custom listbox and a Next button (never pressed), open shadow DOM, same-origin iframe, and a contact
+  form (no chip, nothing pre-filled); (b) "Allow on this site" → dynamic script → chip after reload, Settings →
+  Sites shows it, Remove → no chip; (c) built-in sites unaffected. The popup is opened with CDP
+  `Extensions.triggerAction` (needs `--enable-unsafe-extension-debugging`), which also grants activeTab. The
+  Allow flow uses `http://localhost:8799` because localhost is already a required host, so Chrome resolves the
+  request without a prompt; the real prompt for other hosts can't be clicked headless. Screenshots go to
+  `$ANY_SHOTS` (default `/workspace/any-site`).

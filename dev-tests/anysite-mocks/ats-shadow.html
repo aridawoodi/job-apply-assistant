@@ -1,0 +1,24 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Job application · Product Designer</title>
+<style>body{font:14px/1.45 system-ui,sans-serif;max-width:760px;margin:24px auto}</style></head>
+<body><!-- a web-components application: every field is a custom element with an OPEN shadow root -->
+<h1>Product Designer</h1><p>Example Company · Apply now</p>
+<form id="app" onsubmit="window.__submitted=(window.__submitted||0)+1;return false">
+  <x-field label="First name" name="firstName"></x-field>
+  <x-field label="Last name" name="lastName"></x-field>
+  <x-field label="Email" name="email" type="email"></x-field>
+  <x-field label="Phone" name="phone" type="tel"></x-field>
+  <x-field label="LinkedIn" name="linkedin" type="url"></x-field>
+  <x-field label="Resume" name="resume" type="file"></x-field>
+  <x-field label="Cover letter" name="coverLetter" type="textarea"></x-field>
+  <button type="submit" id="submit">Submit application</button>
+</form>
+<script>
+customElements.define('x-field', class extends HTMLElement {
+  connectedCallback() {
+    const r = this.attachShadow({ mode: 'open' });
+    const t = this.getAttribute('type') || 'text', id = 'i-' + this.getAttribute('name');
+    const ctl = t === 'textarea' ? `<textarea id="${id}" name="${this.getAttribute('name')}" rows="4"></textarea>` : `<input id="${id}" name="${this.getAttribute('name')}" type="${t}">`;
+    r.innerHTML = `<style>label{display:block;font-weight:600;margin:12px 0 4px}input,textarea{width:100%;padding:8px;box-sizing:border-box}</style><label for="${id}">${this.getAttribute('label')}</label>${ctl}`;
+  }
+});
+</script></body></html>

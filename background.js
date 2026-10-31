@@ -846,7 +846,7 @@ chrome.storage.onChanged.addListener((ch, area) => {
   if (ch.profile || ch.answerBank || ch.settings) { try { chrome.storage.session.remove('answerCache'); } catch (_) { /* ignore */ } }
   if (ch.profile || ch.answerBank || ch.applications) { clearTimeout(autoTimer); autoTimer = setTimeout(() => snapshot('auto'), 5000); }
 });
-chrome.runtime.onStartup.addListener(() => { snapshot('browser start'); });
+chrome.runtime.onStartup.addListener(() => { snapshot('browser start'); syncSiteScripts().catch(() => {}); });
 
 // v0.6.6: work history is one list; the old single "Current job" fields become a list entry (kept in
 // profile.legacyCurrent too) and "current" follows each job's end date. A snapshot is taken before updates.
@@ -877,9 +877,104 @@ async function handleInstalled(details) {
   await activationInit(details.reason);
   await installOriginRules();
   await setDefaultIcon();
+  await syncSiteScripts().catch(e => console.warn('site scripts', e));
 }
 chrome.runtime.onInstalled.addListener(details => { handleInstalled(details); });
 globalThis.handleInstalled = handleInstalled; // e2e tests replay install/update events
+
+/* ---------- v0.6.7 any site: one click via the popup (activeTab), or "always allow" per site ----------
+ * The required host permissions stay the built-in job sites (+ the local AI). Other sites are optional
+ * host permissions that the user grants one site at a time from the popup (chrome.permissions.request, a
+ * Chrome prompt). For each allowed site we register the same in-page bundle as the built-in sites
+ * (scripting.registerContentScripts, persisted), and the Fill button shows only on pages that look like a
+ * job application. List: chrome.storage.local `userSites` [{ origin, host, addedAt }]. */
+const SITE_SCRIPT_ID = 'jaa-user-sites';
+const MANIFEST = chrome.runtime.getManifest();
+const REQUIRED_ORIGINS = new Set(MANIFEST.host_permissions || []);
+const BUILTIN_JOB_MATCHES = (MANIFEST.content_scripts.find(c => c.js.includes('content/main.js')) || { matches: [] }).matches;
+function patternToRegExp(p) {
+  const m = /^(\*|https?):\/\/([^/]+)(\/.*)$/.exec(p); if (!m) return null;
+  const host = m[2] === '*' ? '[^/]+' : m[2].replace(/\./g, '\\.').replace(/^\*\\\./, '(?:[^/]+\\.)?');
+  return new RegExp('^' + (m[1] === '*' ? 'https?' : m[1]) + ':\\/\\/' + host + '(?::\\d+)?\\/');
+}
+const BUILTIN_RES = BUILTIN_JOB_MATCHES.map(patternToRegExp).filter(Boolean);
+const isBuiltInJobSite = url => BUILTIN_RES.some(re => re.test(String(url || '')));
+function sitePattern(url) {
+  let u; try { u = new URL(url); } catch (_) { return null; }
+  if (!/^https?:$/.test(u.protocol) || !u.hostname) return null;
+  return { origin: `${u.protocol}//${u.hostname}/*`, host: u.hostname };
+}
+async function userSitesGet() { const { userSites } = await chrome.storage.local.get('userSites'); return Array.isArray(userSites) ? userSites : []; }
+let siteSync = Promise.resolve();
+function syncSiteScripts() {
+  siteSync = siteSync.catch(() => {}).then(async () => {
+    const list = await userSitesGet();
+    const granted = [];
+    for (const s of list) if (s && s.origin && await chrome.permissions.contains({ origins: [s.origin] }).catch(() => false)) granted.push(s.origin);
+    const existing = await chrome.scripting.getRegisteredContentScripts({ ids: [SITE_SCRIPT_ID] }).catch(() => []);
+    if (!granted.length) { if (existing.length) await chrome.scripting.unregisterContentScripts({ ids: [SITE_SCRIPT_ID] }); return { ok: true, registered: [] }; }
+    const def = { id: SITE_SCRIPT_ID, matches: granted, js: globalThis.JAA.CONTENT_FILES, runAt: 'document_idle', allFrames: true, persistAcrossSessions: true };
+    if (existing.length) await chrome.scripting.updateContentScripts([def]); else await chrome.scripting.registerContentScripts([def]);
+    return { ok: true, registered: granted };
+  });
+  return siteSync;
+}
+globalThis.syncSiteScripts = syncSiteScripts;
+async function sitesAdd(origin) {
+  const pat = sitePattern(String(origin || '').replace(/\*$/, ''));
+  if (!pat || pat.origin !== origin) return { ok: false, error: 'Not a web address.' };
+  if (!(await chrome.permissions.contains({ origins: [origin] }))) return { ok: false, error: 'Chrome did not grant access to this site.' };
+  const list = await userSitesGet();
+  if (!list.some(s => s.origin === origin)) list.push({ origin, host: pat.host, addedAt: Date.now() });
+  await chrome.storage.local.set({ userSites: list });
+  const r = await syncSiteScripts();
+  return { ok: true, registered: r.registered };
+}
+async function sitesRemove(origin) {
+  const list = (await userSitesGet()).filter(s => s.origin !== origin);
+  await chrome.storage.local.set({ userSites: list });
+  // required origins (the local AI addresses) can't be removed; everything the user granted can
+  if (!REQUIRED_ORIGINS.has(origin)) await chrome.permissions.remove({ origins: [origin] }).catch(() => false);
+  const r = await syncSiteScripts();
+  return { ok: true, registered: r.registered };
+}
+async function sitesOffer(url) {
+  const pat = sitePattern(url);
+  if (!pat) return { ok: true, show: false, reason: 'not a web page' };
+  if (isBuiltInJobSite(url)) return { ok: true, show: false, builtIn: true, host: pat.host };
+  const list = await userSitesGet();
+  const allowed = list.some(s => s.origin === pat.origin) && await chrome.permissions.contains({ origins: [pat.origin] }).catch(() => false);
+  const { siteOffers = {} } = await chrome.storage.local.get('siteOffers');
+  const declined = siteOffers[pat.host] && Date.now() - siteOffers[pat.host] < 30 * 864e5;
+  return { ok: true, show: !allowed && !declined, allowed, declined: !!declined, host: pat.host, origin: pat.origin };
+}
+async function sitesDecline(host) {
+  const { siteOffers = {} } = await chrome.storage.local.get('siteOffers');
+  siteOffers[String(host || '')] = Date.now();
+  await chrome.storage.local.set({ siteOffers });
+  return { ok: true };
+}
+async function sitesList() {
+  const list = await userSitesGet();
+  const user = [];
+  for (const s of list) user.push(Object.assign({}, s, { granted: await chrome.permissions.contains({ origins: [s.origin] }).catch(() => false) }));
+  return { ok: true, builtIn: BUILTIN_JOB_MATCHES.slice(), user };
+}
+// access granted or taken away outside our UI (Chrome's site-access menu, chrome://extensions)
+chrome.permissions.onAdded.addListener(async p => {
+  const extra = (p.origins || []).filter(o => !REQUIRED_ORIGINS.has(o) && /^https?:\/\//.test(o));
+  if (extra.length) {
+    const list = await userSitesGet();
+    for (const o of extra) if (!list.some(s => s.origin === o)) list.push({ origin: o, host: o.replace(/^https?:\/\//, '').replace(/\/\*$/, ''), addedAt: Date.now() });
+    await chrome.storage.local.set({ userSites: list });
+  }
+  syncSiteScripts().catch(() => {});
+});
+chrome.permissions.onRemoved.addListener(async p => {
+  const gone = new Set(p.origins || []);
+  if (gone.size) await chrome.storage.local.set({ userSites: (await userSitesGet()).filter(s => !gone.has(s.origin)) });
+  syncSiteScripts().catch(() => {});
+});
 
 /* ---------- v0.6.7 setup checklist (local only; see lib/activation.js) ---------- */
 const ACT = globalThis.JAA.activation;
@@ -1192,7 +1287,7 @@ async function tailoredAttach(msg) {
   } catch (e) { return { ok: false, error: 'Could not reach the application page (' + String(e && e.message || e) + '). Reload it and try again.' }; }
 }
 
-const V4_TYPES = new Set(['activation:get', 'activation:go', 'activation:dismiss', 'tracker:update', 'tracker:bookmark', 'tracker:get', 'tracker:list', 'page:status', 'feedback:add', 'diag:info', 'tour:open', 'cover:open', 'cover:save', 'cover:fill', 'match:ai', 'whatsnew:seen', 'privacy:open', 'ollama:status', 'ollama:fixOrigin', 'system:info', 'tailor:open', 'tailor:forJob', 'tailor:save', 'tailor:attach', 'onboarding:open', 'rating:get', 'rating:act']);
+const V4_TYPES = new Set(['sites:list', 'sites:add', 'sites:remove', 'sites:offer', 'sites:decline', 'sites:sync', 'activation:get', 'activation:go', 'activation:dismiss', 'tracker:update', 'tracker:bookmark', 'tracker:get', 'tracker:list', 'page:status', 'feedback:add', 'diag:info', 'tour:open', 'cover:open', 'cover:save', 'cover:fill', 'match:ai', 'whatsnew:seen', 'privacy:open', 'ollama:status', 'ollama:fixOrigin', 'system:info', 'tailor:open', 'tailor:forJob', 'tailor:save', 'tailor:attach', 'onboarding:open', 'rating:get', 'rating:act']);
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // the practice page (and its tour) never writes to your real tracker, feedback or cover letters
   if (msg && sender && sender.url && sender.url.startsWith(chrome.runtime.getURL('practice/')) && /^(tracker:update|tracker:bookmark|feedback:add|cover:save)$/.test(msg.type)) {
@@ -1222,6 +1317,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     'rating:get': () => ratingState(),
     'rating:act': () => ratingActMsg(msg, sender),
     'privacy:open': () => chrome.tabs.create({ url: chrome.runtime.getURL('privacy/privacy.html') }).then(() => ({ ok: true })),
+    'sites:list': () => sitesList(),
+    'sites:add': () => sitesAdd(msg.origin),
+    'sites:remove': () => sitesRemove(msg.origin),
+    'sites:offer': () => sitesOffer(msg.url),
+    'sites:decline': () => sitesDecline(msg.host),
+    'sites:sync': () => syncSiteScripts(),
     'activation:get': () => activationGet(),
     'activation:go': () => activationGo(msg.step),
     'activation:dismiss': () => activationSet(s => ACT.dismiss(s)).then(s => ({ ok: true, view: ACT.view(s) })),

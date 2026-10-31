@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Application form</title>
+<style>body{font:14px/1.45 system-ui,sans-serif;margin:16px}label{display:block;margin:10px 0 3px;font-weight:600}input,select{width:100%;padding:7px;box-sizing:border-box}</style></head>
+<body><h2>Apply: Customer Support Specialist</h2>
+<form id="app" onsubmit="window.__submitted=(window.__submitted||0)+1;return false">
+  <label for="a1">First Name</label><input id="a1" name="first">
+  <label for="a2">Last Name</label><input id="a2" name="last">
+  <label for="a3">Email</label><input id="a3" name="email" type="email">
+  <label for="a4">Mobile phone</label><input id="a4" name="mobile" type="tel">
+  <label for="a5">Resume</label><input id="a5" name="resume" type="file">
+  <label for="a6">Are you at least 18 years of age?</label><select id="a6" name="age"><option value="">--</option><option>Yes</option><option>No</option></select>
+  <button type="submit" id="submit">Submit</button>
+</form></body></html>

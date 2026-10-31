@@ -24,6 +24,10 @@
     "https://*.myworkdaysite.com/*",
     "https://www.linkedin.com/*"
   ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
@@ -77,6 +81,7 @@
       "js": [
         "lib/defaults.js",
         "lib/match.js",
+        "lib/jobdetect.js",
         "content/core.js",
         "content/sites.js",
         "content/ui.js",

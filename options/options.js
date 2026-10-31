@@ -537,6 +537,34 @@ function initChecklist() {
   chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && (ch.activation || ch.resume)) draw(); });
 }
 
+// v0.6.7 Sites: built-in job sites (read-only) and sites the user allowed from the popup (Remove)
+const BUILTIN_NAMES = { 'greenhouse.io': 'Greenhouse', 'jobs.lever.co': 'Lever', 'jobs.ashbyhq.com': 'Ashby', 'myworkdayjobs.com': 'Workday', 'myworkday.com': 'Workday', 'myworkdaysite.com': 'Workday', 'www.linkedin.com': 'LinkedIn Easy Apply' };
+async function renderSites() {
+  const r = await sendBg({ type: 'sites:list' });
+  if (!r.ok) return;
+  const host = p => p.replace(/^https?:\/\//, '').replace(/\/\*$/, '');
+  const ro = $('sitesBuiltIn'); ro.innerHTML = '';
+  for (const p of r.builtIn) {
+    const hp = host(p), key = hp.replace(/^\*\./, '');
+    const li = document.createElement('li');
+    li.innerHTML = '<span class="site-ic" aria-hidden="true"></span><span class="host"></span><span class="meta"></span>';
+    li.querySelector('.host').textContent = BUILTIN_NAMES[key] || key;
+    li.querySelector('.meta').textContent = hp;
+    ro.appendChild(li);
+  }
+  const ul = $('sitesUser'); ul.innerHTML = '';
+  for (const s of r.user) {
+    const li = document.createElement('li'); li.dataset.origin = s.origin;
+    li.innerHTML = '<span class="site-ic" aria-hidden="true"></span><span class="host"></span><span class="meta"></span><span class="sp"></span><button type="button" class="secondary small-btn">Remove</button>';
+    if (!s.granted) li.querySelector('.site-ic').classList.add('off');
+    li.querySelector('.host').textContent = s.host === '*' ? 'All sites' : s.host;
+    li.querySelector('.meta').textContent = s.granted ? 'Automatic' + (s.addedAt ? ' · added ' + new Date(s.addedAt).toLocaleDateString() : '') : 'Access was removed in Chrome';
+    li.querySelector('button').onclick = async e => { e.target.disabled = true; await sendBg({ type: 'sites:remove', origin: s.origin }); renderSites(); };
+    ul.appendChild(li);
+  }
+  $('sitesEmpty').hidden = r.user.length > 0;
+}
+
 (async function init() {
   const all = await JAA.loadAll();
   Object.assign(state, all);
@@ -567,6 +595,8 @@ function initChecklist() {
   // rating from Settings counts as answered, so the popup card won't ask again (the link itself opens normally)
   $('rateLink').addEventListener('click', () => { sendBg({ type: 'rating:act', action: 'rate' }); });
   initBackups();
+  renderSites();
+  chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && ch.userSites) renderSites(); });
   initChecklist();
   // deep links: options.html#profile, or a request from the chat/popup gear button
   const goto = section => { const el = document.getElementById(section); if (!el) return; el.scrollIntoView({ block: 'start' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1500); const first = el.querySelector('input, textarea, select'); if (first && section === 'profile') first.focus({ preventScroll: true }); };

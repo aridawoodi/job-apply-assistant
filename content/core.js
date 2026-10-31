@@ -41,12 +41,17 @@
   function esc(id) { return (window.CSS && CSS.escape) ? CSS.escape(id) : id.replace(/"/g, '\\"'); }
   function ownerDoc(el) { return el.ownerDocument || document; }
 
+  // the document or open shadow root the element lives in (labels and aria ids resolve there)
+  function scopeOf(el) {
+    const r = el.getRootNode ? el.getRootNode() : null;
+    return r && r.getElementById && r.querySelector ? r : ownerDoc(el);
+  }
   function labelById(el) {
     const ids = (el.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean);
-    const t = ids.map(id => textOf(ownerDoc(el).getElementById(id))).filter(Boolean).join(' ');
+    const t = ids.map(id => textOf(scopeOf(el).getElementById(id) || ownerDoc(el).getElementById(id))).filter(Boolean).join(' ');
     if (t) return t;
     if (el.id) {
-      const l = ownerDoc(el).querySelector(`label[for="${esc(el.id)}"]`);
+      const l = scopeOf(el).querySelector(`label[for="${esc(el.id)}"]`);
       if (l && textOf(l)) return textOf(l);
     }
     return '';
@@ -100,6 +105,11 @@
     return t.replace(/\s+/g, ' ').trim().slice(0, 240);
   }
 
+  // unknown markup: "first_name" / "applicantPhone" / "q[email]" -> readable words
+  const humanize = s => String(s || '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_\-.[\]]+/g, ' ').replace(/\s+/g, ' ').trim();
+  // HTML autocomplete tokens -> the label our rules understand (used when a field has no visible label)
+  const AUTOCOMPLETE_LABEL = { 'given-name': 'First name', 'family-name': 'Last name', name: 'Full name', email: 'Email', tel: 'Phone', 'tel-national': 'Phone',
+    'postal-code': 'Postal code', 'address-level2': 'City', 'address-level1': 'State', country: 'Country', 'country-name': 'Country', organization: 'Current company', 'organization-title': 'Current job title', url: 'Website' };
   function labelForControl(el, adapter) {
     if (adapter && adapter.labelFor) {
       const t = adapter.labelFor(el);
@@ -113,7 +123,9 @@
     if (!t) t = el.getAttribute('aria-label') || '';
     if (!t) t = boxLabel(el, [el]);
     if (!t) t = climbLabel(el, [el], []).text;
-    if (!t) t = el.getAttribute('placeholder') || el.name || el.id || '';
+    if (!t) t = el.getAttribute('placeholder') || '';
+    if (!t) t = AUTOCOMPLETE_LABEL[String(el.getAttribute('autocomplete') || '').toLowerCase().replace(/^(section-\S+|shipping|billing)\s+/g, '')] || '';
+    if (!t) t = humanize(el.name || el.id || '');
     return cleanLabel(t);
   }
 
@@ -176,7 +188,9 @@
     const seen = new Set();
     let n = 0;
     const push = f => { f.id = 'f' + (n++); if (f.el && !f.desc) f.desc = describe(f.el); fields.push(f); };
-    const controls = Array.from(root.querySelectorAll(CONTROL_SEL));
+    // sites that aren't built in: also look inside open shadow roots (custom elements), best effort
+    const deep = adapter && adapter.generic && JAA.jobDetect;
+    const controls = deep ? JAA.jobDetect.deepAll(root, CONTROL_SEL) : Array.from(root.querySelectorAll(CONTROL_SEL));
     for (const el of controls) {
       if (seen.has(el) || el.disabled) continue;
       // react-select & co. render aria-hidden "requiredInput" helpers: not real questions
@@ -184,14 +198,14 @@
       if (adapter && adapter.ignore && adapter.ignore(el)) continue;
       const tag = el.tagName;
       const type = (el.getAttribute('type') || (tag === 'INPUT' ? 'text' : tag.toLowerCase())).toLowerCase();
-      const base = { name: el.name || '', idAttr: el.id || '', required: el.required || el.getAttribute('aria-required') === 'true' };
+      const base = { name: el.name || '', idAttr: el.id || '', autocomplete: (el.getAttribute('autocomplete') || '').toLowerCase(), required: el.required || el.getAttribute('aria-required') === 'true' };
       if (type === 'file') {
         seen.add(el);
         push(Object.assign(base, { kind: 'file', el, label: fileLabel(el, adapter), accept: el.accept || '' }));
         continue;
       }
       if (type === 'radio' || type === 'checkbox') {
-        const form = el.form || root;
+        const form = el.form || (deep && el.getRootNode && el.getRootNode() !== ownerDoc(el) ? el.getRootNode() : root);
         let group = el.name ? Array.from(form.querySelectorAll(`input[type="${type}"][name="${esc(el.name)}"]`)) : [el];
         group = group.filter(g => !g.disabled);
         group.forEach(g => seen.add(g));
@@ -229,6 +243,15 @@
       }
     }
     if (adapter && adapter.extraFields) adapter.extraFields(root, { push, seen, groupLabel, textOf, cleanLabel, climbLabel });
+    if (deep) { // custom dropdowns: <button aria-haspopup="listbox"> / <div role="combobox"> without an <input> (best effort)
+      for (const el of JAA.jobDetect.deepAll(root, 'button[aria-haspopup="listbox"], [role="combobox"]:not(input)')) {
+        if (seen.has(el) || el.disabled || el.getAttribute('aria-disabled') === 'true' || !isVisible(el)) continue;
+        if (el.querySelector('input, select, textarea') || el.closest('#jaa-host') || (el.tagName === 'BUTTON' && el.type === 'submit' && el.form)) continue;
+        if (SUBMITTY.test(textOf(el))) continue;
+        seen.add(el);
+        push({ kind: 'listbutton', el, name: el.getAttribute('name') || '', idAttr: el.id || '', required: el.getAttribute('aria-required') === 'true', label: labelForControl(el, adapter) });
+      }
+    }
     return fields;
   }
 
@@ -270,7 +293,7 @@
       case 'checkbox': return f.el.checked ? 'Yes' : (f.question ? 'No' : '');
       case 'combobox': return comboValue(f.el);
       case 'buttons': { const o = f.options.find(x => x.el.getAttribute('aria-pressed') === 'true' || /active|selected|checked/i.test(x.el.className)); return o ? o.text : ''; }
-      case 'listbutton': { const t = textOf(f.el); return /^(select one|select|choose|--)$/i.test(t) ? '' : t; }
+      case 'listbutton': { const t = textOf(f.el); return /^(select( one| an option| an answer)?|choose( one| an option)?|please (select|choose)( one| an option)?|--+|-|none selected|no selection)\s*(\u2026|\.\.\.)?$/i.test(t) ? '' : t; }
       case 'file': return f.el.files && f.el.files.length ? f.el.files[0].name : '';
       default: return '';
     }
@@ -436,8 +459,8 @@
     ['salary', /\b(salary|compensation|pay (expectation|range|requirement)|desired pay|expected pay|rate expectation)\b/, p => p.salaryExpectation, { noLLM: true }],
     ['preferredName', /\b(preferred (first )?name|nick ?name|goes by|like us to call you)\b/, p => p.preferredName || p.firstName],
     ['namePronunciation', /\bpronounc/, () => '', { noLLM: true }],
-    ['firstName', /\b(first name|given name|legal first|firstname|first_name)\b/, p => p.firstName, { short: true }],
-    ['lastName', /\b(last name|surname|family name|legal last|lastname|last_name)\b/, p => p.lastName, { short: true }],
+    ['firstName', /\b(first name|given name|legal first|firstname|first_name|fname)\b/, p => p.firstName, { short: true }],
+    ['lastName', /\b(last name|surname|family name|legal last|lastname|last_name|lname)\b/, p => p.lastName, { short: true }],
     ['fullName', /^(full |legal |your )?name( full)?$|^(full|legal) name\b/, p => [p.firstName, p.lastName].filter(Boolean).join(' '), { short: true }],
     ['email', /\be ?mail\b|\bemail address\b/, p => p.email, { short: true }],
     ['phone', /\b(phone|mobile|cell|telephone)\b/, p => p.phone, { short: true, noLLM: true }],
@@ -482,6 +505,9 @@
     ['disability', /\bdisabilit/, p => p.eeo.disability, { eeo: true, alts: v => /^no/i.test(v) ? [/^no\b/, /\b(do not|don t) have a disability\b/] : (/^yes/i.test(v) ? [/^yes\b/] : []) }]
   ];
 
+  // autocomplete tokens are a strong signal on unknown sites (checked after the label, before name/id)
+  const AUTOCOMPLETE_RULE = { 'given-name': 'firstName', 'family-name': 'lastName', name: 'fullName', email: 'email', tel: 'phone', 'tel-national': 'phone',
+    'postal-code': 'zip', 'address-level2': 'city', 'address-level1': 'state', country: 'country', 'country-name': 'country', 'organization-title': 'currentTitle', organization: 'currentEmployer' };
   function ruleFor(f) {
     const L = norm(f.label);
     const meta = norm((f.name || '') + ' ' + (f.idAttr || ''))
@@ -491,6 +517,8 @@
     for (const [key, re, fn, flags = {}] of RULES) {
       if (L && re.test(L) && (!flags.short || short)) return { key, fn, flags, L };
     }
+    const ac = AUTOCOMPLETE_RULE[String(f.autocomplete || '').replace(/^(section-\S+|shipping|billing)\s+/g, '')];
+    if (ac) { const r = RULES.find(x => x[0] === ac); if (r) return { key: r[0], fn: r[2], flags: r[3] || {}, L: L || ac }; }
     if (meta) {
       for (const [key, re, fn, flags = {}] of RULES) {
         if (re.test(meta)) return { key, fn, flags, L: L || meta };
@@ -904,7 +932,12 @@
     if (f.kind === 'listbutton') return f.el;
     if (f.kind === 'radio' || f.kind === 'checkboxGroup' || f.kind === 'buttons') return f.container || f.el.parentElement;
     if (f.kind === 'checkbox') return f.el.closest('label') || f.el.parentElement;
-    if (f.kind === 'file') return f.el.closest('[class*="upload" i], [class*="file" i], [class*="attach" i], .field, [class*="field" i]') || f.el.parentElement;
+    if (f.kind === 'file') {
+      const box = f.el.closest('[class*="upload" i], [class*="file" i], [class*="attach" i], .field, [class*="field" i]') || f.el.parentElement;
+      // plain pages: the parent may be the whole form; then mark just the input
+      const others = box ? Array.from(box.querySelectorAll(CONTROL_SEL)).filter(c => c !== f.el && c.type !== 'file' && isVisible(c)).length : 0;
+      return others ? f.el : box;
+    }
     return f.el;
   }
   function mark(f, cls) {

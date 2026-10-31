@@ -4,7 +4,7 @@
 <div class="accent-bar"></div>
 <nav>
   <span class="brand"><img src="../icons/icon48.png" width="28" height="28" alt=""><strong>AI Job Application Assistant</strong><span id="ver" class="ver"></span></span>
-  <a href="#profile">Profile</a><a href="#resume">Resume</a><a href="#tailoring">Tailoring</a><a href="#library">Saved resumes</a><a href="#style">Writing style</a><a href="#bank">Answer bank</a><a href="#fields">Fields to fill</a><a href="#behaviour">Behaviour</a><a href="#ai">Local AI</a><a href="#backups">Backups</a><a href="#io">Import / export</a><a href="#tracker">Tracker</a><a href="../onboarding/welcome.html" target="_blank">Setup</a>
+  <a href="#profile">Profile</a><a href="#resume">Resume</a><a href="#tailoring">Tailoring</a><a href="#library">Saved resumes</a><a href="#style">Writing style</a><a href="#bank">Answer bank</a><a href="#fields">Fields to fill</a><a href="#behaviour">Behaviour</a><a href="#ai">Local AI</a><a href="#sites">Sites</a><a href="#backups">Backups</a><a href="#io">Import / export</a><a href="#tracker">Tracker</a><a href="../onboarding/welcome.html" target="_blank">Setup</a>
   <span class="spacer"></span><span id="saved" class="muted"></span><button id="save" class="primary" type="button">Save</button>
 </nav>
 <main>
@@ -105,6 +105,14 @@
     <p><button id="test" type="button" class="secondary">Test connection</button> <span id="testOut" class="muted"></span></p>
   </section>
 
+  <section id="sites"><h2>Sites</h2>
+    <p class="muted">Fill works on most job application forms: open the application and press <b>Fill</b> in the toolbar button. On the sites below, the Fill button also appears by itself when a page looks like an application.</p>
+    <h3 class="sites-h">Allowed by you</h3>
+    <ul id="sitesUser" class="sites"></ul>
+    <p id="sitesEmpty" class="muted">None yet. To add a site, open a job application there, click the toolbar button and choose <b>Allow on this site</b>.</p>
+    <h3 class="sites-h">Built in</h3>
+    <ul id="sitesBuiltIn" class="sites sites-ro"></ul>
+  </section>
   <section id="backups"><h2>Backups</h2>
     <p class="muted">Your profile, answer bank, settings and tracker are snapshotted automatically (on updates, browser start, and at most every 30 minutes while they change). The last 5 snapshots are kept inside the extension. For safety outside the browser, save a backup file now and then. <b>Never click "Remove" on the extension in chrome://extensions</b>: that deletes all of its data, including these snapshots.</p>
     <label class="check"><input id="s_autoBackup" type="checkbox"> Automatic snapshots (last 5)</label>

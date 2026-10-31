@@ -1,6 +1,6 @@
 'use strict';
 const $ = id => document.getElementById(id);
-const CONTENT_FILES = ['lib/defaults.js', 'lib/match.js', 'content/core.js', 'content/sites.js', 'content/ui.js', 'content/learn.js', 'content/chat.js', 'content/panel.js', 'content/refine.js', 'content/steps.js', 'content/track.js', 'content/main.js', 'content/match.js'];
+const CONTENT_FILES = JAA.CONTENT_FILES; // same bundle as the built-in sites (lib/defaults.js)
 
 function siteOf(url) {
   let u; try { u = new URL(url); } catch (_) { return { name: 'Unknown' }; }
@@ -11,7 +11,7 @@ function siteOf(url) {
   if (/myworkdayjobs\.com$|myworkday\.com$|myworkdaysite\.com$/.test(h)) return { name: 'Workday (basic)', supported: true, wizard: true };
   if (/(^|\.)linkedin\.com$/.test(h)) return { name: 'LinkedIn Easy Apply', supported: true, wizard: true };
   if (!/^https?:$/.test(u.protocol)) return { name: 'Not a web page', blocked: true };
-  return { name: 'Other site' };
+  return { name: h.replace(/^www\./, ''), other: true };
 }
 
 function sendToTab(tabId, msg) {
@@ -23,9 +23,60 @@ function sendToTab(tabId, msg) {
   });
 }
 
+// One click on any site: activeTab lets us add the in-page bundle to this tab, in every frame we can
+// reach (forms often live in an iframe). Idempotent: frames that already have it are skipped.
 async function inject(tabId) {
-  await chrome.scripting.executeScript({ target: { tabId }, func: () => { window.__JAA_INJECTED_BY_POPUP__ = true; } });
-  await chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_FILES });
+  const into = async target => {
+    const have = await chrome.scripting.executeScript({ target, func: () => !!window.__JAA_MAIN__ });
+    const need = have.filter(r => !r.result).map(r => r.frameId);
+    if (!need.length) return;
+    const t = { tabId, frameIds: need };
+    await chrome.scripting.executeScript({ target: t, func: () => { window.__JAA_INJECTED_BY_POPUP__ = true; } });
+    await chrome.scripting.executeScript({ target: t, files: CONTENT_FILES });
+  };
+  try { await into({ tabId, allFrames: true }); } catch (_) { await into({ tabId }); } // some frames are off limits: top frame only
+}
+
+// Does the page look like a job application? (only lib/jobdetect.js is added, top frame; nothing stored)
+async function looksLikeApplication(tabId) {
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['lib/jobdetect.js'] });
+    const [r] = await chrome.scripting.executeScript({ target: { tabId }, func: () => { const c = self.JAA.jobDetect.check(document, location); return { ok: c.ok, score: c.score }; } });
+    return r && r.result ? r.result : { ok: false };
+  } catch (_) { return { ok: false }; }
+}
+
+// "Use on <site> automatically?" Only for sites that aren't built in, only after a successful Fill or on a
+// page that looks like an application, and "Not now" keeps it away from that site for 30 days.
+let siteOffer = null, siteTab = null;
+function showSiteCard() {
+  if (!siteOffer || !siteOffer.show) return;
+  $('scHost').textContent = siteOffer.host;
+  $('rate').hidden = true;
+  $('siteCard').hidden = false;
+}
+function initSiteAccess(tab, s) {
+  if (!s.other) return;
+  siteTab = tab;
+  chrome.runtime.sendMessage({ type: 'sites:offer', url: tab.url }, async r => {
+    if (chrome.runtime.lastError || !r || !r.ok) return;
+    siteOffer = r;
+    if (r.allowed) { $('siteOn').hidden = false; return; }
+    if (r.show && (await looksLikeApplication(tab.id)).ok) showSiteCard();
+  });
+  $('siteManage').onclick = e => { e.preventDefault(); chrome.runtime.sendMessage({ type: 'options:open', section: 'sites' }, () => { void chrome.runtime.lastError; window.close(); }); };
+  $('scLater').onclick = () => { chrome.runtime.sendMessage({ type: 'sites:decline', host: siteOffer.host }); $('siteCard').hidden = true; };
+  $('scAllow').onclick = async () => {
+    // must run straight from the click (user gesture); Chrome shows its own confirmation
+    let granted = false;
+    try { granted = await chrome.permissions.request({ origins: [siteOffer.origin] }); } catch (_) { granted = false; }
+    const out = $('scOut'); out.hidden = false;
+    if (!granted) { out.textContent = 'Not allowed. Fill from this button still works on this site.'; return; }
+    const r = await new Promise(res => chrome.runtime.sendMessage({ type: 'sites:add', origin: siteOffer.origin }, x => { void chrome.runtime.lastError; res(x); }));
+    if (!r || !r.ok) { out.textContent = (r && r.error) || 'Could not save that.'; return; }
+    try { await inject(siteTab.id); await sendToTab(siteTab.id, { type: 'jaa:autodetect' }); } catch (_) { /* next visit */ }
+    $('siteCard').hidden = true; $('siteOn').hidden = false;
+  };
 }
 
 function showResult(r) {
@@ -54,7 +105,7 @@ async function openPanel(tabName) {
 let filling = false;
 function initRating() {
   chrome.runtime.sendMessage({ type: 'rating:get' }, r => {
-    if (chrome.runtime.lastError || !r || !r.ok || !r.eligible || filling) return;
+    if (chrome.runtime.lastError || !r || !r.ok || !r.eligible || filling || !$('siteCard').hidden) return;
     const card = $('rate');
     const act = action => new Promise(res => chrome.runtime.sendMessage({ type: 'rating:act', action }, () => { void chrome.runtime.lastError; res(); }));
     $('rateYes').onclick = async () => { await act('rate'); card.hidden = true; await chrome.tabs.create({ url: r.reviewUrl }); window.close(); };
@@ -88,10 +139,11 @@ async function fill(generic) {
     let r = await sendToTab(tab.id, { type: 'jaa:fill', generic });
     if (r && r.noReceiver) {
       await inject(tab.id);
-      r = await sendToTab(tab.id, { type: 'jaa:fill', generic: generic || !siteOf(tab.url).supported });
+      r = await sendToTab(tab.id, { type: 'jaa:fill', generic });
     }
-    if (r && r.portClosed) r = { ok: false, error: 'No application form found on this page. On Lever/Ashby, open the "Apply"/"Application" tab first.' };
+    if (r && (r.portClosed || r.noReceiver)) r = { ok: false, error: 'No application form found on this page. If the job page has an "Apply" button or tab, open the form first.' };
     showResult(r);
+    if (r && r.ok && r.filled > 0) showSiteCard();
   } catch (e) {
     showResult({ ok: false, error: String(e.message || e) });
   } finally {
@@ -105,7 +157,7 @@ async function fill(generic) {
   $('site').textContent = s.name;
   if (s.blocked) { $('fill').disabled = true; $('note').textContent = 'Open a job application page first.'; }
   else if (s.stub) { $('note').textContent = `${s.name} support is planned next. Generic fill may get some fields.`; $('fill').hidden = true; $('generic').hidden = false; }
-  else if (!s.supported) { $('note').textContent = 'Not a Greenhouse/Lever/Ashby page. If the form is embedded from Greenhouse, Fill still works; otherwise try generic fill.'; $('generic').hidden = false; }
+  else if (!s.supported) $('note').textContent = 'Works on most application forms. Fill types your profile into this page; check everything, then submit yourself.';
   else if (s.wizard) $('note').textContent = 'Fills the step that\'s open, then each next step after you press Next yourself. Never presses Next or Submit.';
   else $('note').textContent = 'Fills from your saved profile and opens the assistant chat. It never presses Submit.';
   $('ver').textContent = 'v' + chrome.runtime.getManifest().version + ' · local AI';
@@ -130,6 +182,7 @@ async function fill(generic) {
   initChecklist(checkAI);
 
   initRating();
+  initSiteAccess(tab, s);
 
   // AI status line. While the AI helper was never set up it's optional, so say so calmly instead of an error.
   function checkAI(view) {

@@ -21,7 +21,20 @@
 - **Changed:** the "Rate this extension" links (popup card and Settings footer) use the store's canonical
   listing address with `utm_source=extension` tags, so the store's own listing stats can tell visits from the
   extension apart. The extension still sends nothing anywhere.
-- No permission changes. No telemetry.
+- **New: works on (almost) any job application form.** Open the extension from the toolbar on any http(s)
+  page and click **Fill this application**; it fills the main page and same-site frames, including forms in
+  open shadow DOM, aria-labelled fields, autocomplete hints and custom dropdowns (best effort). If no form is
+  found it says so. A small detector (`lib/jobdetect.js`) scores the page (resume upload, name/email/phone,
+  apply/cover letter/work authorization words, field count; minus passwords, newsletters, contact-us,
+  checkout) and only then shows the Fill button by itself; manual Fill from the toolbar always works.
+- **New:** "Use on <site> automatically?" card in the popup with **Allow on this site** / **Not now**. Allow asks
+  Chrome for access to that one site only, then the Fill button appears there by itself (a registered content
+  script that survives restarts). **Settings → Sites** lists the built-in sites (read-only) and the sites you
+  allowed, each with **Remove**. Not now hides the card on that site for 30 days.
+- **Permissions:** required permissions and hosts are unchanged. Adds `optional_host_permissions`
+  (`https://*/*`, `http://*/*`), which are never granted at install or update; updating users see no prompt
+  and the extension isn't disabled. Each site is requested only when you click Allow.
+- Never presses Submit, Next or Apply; equal-opportunity questions are still never filled by the AI. No telemetry.
 
 ## 0.6.6 (2026-10-29): Work history editor, Yes/No choices + Lever location
 - **Fixed:** after a resume import the profile could show a single job marked "current" even though the review
