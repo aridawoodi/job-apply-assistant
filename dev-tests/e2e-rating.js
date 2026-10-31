@@ -57,7 +57,7 @@ let fails = 0; const check = (c, m) => { console.log((c ? '  PASS ' : '  FAIL ')
   p = await popup(); check(await p.locator('#rate').isHidden(), 'never shown after rating'); await p.close();
   // content scripts / web pages can't answer the card
   const o = await ctx.newPage(); await o.goto(X('options/options.html')); await o.waitForTimeout(500);
-  check(await o.locator('#rateLink').isVisible() && /ianfkblcpiejjcjammkdloflpjhodaen\/reviews$/.test(await o.locator('#rateLink').getAttribute('href')), 'Settings footer: Rate this extension link');
+  check(await o.locator('#rateLink').isVisible() && /ianfkblcpiejjcjammkdloflpjhodaen\/reviews\?utm_source=extension&utm_medium=options_footer/.test(await o.locator('#rateLink').getAttribute('href')), 'Settings footer: Rate this extension link');
   await o.locator('footer.about').scrollIntoViewIfNeeded(); await o.screenshot({ path: path.join(SHOTS, 'rating-settings-footer.png') });
   const errs = []; ctx.on('weberror', e => errs.push(String(e.error())));
   check(errs.length === 0, 'no page errors');

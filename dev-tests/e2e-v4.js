@@ -28,20 +28,23 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const X = p => `chrome-extension://${extId}/${p}`;
   const store = k => sw.evaluate(async k => chrome.storage.local.get(k), k);
 
-  console.log('\n1) install opens the setup wizard; OS + RAM detected');
+  console.log('\n1) install opens the setup wizard (v0.6.7: resume import first); OS + RAM detected on the AI step');
   let wiz = ctx.pages().find(p => /onboarding\/welcome\.html/.test(p.url()));
   for (let i = 0; !wiz && i < 40; i++) { await sleep(150); wiz = ctx.pages().find(p => /onboarding\/welcome\.html/.test(p.url())); }
   check(!!wiz, 'welcome.html opened on install');
-  await wiz.waitForFunction(() => /GB of memory/.test(document.body.innerText), null, { timeout: 8000 });
-  const wtxt = await wiz.innerText('body');
+  await wiz.waitForSelector('#importBtn');
+  check(await wiz.isVisible('#importBtn') && /Import your resume/.test(await wiz.innerText('#importBtn')), 'welcome: one primary action, "Import your resume"');
+  await wiz.screenshot({ path: SHOTS + '/01-welcome.png' });
+  const goStep = async h => { await wiz.goto('about:blank'); await wiz.goto(X('onboarding/welcome.html#' + h)); };
+  await goStep('ollama');
+  await wiz.waitForFunction(() => /GB of memory/.test(document.querySelector('[data-step=ollama]').innerText), null, { timeout: 8000 });
+  const wtxt = await wiz.innerText('[data-step=ollama]');
   check(/Detected: Linux with \d+ GB of memory/.test(wtxt), 'detected: ' + (wtxt.match(/Detected:[^\n]*/) || [''])[0]);
   check(/won't need a terminal/.test(wtxt), 'says no terminal needed');
-  await wiz.screenshot({ path: SHOTS + '/01-welcome.png' });
   const rec = await sw.evaluate(() => [recommendModel(8), recommendModel(4), recommendModel(16), recommendModel(32)]);
   check(rec.join() === 'qwen2.5:3b,qwen2.5:3b,qwen2.5:7b,qwen2.5:7b', 'RAM recommendation 8/4/16/32 GB: ' + rec.join(', '));
 
   console.log('\n2) Ollama not running: big download button, then auto-detect once it starts');
-  await wiz.click('[data-step=welcome] [data-next]');
   await wiz.waitForSelector('#installBox:not(.hidden)', { timeout: 8000 });
   check(await wiz.getAttribute('#dlBtn', 'href') === 'https://ollama.com/download/linux', 'Linux download link (official)');
   check(await wiz.isDisabled('#ollamaNext'), 'Continue disabled while Ollama is missing');
@@ -103,10 +106,12 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await wiz.waitForFunction(() => !document.getElementById('modelNext').disabled, null, { timeout: 8000 });
   check((await store('settings')).settings.model === 'qwen2.5:3b', 'model saved to settings after the download');
   check(mock.state.requests.some(r => r.path === '/api/pull' && !r.origin), '/api/pull went through (Origin removed)');
-  await wiz.click('#modelNext');
 
-  console.log('\n5) resume (fake DOCX): parsed locally, AI facts checked, confirm checklist');
-  await wiz.setInputFiles('#importer input[type=file]', path.join(FX, 'jordan-rivera-resume.docx'));
+  console.log('\n5) resume (fake DOCX) from the welcome step: parsed locally, AI facts checked, confirm checklist');
+  await goStep('welcome');
+  const [chooser] = await Promise.all([wiz.waitForEvent('filechooser'), wiz.click('#importBtn')]);
+  check(!!chooser, '"Import your resume" opens the file chooser');
+  await chooser.setFiles(path.join(FX, 'jordan-rivera-resume.docx'));
   await wiz.waitForSelector('#importer .check', { timeout: 20000 });
   const vals = await wiz.evaluate(() => Object.fromEntries([...document.querySelectorAll('#importer .check')].map(r => [r.querySelector('input[type=checkbox]').dataset.k, r.querySelector('.val input, .val textarea').value])));
   check(vals.firstName === 'Jordan' && vals.lastName === 'Rivera', 'name: ' + vals.firstName + ' ' + vals.lastName);
@@ -124,7 +129,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check(s.profile.firstName === 'Jordan' && s.profile.workHistory.length === 2 && s.profile.workHistory[0].bullets.length === 4, `profile saved: ${s.profile.workHistory.length} jobs, ${s.profile.workHistory[0].bullets.length} bullets copied from the resume`);
   check(!s.profile.skills.includes('Kubernetes') && s.profile.skills.includes('Airflow'), 'skills checked against the resume (Kubernetes dropped): ' + s.profile.skills.join(', '));
   check(s.resume && /docx$/.test(s.resume.name) && s.resumeMaster.kind === 'docx', 'master resume stored (docx)');
-  await wiz.click('#resumeNext');
+  await wiz.waitForSelector('#importDone:not(.hidden)', { timeout: 8000 });
+  check(/jordan-rivera-resume\.docx/.test(await wiz.innerText('#importDoneTxt')) && await wiz.isVisible('#practiceBtn'), 'after saving: "Try it on a sample form" offered');
+  await wiz.click('#importDone [data-next]');
 
   console.log('\n6) questions resumes lack, saved to the profile (EEO optional)');
   await wiz.waitForSelector('#qa .msg.bot .chip');
@@ -144,7 +151,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check(p.workAuthorizedUS === 'Yes' && p.needsSponsorship === 'No' && p.over18 === 'Yes' && p.availability === '2 weeks notice' && p.willingToRelocate === 'Depends on the role' && p.salaryExpectation === '$95,000', 'answers saved to the profile');
   check(p.eeo.gender === "I don't wish to answer" && !p.eeo.ethnicity && !p.eeo.veteran && !p.eeo.disability, 'EEO: an explicit "I don\'t wish to answer" is saved; skipped ones stay empty (not set)');
   check(!JSON.stringify(p).match(/\b(pet|dog|cat)\b/i), 'no pet/personal details in the profile');
-  await wiz.click('#qNext');
+  await wiz.click('#qNext'); // -> AI helper (already connected) -> model (already downloaded) -> ready
+  await wiz.waitForFunction(() => !document.getElementById('ollamaNext').disabled && document.querySelector('[data-step=ollama]').offsetParent, null, { timeout: 8000 });
+  await wiz.click('#ollamaNext');
+  await wiz.waitForFunction(() => !document.getElementById('modelNext').disabled && document.querySelector('[data-step=model]').offsetParent, null, { timeout: 8000 });
+  await wiz.click('#modelNext');
   await wiz.waitForFunction(() => document.querySelectorAll('#summary .status').length === 4);
   const ready = await wiz.innerText('#summary');
   check((ready.match(/dot ok/g) || []).length >= 0 && /Ollama is running/.test(ready) && /qwen2\.5:3b/.test(ready) && /Master resume: jordan-rivera-resume\.docx/.test(ready) && /Jordan Rivera/.test(ready), 'ready summary');
@@ -300,11 +311,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const jobsN = await opt.$$eval('#jobsBox [data-exp-card]', x => x.length);
   check(jobsN === 2, 'Options profile shows the imported work history (' + jobsN + ' jobs)');
 
-  console.log('\n11) popup "Finish setup" for new users only');
-  await sw.evaluate(() => chrome.storage.local.set({ onboarding: { done: false }, profile: {} }));
+  console.log('\n11) popup "Getting started" checklist (v0.6.7 replaces the "Finish setup" banner)');
   const pop = await ctx.newPage(); await pop.goto(X('popup/popup.html'));
-  await sleep(500);
-  check(await pop.isVisible('#setup'), 'popup shows "Finish setup" when setup is not done');
+  await pop.waitForSelector('#checklist:not([hidden])', { timeout: 8000 }).catch(() => {});
+  check(await pop.isVisible('#checklist'), 'popup shows the setup checklist while setup is incomplete');
   await pop.close();
 
   check(realHits.length === 0, 'no request reached a real website: ' + realHits.slice(0, 3).join(', '));

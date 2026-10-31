@@ -3,3 +3,11 @@
 .consent{margin-top:14px;font-size:14px}.consent input{width:18px;height:18px}
 input[type=file]{font-size:13px}
 .confirm{text-align:center;padding:28px 10px}.confirm .big{width:64px;height:64px;margin:0 auto 10px;border-radius:50%;background:#dcfce7;color:#15803d;font:800 32px/64px system-ui}
+
+/* v0.6.7 */
+.pill.warn{background:#fef9c3;color:#854d0e}
+fieldset.group{border:1px solid var(--line);border-radius:12px;padding:10px 14px 14px;margin:14px 0 0}
+fieldset.group legend{font-size:13px;font-weight:600;color:#334155;padding:0 6px}
+#submit .po{font-weight:500;opacity:.85;font-size:13px}
+.done-note{display:flex;gap:12px;align-items:flex-start;background:#f0fdf4;border-color:#bbf7d0;color:#14532d}
+.ok-dot{flex:none;width:26px;height:26px;border-radius:50%;background:#16a34a;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center}

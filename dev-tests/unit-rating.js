@@ -53,7 +53,7 @@ check(!R.countsAsApplied({ stage: 'applied', submittedAt: 'x', status: 'Error - 
 check(!R.countsAsApplied(null), 'null row: no');
 
 console.log('policy');
-check(R.REVIEW_URL === 'https://chromewebstore.google.com/detail/ianfkblcpiejjcjammkdloflpjhodaen/reviews', 'Rate it opens the store reviews page');
+check(R.REVIEW_URL === 'https://chromewebstore.google.com/detail/ai-job-application-assist/ianfkblcpiejjcjammkdloflpjhodaen/reviews?utm_source=extension&utm_medium=rating_prompt&utm_campaign=in_extension', 'Rate it opens the store reviews page (canonical URL, tagged utm_source=extension)');
 check(/^https:\/\/github\.com\/aridawoodi\/job-apply-assistant\/issues$/.test(R.FEEDBACK_URL), 'feedback goes to GitHub issues');
 check(R.MIN_COUNT === 3 && R.MIN_AGE_MS === 3 * DAY && R.LATER_GAP === 10, 'thresholds: 3 applications, 3 days, +10 on later');
 

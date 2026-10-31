@@ -1,10 +1,12 @@
-/* First-run setup: Ollama install check (no terminal), model download with progress,
- * resume import, a few questions, then a practice application. */
+/* First-run setup (v0.6.7): one primary action (import your resume), then a practice fill on a sample
+ * form inside the extension. A few questions and the optional AI helper (Chrome's built-in AI, or the
+ * Ollama app with a model download, no terminal) come after. The "Getting started" checklist is shared
+ * with the popup and Options (lib/activation.js). */
 (function () {
   'use strict';
   const { h, send, task, os, fmtBytes } = JAA.page;
   const $ = s => document.querySelector(s);
-  const STEPS = [['welcome', 'Welcome'], ['ollama', 'Ollama'], ['model', 'AI model'], ['resume', 'Resume'], ['questions', 'Questions'], ['ready', 'Ready']];
+  const STEPS = [['welcome', 'Your resume'], ['questions', 'A few answers'], ['ollama', 'AI helper'], ['model', 'AI model'], ['ready', 'Ready']];
   const OS = os();
   const OS_NAME = { mac: 'Mac', win: 'Windows', linux: 'Linux', other: 'your computer' }[OS];
   let cur = 0, sys = { ramGB: 0, recommended: 'qwen2.5:3b', models: {} }, status = null;
@@ -23,11 +25,61 @@
   document.querySelectorAll('[data-next]').forEach(b => b.addEventListener('click', () => go(cur + 1)));
   document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => go(cur - 1)));
 
-  /* ---------- step: welcome ---------- */
+  /* ---------- step: welcome = import your resume (the one primary action), then practice ---------- */
   $('#osName').textContent = OS_NAME;
   send({ type: 'system:info' }).then(r => { if (r) { sys = r; if (r.ramGB) $('#ramTxt').textContent = ` with ${r.ramGB} GB of memory`; } });
+  let importerMounted = false;
+  function mountImporter() {
+    if (importerMounted) return; importerMounted = true;
+    JAA.importer.mount($('#importer'), { useAI: true, onSaved: () => { showImported(true); refreshChecklist(); } });
+  }
+  function openImporter() {
+    mountImporter();
+    $('#importCard').classList.remove('hidden');
+    const inp = $('#importer input[type=file]'); if (inp) inp.click();
+    $('#importCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  async function showImported(justSaved) {
+    const { resume, profile } = await chrome.storage.local.get(['resume', 'profile']);
+    if (!resume && !(profile && profile.firstName)) return;
+    const n = ((profile && profile.workHistory) || []).length;
+    $('#importDoneTxt').textContent = (resume ? `Saved from ${resume.name}` : 'Your profile is saved') + (n ? ` · ${n} job${n === 1 ? '' : 's'}` : '') + '. You can edit it any time in Settings → Profile.';
+    $('#importStart').classList.add('hidden'); $('#importDone').classList.remove('hidden');
+    $('#skipResume').classList.add('hidden');
+    if (justSaved) setTimeout(() => { $('#importCard').classList.add('hidden'); window.scrollTo({ top: 0, behavior: 'smooth' }); $('#practiceBtn').focus({ preventScroll: true }); }, 900);
+  }
+  $('#importBtn').addEventListener('click', openImporter);
+  $('#demoLink').addEventListener('click', e => { e.preventDefault(); send({ type: 'tour:open' }); });
+  showImported();
 
-  /* ---------- step: Ollama ---------- */
+  /* ---------- "Getting started" checklist (welcome + ready steps) ---------- */
+  async function refreshChecklist() {
+    const r = await send({ type: 'activation:get' });
+    if (!r || !r.view) return;
+    const onGo = id => {
+      if (id === 'profile') { go2('welcome'); openImporter(); }
+      else if (id === 'ai') go2('ollama');
+      else if (id === 'real') go2('ready');
+      else send({ type: 'activation:go', step: id });
+    };
+    const dismiss = async () => { await send({ type: 'activation:dismiss' }); refreshChecklist(); };
+    JAA.activation.render($('#checklist'), r.view, { surface: 'welcome', onGo, onDismiss: dismiss });
+    JAA.activation.render($('#checklistReady'), r.view, { surface: 'welcome', onGo, onDismiss: dismiss });
+  }
+  const go2 = id => go(STEPS.findIndex(x => x[0] === id));
+  chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && (ch.activation || ch.resume)) { refreshChecklist(); if (ch.resume) showImported(); } });
+  refreshChecklist();
+
+  /* ---------- step: AI helper (Chrome's built-in AI, or Ollama) ---------- */
+  let useChromeAI = false;
+  async function checkChromeAI() {
+    const r = await send({ type: 'chromeai:check' });
+    const ready = !!(r && r.status === 'available');
+    $('#chromeAiBox').classList.toggle('hidden', !ready);
+    if (ready && !(status && status.reachable)) { useChromeAI = true; $('#ollamaNext').disabled = false; }
+  }
+  $('#skipAi').addEventListener('click', () => go2('ready'));
+  $('#ollamaNext').addEventListener('click', () => (useChromeAI ? go2('ready') : go(cur + 1)));
   const DL = {
     mac: { url: 'https://ollama.com/download/Ollama.dmg', label: '⬇ Download Ollama for Mac', note: 'Free, from ollama.com (the official site)' },
     win: { url: 'https://ollama.com/download/OllamaSetup.exe', label: '⬇ Download Ollama for Windows', note: 'Free, from ollama.com (the official site)' },
@@ -68,7 +120,7 @@
       $('#installBox').classList.add('hidden'); $('#originBox').classList.remove('hidden'); $('#ollamaNext').disabled = true;
     } else {
       dot.className = 'dot ok'; txt.textContent = `Ollama is running${status.version ? ' (version ' + status.version + ')' : ''} and connected. ✓`;
-      $('#installBox').classList.add('hidden'); $('#originBox').classList.add('hidden'); $('#ollamaNext').disabled = false;
+      $('#installBox').classList.add('hidden'); $('#originBox').classList.add('hidden'); $('#ollamaNext').disabled = false; useChromeAI = false;
       return;
     }
     if (!once && STEPS[cur][0] === 'ollama') pollTimer = setTimeout(poll, 2000);
@@ -135,14 +187,6 @@
   }
   $('#pullCancel').addEventListener('click', () => { if (pulling) pulling.cancel(); });
 
-  /* ---------- step: resume ---------- */
-  let importerMounted = false;
-  function mountImporter() {
-    if (importerMounted) return; importerMounted = true;
-    JAA.importer.mount($('#importer'), { useAI: true, onSaved: () => { $('#resumeNext').disabled = false; } });
-    chrome.storage.local.get('resume').then(r => { if (r.resume) { $('#resumeNext').disabled = false; $('#importer').prepend(h('p', { class: 'ok' }, `Current master resume: ${r.resume.name}. Upload a new one to replace it, or continue.`)); } });
-  }
-  $('#skipResume').addEventListener('click', () => go(cur + 1));
 
   /* ---------- step: questions ---------- */
   const QUESTIONS = [
@@ -210,12 +254,12 @@
       line(!!resume, resume ? `Master resume: ${resume.name}` : 'No resume yet (you can add one in Settings → Resume)'),
       line(!!profile.firstName, profile.firstName ? `Profile: ${profile.firstName} ${profile.lastName || ''}${profile.email ? ' · ' + profile.email : ''}` : 'Profile is empty (Settings → Profile)'));
     chrome.storage.local.set({ onboarding: { step: 'ready', done: true, at: Date.now() } });
+    refreshChecklist();
   }
 
   function onEnter(step) {
-    if (step === 'ollama') poll();
+    if (step === 'ollama') { poll(); checkChromeAI(); }
     if (step === 'model') renderModels();
-    if (step === 'resume') mountImporter();
     if (step === 'questions') startQA();
     if (step === 'ready') renderReady();
   }
@@ -228,7 +272,8 @@
   function svgTray() { return '<svg viewBox="0 0 150 100" aria-hidden="true"><rect x="8" y="10" width="134" height="62" rx="4" fill="#f8fafc" stroke="#cbd5e1"/><rect x="8" y="74" width="134" height="18" rx="3" fill="#1e293b"/><text x="112" y="88" font-size="12" text-anchor="middle">🦙</text><circle cx="112" cy="83" r="10" fill="none" stroke="#facc15" stroke-width="2"/><text x="132" y="87" font-size="7" fill="#e2e8f0" font-family="sans-serif">9:41</text></svg>'; }
 
   // start: deep link (#resume etc.) or where the user left off
-  const startAt = STEPS.findIndex(s => s[0] === location.hash.slice(1));
+  const hashStep = location.hash.slice(1) === 'resume' ? 'welcome' : location.hash.slice(1); // old links
+  const startAt = STEPS.findIndex(s => s[0] === hashStep);
   if (startAt >= 0) go(startAt);
   else chrome.storage.local.get('onboarding').then(r => { const o = r.onboarding; const i = o && !o.done ? STEPS.findIndex(s => s[0] === o.step) : -1; go(i > 0 ? i : 0); });
 })();

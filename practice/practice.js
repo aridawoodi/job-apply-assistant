@@ -6,7 +6,7 @@ document.getElementById('application-form').addEventListener('submit', e => {
     sent.textContent = 'Tick the consent box first: the assistant never ticks consent boxes for you.';
     return;
   }
-  sent.textContent = '✓ Practice only: nothing was sent. On a real job site, this is the button you press yourself.';
+  sent.textContent = '✓ Practice only: nothing was submitted or sent. On a real job site, this is the button you press yourself.';
   setTimeout(() => {
     document.getElementById('application-form').hidden = true;
     document.getElementById('confirmation').hidden = false;
@@ -19,4 +19,11 @@ document.getElementById('again').addEventListener('click', e => {
   document.getElementById('application-form').hidden = false;
   document.getElementById('confirmation').hidden = true;
   document.getElementById('sent').textContent = '';
+});
+
+// v0.6.7: after a fill on this page, a calm "Practice fill done" note (the setup checklist ticks too)
+window.addEventListener('jaa-filled', e => {
+  if (!e.detail || !(e.detail.filled > 0) || /[?&]tour=1\b/.test(location.search)) return; // the tour has its own ending
+  const done = document.getElementById('practiceDone');
+  if (done && done.classList.contains('hidden')) { done.classList.remove('hidden'); done.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 });

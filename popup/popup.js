@@ -65,6 +65,20 @@ function initRating() {
   });
 }
 
+// v0.6.7: "Getting started" checklist (lib/activation.js). Shown until all four steps are done and the user
+// hides it; after the first real application it shrinks to one quiet line. State is local only.
+function initChecklist(done) {
+  chrome.runtime.sendMessage({ type: 'activation:get' }, r => {
+    if (done) done(r && r.view);
+    if (chrome.runtime.lastError || !r || !r.view) return;
+    JAA.activation.render($('checklist'), r.view, {
+      surface: 'popup',
+      onGo: step => chrome.runtime.sendMessage({ type: 'activation:go', step }, () => { void chrome.runtime.lastError; window.close(); }),
+      onDismiss: () => chrome.runtime.sendMessage({ type: 'activation:dismiss' }, () => { void chrome.runtime.lastError; $('checklist').hidden = true; })
+    });
+  });
+}
+
 async function fill(generic) {
   filling = true; $('rate').hidden = true;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -113,18 +127,20 @@ async function fill(generic) {
   $('tracker').onclick = e => { e.preventDefault(); openSection('tracker'); };
   const openSetup = step => chrome.runtime.sendMessage({ type: 'onboarding:open', step }, () => { void chrome.runtime.lastError; window.close(); });
   $('setupLink').onclick = e => { e.preventDefault(); openSetup(''); };
-  $('setup').onclick = e => { e.preventDefault(); openSetup(''); };
-  chrome.storage.local.get(['onboarding', 'profile']).then(({ onboarding, profile }) => {
-    if (!(onboarding && onboarding.done) && !(profile && (profile.firstName || profile.email))) $('setup').hidden = false;
-  });
+  initChecklist(checkAI);
 
   initRating();
 
+  // AI status line. While the AI helper was never set up it's optional, so say so calmly instead of an error.
+  function checkAI(view) {
+  const aiNeverSetUp = view && !view.steps.find(s => s.id === 'ai').done;
   chrome.runtime.sendMessage({ type: 'ollama:test' }, r => {
     const el = $('ollama');
     if (chrome.runtime.lastError || !r) { el.className = 'bad'; el.textContent = 'Local AI: no reply'; return; }
+    if (!r.ok && aiNeverSetUp) { el.className = 'muted'; el.textContent = 'AI helper not set up (optional). Forms still fill from your profile.'; return; }
     el.className = r.ok ? 'good' : 'bad';
     $('odot').className = 'dotx ' + (r.ok ? 'good' : 'bad');
     el.textContent = r.ok ? 'Local AI ready ✓' : 'Local AI: ' + r.error;
   });
+  }
 })();

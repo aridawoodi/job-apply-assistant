@@ -123,3 +123,16 @@ Run from `dev-tests/` with `NODE_PATH` pointing at a folder where Playwright is 
   reload, a stale Options tab, 150-card render speed and debounced saving, and Fill on a Lever mock
   (`v5-mocks/lever-exp.html`). Screenshots go to `$EXP_SHOTS` (default `/workspace/exp-fix`).
   `python3 make-multijob.py` rebuilds the fixture.
+
+## v0.6.7 tests
+- `node unit-activation.js` (no browser): "Getting started" checklist state (`lib/activation.js`): first
+  timestamp kept, a real fill implies practice, progress/next step, compact popup line, dismiss only when
+  complete, timestamps-only storage.
+- `node e2e-activation.js` (run with `unshare -rn sh -c 'ip link set lo up && node e2e-activation.js'` if a
+  real local AI server is on port 11434): fresh install opens the welcome page once (replayed update and
+  install events open nothing), Import your resume (`fixtures/casey-morgan-resume.pdf`) → Try it on a sample
+  form → Fill on the practice page (nothing submitted, not tracked) → checklist ticks live, survives a
+  browser restart, popup + Options show progress and route each step, a Lever mock fill ticks the real step,
+  dismiss when complete. Screenshots go to `$ACT_SHOTS` (default `/workspace/activation`).
+- `e2e-v4.js` follows the new welcome order (resume first, AI helper after the questions).
+

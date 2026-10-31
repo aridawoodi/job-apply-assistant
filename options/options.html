@@ -1,5 +1,5 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><title>AI Job Application Assistant · Profile & settings</title><link rel="stylesheet" href="options.css"><link rel="stylesheet" href="../lib/exp-editor.css"></head>
+<html><head><meta charset="utf-8"><title>AI Job Application Assistant · Profile & settings</title><link rel="stylesheet" href="options.css"><link rel="stylesheet" href="../lib/exp-editor.css"><link rel="stylesheet" href="../lib/activation.css"></head>
 <body>
 <div class="accent-bar"></div>
 <nav>
@@ -8,6 +8,7 @@
   <span class="spacer"></span><span id="saved" class="muted"></span><button id="save" class="primary" type="button">Save</button>
 </nav>
 <main>
+  <div id="checklist" class="act act-options" hidden></div>
   <section id="profile"><h2>Profile</h2><p class="muted">Stored only in this browser (chrome.storage.local). Blank fields are left for you to fill on each form.</p><div id="profileForm"></div></section>
 
   <section id="resume"><h2>Resume</h2>
@@ -129,7 +130,7 @@
   </section>
 </main>
 <footer class="about">AI Job Application Assistant <span id="footVer"></span> · Free and open source ·
-  <a id="rateLink" href="https://chromewebstore.google.com/detail/ianfkblcpiejjcjammkdloflpjhodaen/reviews" target="_blank" rel="noopener">★ Rate this extension</a> ·
+  <a id="rateLink" href="https://chromewebstore.google.com/detail/ai-job-application-assist/ianfkblcpiejjcjammkdloflpjhodaen/reviews?utm_source=extension&amp;utm_medium=options_footer&amp;utm_campaign=in_extension" target="_blank" rel="noopener">★ Rate this extension</a> ·
   <a href="https://github.com/aridawoodi/job-apply-assistant/issues" target="_blank" rel="noopener">Send feedback</a></footer>
 <script src="../lib/defaults.js"></script>
 <script src="../lib/pageutil.js"></script>
@@ -138,5 +139,6 @@
 <script src="../lib/tailor.js"></script>
 <script src="../lib/exp-editor.js"></script>
 <script src="../lib/importer.js"></script>
+<script src="../lib/activation.js"></script>
 <script src="options.js"></script>
 </body></html>

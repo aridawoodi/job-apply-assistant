@@ -521,6 +521,22 @@ function initBackups() {
   renderBackups();
 }
 
+// v0.6.7: "Getting started" checklist at the top (lib/activation.js); local state, hidden once done + dismissed
+function initChecklist() {
+  const box = $('checklist');
+  const jump = id => { const el = document.getElementById(id); if (el) { el.scrollIntoView({ block: 'start' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1500); } };
+  const draw = () => chrome.runtime.sendMessage({ type: 'activation:get' }, r => {
+    if (chrome.runtime.lastError || !r || !r.view) return;
+    JAA.activation.render(box, r.view, {
+      surface: 'options',
+      onGo: step => { if (step === 'profile') jump('resume'); else if (step === 'ai') jump('ai'); else chrome.runtime.sendMessage({ type: 'activation:go', step }, () => { void chrome.runtime.lastError; }); },
+      onDismiss: () => chrome.runtime.sendMessage({ type: 'activation:dismiss' }, () => { void chrome.runtime.lastError; draw(); })
+    });
+  });
+  draw();
+  chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && (ch.activation || ch.resume)) draw(); });
+}
+
 (async function init() {
   const all = await JAA.loadAll();
   Object.assign(state, all);
@@ -551,6 +567,7 @@ function initBackups() {
   // rating from Settings counts as answered, so the popup card won't ask again (the link itself opens normally)
   $('rateLink').addEventListener('click', () => { sendBg({ type: 'rating:act', action: 'rate' }); });
   initBackups();
+  initChecklist();
   // deep links: options.html#profile, or a request from the chat/popup gear button
   const goto = section => { const el = document.getElementById(section); if (!el) return; el.scrollIntoView({ block: 'start' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1500); const first = el.querySelector('input, textarea, select'); if (first && section === 'profile') first.focus({ preventScroll: true }); };
   const takeGoto = async () => { const { optionsGoto } = await chrome.storage.local.get('optionsGoto'); if (optionsGoto && Date.now() - optionsGoto.at < 15000) { await chrome.storage.local.remove('optionsGoto'); goto(optionsGoto.section); } };

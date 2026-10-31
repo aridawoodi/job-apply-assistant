@@ -4,7 +4,7 @@
  * A declarativeNetRequest rule (installOriginRules) removes the Origin header from THIS
  * extension's own requests to the local Ollama port, so no OLLAMA_ORIGINS setup is needed. */
 'use strict';
-importScripts('lib/defaults.js', 'lib/tailor.js', 'lib/cover.js', 'lib/resume.js', 'lib/extract.js', 'lib/rating.js');
+importScripts('lib/defaults.js', 'lib/tailor.js', 'lib/cover.js', 'lib/resume.js', 'lib/extract.js', 'lib/rating.js', 'lib/activation.js');
 
 const ORIGINS_HINT =
   'Ollama refused the request (403). The extension normally fixes this by itself. Make sure Chrome is up to date (version 110 or newer), ' +
@@ -736,7 +736,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && V4_TYPES.has(msg.type)) return false; // answered by the v0.4 listener below
   // the built-in practice page: nothing it does goes into the tracker or the answer bank
   if (msg && sender && sender.url && sender.url.startsWith(chrome.runtime.getURL('practice/')) && /^(tracker:log|tracker:event|tracker:pending|bank:learn)$/.test(msg.type)) {
+    // ...but a finished fill there ticks "Try a practice fill" on the setup checklist
+    if (msg.type === 'tracker:log' && msg.entry && msg.entry.filled > 0) activationSet(s => ACT.mark(s, 'practice')).catch(() => {});
     sendResponse({ ok: true, practice: true }); return false;
+  }
+  if (msg && msg.type === 'tracker:log' && msg.entry && msg.entry.filled > 0 && sender && sender.tab && /^https?:/.test(sender.url || '')) {
+    activationSet(s => ACT.mark(s, 'real')).catch(() => {}); // first real application filled (local only)
   }
   (async () => {
     switch (msg && msg.type) {
@@ -850,8 +855,16 @@ async function migrateExperience() {
   if (!profile || (profile.expVersion || 0) >= JAA.EXP_VERSION) return;
   await chrome.storage.local.set({ profile: JAA.migrateProfile(profile) });
 }
-chrome.runtime.onInstalled.addListener(async (details) => {
-  if (details.reason === 'install') chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/welcome.html') });
+// v0.6.7: a fresh install opens the welcome page once (never on updates, reloads or Chrome updates)
+async function openWelcomeOnce() {
+  const { welcomeOpenedAt } = await chrome.storage.local.get('welcomeOpenedAt');
+  if (welcomeOpenedAt) return false;
+  await chrome.storage.local.set({ welcomeOpenedAt: Date.now() });
+  await chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/welcome.html') });
+  return true;
+}
+async function handleInstalled(details) {
+  if (details.reason === 'install') await openWelcomeOnce();
   // update/reload: snapshot first, then migrate in place (data in chrome.storage.local is kept)
   if (details.reason === 'update') await snapshot('before update to ' + chrome.runtime.getManifest().version, true);
   await withTracker(() => null);
@@ -861,9 +874,61 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   await migrateExperience();
   if (details.reason === 'update') await noteWhatsNew(details.previousVersion);
   await ratingInit();
+  await activationInit(details.reason);
   await installOriginRules();
   await setDefaultIcon();
-});
+}
+chrome.runtime.onInstalled.addListener(details => { handleInstalled(details); });
+globalThis.handleInstalled = handleInstalled; // e2e tests replay install/update events
+
+/* ---------- v0.6.7 setup checklist (local only; see lib/activation.js) ---------- */
+const ACT = globalThis.JAA.activation;
+async function activationSet(fn) {
+  const { activation } = await chrome.storage.local.get('activation');
+  const next = fn(ACT.normalize(activation));
+  if (!ACT.same(activation, next) || !activation) await chrome.storage.local.set({ activation: next });
+  return next;
+}
+const hasProfileData = (profile, resume) => !!(resume || (profile && (profile.firstName || profile.email) && ((profile.workHistory || []).length || profile.resumeText)));
+// updating users: mark what they already did, so nobody is asked to redo it
+async function activationInit(reason) {
+  if (reason !== 'update') return;
+  const { applications = [], profile, resume } = await chrome.storage.local.get(['applications', 'profile', 'resume']);
+  const real = applications.find(a => a && (a.filled > 0 || a.firstFilled));
+  await activationSet(s => {
+    if (hasProfileData(profile, resume)) s = ACT.mark(s, 'profile');
+    if (real) s = ACT.mark(s, 'real', Date.parse(real.firstFilled || real.date) || Date.now());
+    return s;
+  });
+}
+async function aiReadyNow() {
+  const c = await checkChromeAI().catch(() => ({}));
+  if (c && c.status === 'available') return true;
+  const o = await ollamaStatus().catch(() => null);
+  return !!(o && o.reachable && o.originOk !== false && o.hasModel);
+}
+// the checklist as it stands: stored stamps + what is true right now (resume saved, an AI engine answering)
+async function activationGet() {
+  const { activation, profile, resume } = await chrome.storage.local.get(['activation', 'profile', 'resume']);
+  const s0 = ACT.normalize(activation);
+  const facts = { hasProfile: hasProfileData(profile, resume), aiReady: s0.aiAt ? true : await aiReadyNow() };
+  const s = await activationSet(cur => ACT.reconcile(cur, facts));
+  return { ok: true, state: s, view: ACT.view(s) };
+}
+const ACT_TARGET = { profile: 'onboarding/welcome.html#welcome', ai: 'onboarding/welcome.html#ollama', practice: 'practice/practice.html', real: 'onboarding/welcome.html#ready' };
+async function activationGo(step) {
+  if (step === 'profile' || step === 'ai' || step === 'real') {
+    const url = chrome.runtime.getURL(ACT_TARGET[step]);
+    try { // reuse an open setup tab when we can see it (own extension pages); otherwise open a new one
+      const base = chrome.runtime.getURL('onboarding/welcome.html');
+      const open = (await chrome.tabs.query({})).find(t => t.url && t.url.startsWith(base));
+      if (open) { await chrome.tabs.update(open.id, { url, active: true }); return { ok: true, reused: true }; }
+    } catch (_) { /* fall through */ }
+    await chrome.tabs.create({ url }); return { ok: true };
+  }
+  if (step === 'practice') { await chrome.tabs.create({ url: chrome.runtime.getURL(ACT_TARGET.practice) }); return { ok: true }; }
+  return { ok: false, error: 'Unknown step' };
+}
 // v0.4: keep everything; switch the old default Ollama URL to 127.0.0.1; existing users skip the setup wizard.
 async function migrateV4() {
   const { settings, profile, onboarding } = await chrome.storage.local.get(['settings', 'profile', 'onboarding']);
@@ -1127,7 +1192,7 @@ async function tailoredAttach(msg) {
   } catch (e) { return { ok: false, error: 'Could not reach the application page (' + String(e && e.message || e) + '). Reload it and try again.' }; }
 }
 
-const V4_TYPES = new Set(['tracker:update', 'tracker:bookmark', 'tracker:get', 'tracker:list', 'page:status', 'feedback:add', 'diag:info', 'tour:open', 'cover:open', 'cover:save', 'cover:fill', 'match:ai', 'whatsnew:seen', 'privacy:open', 'ollama:status', 'ollama:fixOrigin', 'system:info', 'tailor:open', 'tailor:forJob', 'tailor:save', 'tailor:attach', 'onboarding:open', 'rating:get', 'rating:act']);
+const V4_TYPES = new Set(['activation:get', 'activation:go', 'activation:dismiss', 'tracker:update', 'tracker:bookmark', 'tracker:get', 'tracker:list', 'page:status', 'feedback:add', 'diag:info', 'tour:open', 'cover:open', 'cover:save', 'cover:fill', 'match:ai', 'whatsnew:seen', 'privacy:open', 'ollama:status', 'ollama:fixOrigin', 'system:info', 'tailor:open', 'tailor:forJob', 'tailor:save', 'tailor:attach', 'onboarding:open', 'rating:get', 'rating:act']);
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // the practice page (and its tour) never writes to your real tracker, feedback or cover letters
   if (msg && sender && sender.url && sender.url.startsWith(chrome.runtime.getURL('practice/')) && /^(tracker:update|tracker:bookmark|feedback:add|cover:save)$/.test(msg.type)) {
@@ -1157,6 +1222,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     'rating:get': () => ratingState(),
     'rating:act': () => ratingActMsg(msg, sender),
     'privacy:open': () => chrome.tabs.create({ url: chrome.runtime.getURL('privacy/privacy.html') }).then(() => ({ ok: true })),
+    'activation:get': () => activationGet(),
+    'activation:go': () => activationGo(msg.step),
+    'activation:dismiss': () => activationSet(s => ACT.dismiss(s)).then(s => ({ ok: true, view: ACT.view(s) })),
     'whatsnew:seen': () => chrome.storage.local.get('whatsNew').then(({ whatsNew }) => chrome.storage.local.set({ whatsNew: Object.assign({}, whatsNew || {}, { seen: true }) })).then(() => ({ ok: true }))
   };
   const h = msg && handlers[msg.type];

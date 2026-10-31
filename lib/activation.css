@@ -1,0 +1,27 @@
+/* v0.6.7 "Getting started" checklist (popup, Options, welcome). Quiet Chrome: white card, slate text, indigo accent. */
+.act{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px 14px;box-shadow:0 1px 3px rgba(15,23,42,.05);font:13px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0f172a}
+.act[hidden]{display:none}
+.act-head{display:flex;align-items:center;gap:10px;position:relative}
+.act-ring{flex:none}.act-ring-val{transition:stroke-dashoffset .5s ease}
+.act-pct{position:absolute;left:0;top:50%;margin-top:-20px;width:40px;height:40px;line-height:40px;text-align:center;font-size:10.5px;font-weight:700;color:#3730a3}
+.act-tt{flex:1;display:flex;flex-direction:column;min-width:0}.act-tt b{font-size:13.5px}
+.act-sub{font-size:12px;color:#64748b}
+.act-x{background:none;border:0;color:#94a3b8;font-size:18px;line-height:1;padding:4px 6px;border-radius:6px;cursor:pointer;width:auto;margin:0;box-shadow:none}.act-x:hover{color:#334155;background:#f1f5f9}
+.act-list{list-style:none;margin:8px 0 0;padding:0}
+.act-step{margin:0}
+.act-go{all:unset;box-sizing:border-box;display:flex;align-items:flex-start;gap:10px;width:100%;padding:7px 6px;border-radius:9px;cursor:pointer}
+.act-go:hover{background:#f8fafc}.act-go:focus-visible{outline:2px solid #6366f1;outline-offset:1px}
+.act-dot{flex:none;width:18px;height:18px;margin-top:1px;border-radius:50%;border:1.5px solid #cbd5e1;background:#fff;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.act-step.is-next .act-dot{border-color:#6366f1;box-shadow:0 0 0 3px #eef2ff}
+.act-step.is-done .act-dot{background:linear-gradient(135deg,#4f46e5,#7c3aed);border-color:transparent}
+.act-txt{flex:1;display:flex;flex-direction:column;min-width:0}
+.act-t{font-size:13px;color:#0f172a}.act-step.is-next .act-t{font-weight:600}
+.act-step.is-done .act-t{color:#64748b}.act-step.is-done .act-go{cursor:default}.act-step.is-done .act-go:hover{background:none}
+.act-h{font-size:12px;color:#64748b;margin-top:1px}
+.act-chev{flex:none;color:#94a3b8;font-size:16px;line-height:18px}
+.act-line{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:10px;font-size:12px;color:#334155;cursor:pointer}.act-line:hover{border-color:#c7d2fe;color:#3730a3}.act-line .act-chev{margin-left:auto}
+.act-popup{margin:10px 14px 0;padding:10px 10px 6px}.act-popup .act-go{padding:5px 4px}.act-popup .act-t{font-size:12.5px}
+.act.act-popup:has(.act-line){padding:0;border:0;box-shadow:none}
+@media (prefers-reduced-motion:reduce){.act-ring-val{transition:none}}
+.act-options{margin:16px 0 0;padding:16px 18px}
+.act-welcome{padding:14px 14px 8px}

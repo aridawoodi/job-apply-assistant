@@ -266,6 +266,8 @@
       if (JAA.chat) JAA.chat.afterRun(summary, fields, opts);
       if (JAA.learn) JAA.learn.watch(fields, items, { company: summary.company, site: adapter.name });
       const extra = (JAA.jobMeta ? JAA.jobMeta() : {}) || {};
+      // the practice page (inside the extension) shows a "Practice fill done" note; real sites never see this event
+      if (location.protocol === 'chrome-extension:') { try { window.dispatchEvent(new CustomEvent('jaa-filled', { detail: { filled, todo: summary.todo } })); } catch (_) { /* ignore */ } }
       send({ type: 'tracker:log', entry: { key: JAA.jobKey(location.href), company: summary.company, title: summary.title, url: (window.top === window ? location.href : (document.referrer || location.href)), formUrl: location.href, site: adapter.name, filled, ai, todo: summary.todo, location: extra.location || '', salary: extra.salary || '' } });
       return summary;
     } catch (e) {

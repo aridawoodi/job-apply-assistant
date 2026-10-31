@@ -1,6 +1,6 @@
 # Chrome Web Store Listing — AI Job Application Assistant
 
-> Last Updated: 2026-10-29
+> Last Updated: 2026-10-30
 
 ## Store Listing
 
@@ -164,6 +164,7 @@ https://github.com/aridawoodi/job-apply-assistant
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 0.6.7 | 2026-10-30 | First-run activation: welcome leads with "Import your resume" then a practice fill on a fuller built-in sample form; "Getting started" checklist (popup, Options, welcome) stored locally; welcome opens once on install only; rating links use the canonical listing URL with utm_source=extension. Listing rewrite drafted in store-listing/0.6.7-draft.md. No permission changes, no telemetry. | In development (local branch release-0.6.7) |
 | 0.6.6 | 2026-10-29 | Work history editor (job cards, "I currently work here", reorder, Check-this hints); fix: a resume import no longer collapses to one "current" job, and "current" comes from end dates only; Yes/No choice mapping (no invented values); Lever location autocomplete picks a suggestion. No permission changes. | Ready to submit |
 | 0.6.5 | 2026-10-29 | Fix: cover-letter upload card no longer says "Add your resume". Refreshed screenshots and promo tile (new look). No permission changes. | Published (live) |
 | 0.6.4 | 2026-10-29 | Optional rating card in the popup after 3 tracked applications (Rate it / Maybe later / No thanks, plus Send feedback); permanent "Rate this extension" link in Settings. No permission changes. | Submitted, review cancelled for 0.6.5 |

@@ -3,9 +3,10 @@
 <title>Practice application · AI Job Application Assistant</title>
 <link rel="stylesheet" href="../lib/pages.css"><link rel="stylesheet" href="practice.css"><link rel="stylesheet" href="tour.css"></head>
 <body>
-<div class="top"><img src="../icons/icon48.png" width="30" height="30" alt=""><strong>Practice application</strong><span class="sp"></span><span class="pill">Nothing here is sent anywhere</span></div>
+<div class="top"><img src="../icons/icon48.png" width="30" height="30" alt=""><strong>Practice application</strong><span class="sp"></span><span class="pill warn">Practice page · nothing is submitted</span></div>
 <main>
-  <div class="card banner">This is a <b>fake job</b> on a page inside the extension, so you can safely see how filling works. Click the purple <b>Fill application</b> button (bottom right), answer the assistant's questions, try <b>"tailor my resume for this job"</b> in the chat, then press Submit yourself. Submitting here sends nothing and isn't added to your tracker.</div>
+  <div class="card banner" id="practiceBanner"><b>Practice application.</b> This pretend job lives inside the extension, so you can safely see how filling works. Press the purple <b>Fill application</b> button (bottom right) and watch the form fill from your profile. Nothing here is submitted, sent anywhere or added to your tracker.</div>
+  <div class="card done-note hidden" id="practiceDone" role="status"><span class="ok-dot" aria-hidden="true">✓</span><div><b>Practice fill done.</b> That's all it takes. Next time you're on a real job application, press <b>Fill</b> the same way, check the answers, and press the site's Submit button yourself.</div></div>
   <section class="card">
     <div class="muted small" id="job-company">Example Co</div>
     <h1 id="job-title">Data Analyst</h1>
@@ -29,27 +30,47 @@
         <label class="f">Phone<input type="tel" name="phone" id="phone" autocomplete="off"></label>
         <label class="f">Location (city)<input type="text" name="location" id="location" autocomplete="off"></label>
         <label class="f">LinkedIn profile<input type="url" name="linkedin" id="linkedin" autocomplete="off"></label>
+        <label class="f">Current company<input type="text" name="current_company" id="current_company" autocomplete="off"></label>
+        <label class="f">Current title<input type="text" name="current_title" id="current_title" autocomplete="off"></label>
       </div>
       <div class="grid" style="margin-top:12px">
         <label class="f">Resume/CV *<input type="file" name="resume" id="resume" accept=".pdf,.docx" required></label>
-        <label class="f">Cover letter<input type="file" name="cover_letter" id="cover_letter" accept=".pdf,.docx"></label>
       </div>
+      <fieldset class="group"><legend>Work experience</legend>
+        <div class="grid">
+          <label class="f">Company name<input type="text" name="company-name--0" id="company-name--0" autocomplete="off"></label>
+          <label class="f">Title<input type="text" name="title--0" id="title--0" autocomplete="off"></label>
+          <label class="f">Company name<input type="text" name="company-name--1" id="company-name--1" autocomplete="off"></label>
+          <label class="f">Title<input type="text" name="title--1" id="title--1" autocomplete="off"></label>
+        </div>
+      </fieldset>
+      <fieldset class="group"><legend>Education</legend>
+        <div class="grid">
+          <label class="f">School<input type="text" name="school--0" id="school--0" autocomplete="off"></label>
+          <label class="f">Degree<select name="degree--0" id="degree--0"><option value="">Select…</option><option>High School</option><option>Associate's Degree</option><option>Bachelor's Degree</option><option>Master's Degree</option><option>Doctorate</option><option>Other</option></select></label>
+          <label class="f">Discipline<input type="text" name="discipline--0" id="discipline--0" autocomplete="off"></label>
+        </div>
+      </fieldset>
       <div class="grid" style="margin-top:12px">
         <label class="f">Are you legally authorized to work in the United States? *<select name="q_auth" id="q_auth" required><option value="">Select…</option><option>Yes</option><option>No</option></select></label>
         <label class="f">Will you now or in the future require visa sponsorship? *<select name="q_sponsor" id="q_sponsor" required><option value="">Select…</option><option>Yes</option><option>No</option></select></label>
-        <label class="f">Current company<input type="text" name="current_company" id="current_company" autocomplete="off"></label>
+        <label class="f">Are you at least 18 years of age? *<select name="q_age" id="q_age" required><option value="">Select…</option><option>Yes</option><option>No</option></select></label>
+        <label class="f">Are you open to relocating?<select name="q_relocate" id="q_relocate"><option value="">Select…</option><option>Yes</option><option>No</option></select></label>
         <label class="f">What are your salary expectations?<input type="text" name="salary" id="salary" autocomplete="off"></label>
       </div>
       <label class="f" style="margin-top:12px">How many years have you used SQL?<input type="text" name="q_sql" id="q_sql" autocomplete="off"></label>
       <label class="f" style="margin-top:12px">Why do you want to work at Example Co? *<textarea name="q_why" id="q_why" rows="4" required></textarea></label>
+      <label class="f" style="margin-top:12px">Cover letter (optional)<textarea name="cover_letter_text" id="cover_letter_text" rows="5" placeholder="Paste or write a cover letter"></textarea></label>
       <h3>Voluntary self-identification</h3>
       <p class="muted small">Optional. Your answers don't affect your application.</p>
       <div class="grid">
         <label class="f">Gender<select name="eeo_gender" id="eeo_gender"><option value="">Select…</option><option>Male</option><option>Female</option><option>Non-binary</option><option>Decline to self-identify</option></select></label>
         <label class="f">Veteran status<select name="eeo_veteran" id="eeo_veteran"><option value="">Select…</option><option>I am not a protected veteran</option><option>I identify as one or more of the classifications of protected veteran</option><option>I don't wish to answer</option></select></label>
+        <label class="f">Race / ethnicity<select name="eeo_race" id="eeo_race"><option value="">Select…</option><option>American Indian or Alaska Native</option><option>Asian</option><option>Black or African American</option><option>Hispanic or Latino</option><option>Native Hawaiian or Other Pacific Islander</option><option>White</option><option>Two or More Races</option><option>Decline to self-identify</option></select></label>
+        <label class="f">Disability status<select name="eeo_disability" id="eeo_disability"><option value="">Select…</option><option>Yes, I have a disability (or previously had a disability)</option><option>No, I don't have a disability</option><option>I don't wish to answer</option></select></label>
       </div>
       <label class="row consent"><input type="checkbox" name="consent" id="consent" required> I have read and agree to the (fake) privacy notice.</label>
-      <div class="row" style="margin-top:16px"><button type="submit" class="primary big" id="submit">Submit application</button><span id="sent" class="muted"></span></div>
+      <div class="row" style="margin-top:16px"><button type="submit" class="primary big" id="submit" title="Practice only: nothing is sent">Submit application <span class="po">· practice only</span></button><span id="sent" class="muted"></span></div>
     </form>
     <div id="confirmation" class="confirm" hidden>
       <div class="big">✓</div>

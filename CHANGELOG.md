@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.6.7 (2026-10-30): First-run activation
+- **Changed:** the welcome page now leads with one thing: **Import your resume** (the same import and review
+  as before). Right after saving, **Try it on a sample form** opens the built-in practice application, so you
+  see Fill work in about a minute. A few questions and the optional AI helper come after that, instead of an
+  app install first. The AI helper step says it's optional, offers Chrome's built-in AI when it's available,
+  and can be skipped. "No resume handy?" opens the practice tour with a made-up person.
+- **New:** a short **Getting started** checklist (Profile imported · AI helper ready · Practice fill done ·
+  First application filled) with a progress ring, on the welcome page, in the popup and at the top of
+  Options. Each step opens the right place. It can only be hidden once everything is done, and in the
+  popup it shrinks to one quiet line after your first real application. It replaces the yellow "Finish
+  setup" banner. Steps tick themselves (a resume import, a working AI, a fill on the practice page, a fill on
+  a real job site), and people updating from 0.6.6 get credit for what they've already done. The state is
+  four timestamps in `chrome.storage.local`. Nothing is counted or sent anywhere.
+- **Changed:** the practice application is a fuller, realistic form: current company and title, two work
+  history entries, education, more Yes/No questions, a cover letter box and a complete self-identification
+  section. It says "Practice page · nothing is submitted", the submit button reads "Submit application ·
+  practice only", and a calm "Practice fill done" note appears after your first fill there.
+- **Fixed:** the welcome page opens only once on a fresh install (never on update, never twice).
+- **Changed:** the "Rate this extension" links (popup card and Settings footer) use the store's canonical
+  listing address with `utm_source=extension` tags, so the store's own listing stats can tell visits from the
+  extension apart. The extension still sends nothing anywhere.
+- No permission changes. No telemetry.
+
 ## 0.6.6 (2026-10-29): Work history editor, Yes/No choices + Lever location
 - **Fixed:** after a resume import the profile could show a single job marked "current" even though the review
   listed them all. An Options tab that was already open (or open next to the setup wizard) saved its old copy
