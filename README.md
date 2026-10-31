@@ -1,39 +1,108 @@
-# AI Job Application Assistant
+<p align="center"><img src="icons/icon128.png" width="96" height="96" alt=""></p>
 
-**Fill job applications in seconds, and tailor your resume to each job, with a free AI that runs on
-your own computer.** Works on Mac and Windows in Google Chrome. No account, no subscription, and your
-data never leaves your computer. Choose between Chrome's built-in AI (Gemini Nano) or Ollama.
+<h1 align="center">AI Job Application Assistant</h1>
 
-- ⚡ **Fills applications** on Greenhouse, Lever and Ashby (plus basic Workday and LinkedIn Easy Apply) from your profile.
-- 💬 **Chats with you** about anything it couldn't fill, one question at a time, and drafts the "Why us?" answers in your voice.
-- 🤖 **AI engine options**: Chrome built-in AI (Gemini Nano, Chrome 138+) or Ollama, with automatic fallback. No installation needed for Chrome AI; Ollama works on any system with 8 GB+ RAM.
-- 📄 **Tailors your resume** for each job: rewords and reorders what's already in your resume (it never invents
-  anything) and you approve each change. Exports Word and PDF, named `First Last - Company - Job Title`.
-- ✉️ **Writes cover letters** from your resume and the job, fact-checked, as text, PDF or Word.
-- 🎯 **Shows your resume match** for each job: which keywords you cover and which are missing.
-- ✨ **Refine any long answer** with one click: shorter, more technical, more enthusiastic, or your own words.
-- 📇 **Your profile, one click to copy**, on any site, even ones it doesn't fill.
-- 📋 **Tracks your applications** when you press Submit, even if you didn't use Fill, with stages, notes and reminders.
-- 🛑 **Never presses Submit, Next or Apply.** You stay in control: it fills, you review, you submit.
+<p align="center"><b>Free AI job application autofill that keeps your resume on your computer.</b><br>
+Autofill job applications, draft answers, tailor your resume and write cover letters with AI that runs locally.<br>
+No account. No subscription. No in-app purchases. It never clicks Submit.</p>
 
-> Screenshots: [store-assets/](store-assets/)
+<p align="center">
+<a href="https://chromewebstore.google.com/detail/ai-job-application-assist/ianfkblcpiejjcjammkdloflpjhodaen?utm_source=github&utm_medium=readme&utm_campaign=evergreen"><img alt="Chrome Web Store version" src="https://img.shields.io/chrome-web-store/v/ianfkblcpiejjcjammkdloflpjhodaen?label=Chrome%20Web%20Store&color=4f46e5"></a>
+<a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-22c55e"></a>
+<img alt="Price: free" src="https://img.shields.io/badge/price-free-22c55e">
+<img alt="AI runs locally" src="https://img.shields.io/badge/AI-runs%20locally-7c3aed">
+<a href="https://github.com/aridawoodi/job-apply-assistant/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/aridawoodi/job-apply-assistant?style=flat&color=4f46e5"></a>
+</p>
 
-## Install (3 steps, no terminal)
+<p align="center">
+<a href="https://chromewebstore.google.com/detail/ai-job-application-assist/ianfkblcpiejjcjammkdloflpjhodaen?utm_source=github&utm_medium=readme&utm_campaign=evergreen"><b>➜ Add to Chrome (free)</b></a> ·
+<a href="https://aridawoodi.github.io/job-apply-assistant/">Website</a> ·
+<a href="PRIVACY.md">Privacy</a> ·
+<a href="docs/USER-GUIDE.md">User guide</a>
+</p>
 
-1. **Add the extension** from the Chrome Web Store: _link coming after the store review_
-   (or, for now, see [Install from source](#install-from-source)).
-2. **Follow the setup page** that opens. It detects whether you have Chrome 138+ with built-in AI support,
-   or guides you to install **Ollama** (the free app that runs AI models). Chrome built-in AI works on
-   devices with ~16 GB RAM or a strong GPU; 8 GB machines work great with Ollama. The setup downloads
-   the right AI model for your system, with a progress bar.
-3. **Drop in your resume** (PDF or Word). The assistant reads it on your computer, fills in your profile,
-   and asks a few things resumes don't say (work authorization, sponsorship, start date, salary, and the
-   optional equal-opportunity questions, which you can always decline). Then try it on the built-in
-   practice application.
+<p align="center"><img src="store-assets/screenshot-1-fill.png" width="820" alt="AI Job Application Assistant filling a practice job application. The side panel shows 7 fields filled from the profile, 1 drafted by local AI and 3 that need you."></p>
 
-That's it. Open a job application and click the purple **⚡ Fill application** button.
-New here? The setup page offers a **2-minute practice tour** with a made-up person. You can run it again
-anytime from the popup or Settings → Behaviour.
+> **Looking for the right extension?** Other Chrome extensions have similar names, and some sell paid features.
+> This one is made by **Ari Dawoodi**, is **100% free**, **MIT open source**, has **no in-app purchases**, and its
+> Chrome Web Store ID is `ianfkblcpiejjcjammkdloflpjhodaen`.
+
+## Why it exists
+
+Most job application tools give autofill away and charge for the AI writing, because cloud AI costs them money on
+every request. This extension runs the AI **on your own computer** (Chrome's built-in AI or the free
+[Ollama](https://ollama.com) app), so every feature is free and your resume never goes to a server.
+
+## Features
+
+- ⚡ **Autofills job applications** on Greenhouse, Lever and Ashby (plus basic Workday and LinkedIn Easy Apply) from a profile built from your PDF or Word resume.
+- 🎨 **Colour-codes every field**: from your profile, drafted by AI, typed by you, or still needs you.
+- 💬 **Drafts answers** to open questions ("Why do you want to work here?") in your voice, and asks you one question at a time about anything it couldn't fill.
+- 📄 **Tailors your resume** to each job by rewording and reordering what's already true. Invented employers, titles, dates, numbers and tools are blocked, and you approve every change. Word or PDF.
+- ✉️ **Writes cover letters**, fact-checked the same way.
+- 🎯 **Shows your resume match**: the job's keywords you cover and the ones you're missing.
+- 📋 **Tracks applications** with stages, notes, follow-up reminders and CSV export.
+- 🛑 **Never presses Submit, Next or Apply.** Equal-opportunity (EEO) questions are never filled by AI.
+
+| Resume match | Cover letters | Application tracker |
+|---|---|---|
+| <img src="store-assets/screenshot-2-match.png" alt="Resume match card with covered and missing keywords"> | <img src="store-assets/screenshot-3-cover.png" alt="Fact-checked cover letter editor"> | <img src="store-assets/screenshot-5-tracker.png" alt="Application tracker with stages and reminders"> |
+
+## Privacy
+
+Everything (profile, resume, answers, tracker, cover letters) is stored only in your browser. The AI runs on your
+device. There is no account, no server, no analytics and no remote code. EEO answers and salary are never sent to
+the AI. Details: [PRIVACY.md](PRIVACY.md).
+
+## How it compares
+
+Free tiers, from each tool's own website, checked October 31, 2026. Prices and limits change, so check their sites.
+
+| | Free autofill | Free AI answers, tailoring, cover letters | Account | Your data leaves your computer |
+|---|---|---|---|---|
+| **AI Job Application Assistant** | ✅ Unlimited | ✅ Unlimited, local AI | ✅ None | ✅ No |
+| [Simplify Copilot](https://help.simplify.jobs/articles/5623502-whats-included-in-simplify-features-and-pricing) | ✅ | Simplify+ ($19.99/week, $39.99/month or $89.99/3 months) | Required | Yes |
+| [DonutApply](https://donutapply.com/) | ✅ Unlimited, one at a time | Free allowance, then Pro | Required (US) | Yes (cloud AI) |
+| [VeloApply](https://veloapply.com/pricing) | ✅ On supported forms | Limited allowance; $19–$99/month | Required | Yes (cloud AI) |
+| [ApplyBtn](https://applybtn.app/) | ✅ | 1,000 welcome credits, then paid | Required | Yes (cloud AI) |
+
+Bigger tools support more sites and include job search; this one is free, private and open source.
+Full table and notes: [https://aridawoodi.github.io/job-apply-assistant/#compare](https://aridawoodi.github.io/job-apply-assistant/#compare).
+
+## Install
+
+1. **[Add it from the Chrome Web Store](https://chromewebstore.google.com/detail/ai-job-application-assist/ianfkblcpiejjcjammkdloflpjhodaen?utm_source=github&utm_medium=readme&utm_campaign=evergreen)** (free).
+2. A setup page opens. Import your resume (PDF or Word) and check what it found.
+3. Try it on the built-in practice application, then on a real one: click **⚡ Fill application**.
+4. Set up the local AI when you want drafted answers, tailoring and cover letters. The setup page detects Chrome's
+   built-in AI (Chrome 138+, roughly 16 GB of memory or a strong GPU) or walks you through Ollama (8 GB of memory is
+   enough, about 3 GB of disk). No terminal needed.
+
+## FAQ
+
+**Is it really free?** Yes. No paid plan, credits, trial or in-app purchases. The AI runs on your computer, so there's no server bill.
+
+**Does my resume leave my computer?** No. It's stored in your browser, and the AI runs locally.
+
+**Which sites?** Best on Greenhouse, Lever and Ashby; basic Workday and LinkedIn Easy Apply; one-click profile copy anywhere.
+
+**Do I need Ollama?** Only if Chrome's built-in AI isn't available on your computer. Setup tells you which to use.
+
+**Does it submit for me?** Never. You review and press Submit.
+
+**Is it the same as other extensions with similar names?** No. See the note at the top.
+
+## Contributing
+
+Bug reports, site requests and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and
+[open an issue](https://github.com/aridawoodi/job-apply-assistant/issues). If a form on a job site doesn't fill
+properly, the panel's **Report** tab prepares a report with no personal data.
+
+**If it saved you time, please ⭐ star the repo and [leave a review on the Chrome Web Store](https://chromewebstore.google.com/detail/ai-job-application-assist/ianfkblcpiejjcjammkdloflpjhodaen/reviews?utm_source=github&utm_medium=readme&utm_campaign=evergreen).** It's a one-person project, and both help other job seekers find it.
+
+---
+
+## Using it
 
 ### What you'll see
 - **Toolbar icon:** colored on job pages it supports, gray elsewhere. Hover it to see what it found.
@@ -70,12 +139,6 @@ original but not identical. Uploading the Word version gives the best result.
 - For Ollama: about 3 GB of free disk space for Ollama and the small AI model (about 6 GB for the larger one). 
   8 GB of memory is enough; with 16 GB or more the setup suggests a larger model that writes better.
 - For Chrome built-in AI: Chrome 138+, and about 16 GB RAM or a strong GPU. 8 GB machines work better with Ollama.
-
-### Privacy in one paragraph
-Everything (profile, resume, answers, tracker, cover letters, feedback) is stored only in your browser on your computer. No account. The AI
-runs on your device: either Chrome's built-in AI (Gemini Nano) or Ollama on your computer. The extension makes no other network requests: no analytics, no
-servers, no remote code. Equal-opportunity answers and salary are never sent to the AI.
-Details: [PRIVACY.md](PRIVACY.md).
 
 ## Help
 | Problem | Fix |
@@ -136,7 +199,8 @@ practice/                practice application + guided tour (demo person, nothin
 options/  popup/         settings page and toolbar popup
 store/                   Chrome Web Store listing text, permission justifications
 store-assets/            store tile and screenshots (fake data)
-scripts/                 lint + build-zip scripts
+scripts/                 lint + build-zip scripts, site.py (builds the homepage)
+site/                    homepage for GitHub Pages (static HTML/CSS, generated by scripts/site.py)
 dev-tests/               Playwright end-to-end tests, mocks, fixtures (not shipped)
 ```
 
@@ -168,3 +232,6 @@ node scripts/lint.js && python3 scripts/build.py     # -> dist/job-apply-assista
 ```
 
 Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). License: [MIT](LICENSE).
+
+### Website
+The homepage in `site/` is plain HTML and CSS (no JavaScript, no trackers). Edit `scripts/site.py`, run `python3 scripts/site.py`, and `.github/workflows/pages.yml` publishes it to GitHub Pages on push to `main`.

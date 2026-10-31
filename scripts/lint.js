@@ -19,7 +19,7 @@ function walk(dir, out = []) {
   return out;
 }
 const all = walk('.').map(f => f.replace(/^\.\//, ''));
-const shipped = all.filter(f => !/^(dev-tests|scripts|store|store-assets|\.github|docs)\//.test(f) && !/\.(md)$/.test(f) && f !== 'LICENSE' && !/^\./.test(f));
+const shipped = all.filter(f => !/^(dev-tests|scripts|store|store-assets|\.github|docs|site)\//.test(f) && !/\.(md)$/.test(f) && f !== 'LICENSE' && !/^\./.test(f));
 const ours = shipped.filter(f => !f.startsWith('lib/vendor/'));
 
 console.log('JavaScript syntax');
@@ -68,7 +68,7 @@ ok('own code: only local Ollama, job sites, ollama.com download links, the store
 
 console.log('personal data');
 const shippedText = shipped.filter(f => /\.(js|html|css|json|txt)$/.test(f) && !f.startsWith('lib/vendor/'));
-for (const f of shippedText.concat(all.filter(f => /^(dev-tests|store|docs)\//.test(f) && /\.(js|html|json|md|txt)$/.test(f))).concat(['README.md', 'PRIVACY.md', 'CHANGELOG.md'])) {
+for (const f of shippedText.concat(all.filter(f => /^(dev-tests|store|docs|site)\//.test(f) && /\.(js|html|json|md|txt|xml)$/.test(f))).concat(['README.md', 'PRIVACY.md', 'CHANGELOG.md'])) {
   const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
   for (const [e] of src.matchAll(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g)) if (!/@(example\.(com|org|test)|users\.noreply\.github\.com)$/i.test(e) && !/\.(png|js|css)$/.test(e)) fail(`${f}: email address ${e}`);
   for (const [p] of src.matchAll(/\(\d{3}\)\s?\d{3}-\d{4}|\b\d{3}-\d{3}-\d{4}\b/g)) if (!/555/.test(p)) fail(`${f}: phone number ${p}`);

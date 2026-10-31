@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://aridawoodi.github.io/job-apply-assistant/sitemap.xml
