@@ -3,7 +3,7 @@
   "name": "AI Job Application Assistant",
   "short_name": "AI Job Apply",
   "version": "0.6.7",
-  "description": "Fills job applications and tailors your resume with a free local AI. Private: your data stays on your computer. Never clicks Submit.",
+  "description": "Autofill job applications from your resume with free, private AI that runs on your computer. Cover letters too. You click Submit.",
   "minimum_chrome_version": "110",
   "permissions": [
     "storage",

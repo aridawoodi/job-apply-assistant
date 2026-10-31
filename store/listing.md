@@ -4,7 +4,7 @@
 AI Job Application Assistant
 
 ## Summary (short description, max 132 characters; same as manifest "description")
-Fills job applications and tailors your resume with a free local AI. Private: your data stays on your computer. Never clicks Submit.
+Autofill job applications from your resume with free, private AI that runs on your computer. Cover letters too. You click Submit.
 
 ## Category
 Productivity (alternative: Tools)
@@ -13,38 +13,38 @@ Productivity (alternative: Tools)
 English
 
 ## Detailed description
-Apply to jobs faster without giving your data to anyone.
+Fill out job applications in minutes, without handing your data to anyone.
 
-AI Job Application Assistant fills job applications on Greenhouse, Lever and Ashby (and basic Workday and LinkedIn Easy Apply) from your profile, and uses a free AI that runs on your own computer (Ollama) for everything else. Nothing is uploaded: no account, no subscription, no cloud.
+Import your resume once. AI Job Application Assistant autofills application forms from your profile, drafts answers to the open questions, tailors your resume to each job and writes cover letters. The AI runs on your own computer, so it's free and private: no account, no subscription, no cloud.
 
 WHAT IT DOES
-• Fills the application for you: name, contact details, links, work authorization, education, your resume file and more. Every field is colour-coded so you can see what came from your profile, what the AI drafted, and what still needs you.
-• Chats with you about the rest, one question at a time, with tap-to-answer buttons. It drafts the "Why do you want to work here?" answers in your own voice.
-• Tailors your resume to each job: type "tailor my resume for this job". It suggests rewording and reordering using only what's already in your resume. Invented employers, titles, dates, numbers or tools are blocked automatically, and you approve every change. Download Word, PDF or both, named "First Last - Company - Job Title", and attach it to the application with one click.
-• Your rules for tailoring, like "Keep to 2 pages", "Use US spelling" or "Don't change job titles".
-• Writes cover letters from your resume and the job. They are fact-checked the same way. Put the letter in the text box, or download a PDF or Word file and attach it.
-• Shows your resume match for each job: the keywords you cover and the ones that are missing.
-• Refine any long answer with one click: shorter, more technical, more enthusiastic, or your own instruction. 👍 / 👎 teach it your taste, stored on your computer.
-• Your profile, one click to copy, on any website.
-• Tracks your applications when you press Submit, even if you filled the form yourself. Stages from Saved to Offer, notes, follow-up reminders, saved jobs, search and CSV export.
-• A 2-minute practice tour with a made-up person shows you everything before you apply for real.
-• Never presses Submit, Next or Apply. You review and submit yourself.
+• Autofills the form: name, contact details, links, work history, education, work authorization and your resume file, in seconds.
+• Answers in your voice: drafts "Why do you want to work here?" and other open questions from your resume. Refine any answer with one click: shorter, more technical, or your own instruction.
+• Tailors your resume to the job: suggests rewording and reordering using only what's already in your resume. Invented employers, titles, dates or numbers are blocked, and you approve every change. Download Word or PDF.
+• Writes cover letters from your resume and the job description, fact-checked the same way.
+• Shows your resume match: the keywords from the job you cover and the ones you're missing.
+• Tracks your applications when you submit, with stages, notes and follow-up reminders.
+• Keeps you in control: it never presses Submit, Next or Apply. Every field is colour-coded, so you know what came from your profile, what the AI drafted and what still needs you.
 
-EASY SETUP, NO TERMINAL
-1. Install the extension. A setup page opens.
-2. It finds the free local AI app (or gives you a one-click download for Mac or Windows) and downloads the right AI model for your computer, with a progress bar.
-3. Drop in your resume (PDF or Word). Your profile fills itself in; you check it and answer a few quick questions. Then try it on the built-in practice application.
+GET STARTED IN ABOUT A MINUTE
+1. Install. A welcome page opens.
+2. Import your resume (PDF or Word) and check what it found.
+3. Try it on the built-in sample application. Nothing is submitted.
+4. Optional: turn on the AI helper for open questions, cover letters and tailoring. The setup page walks you through it, with no terminal.
 
 PRIVATE BY DESIGN
 • Your profile, resume, answers and tracker are stored only in your browser.
-• The AI runs on your computer. The extension makes no other network requests: no analytics, no tracking, no remote code.
-• Equal-opportunity (EEO) answers, salary and personal details are never sent to the AI. EEO questions are optional and you can always decline.
+• The AI runs on your computer. No analytics, no tracking, no remote code.
+• Equal-opportunity answers, salary and personal details are never sent to the AI, and those questions are always optional.
+
+FREE AND OPEN SOURCE
+No paid plan and no sign-up. MIT license: https://github.com/aridawoodi/job-apply-assistant
+
+WHERE IT WORKS
+Most job application forms on the web: company career pages, application platforms and embedded forms. On any site, open the extension from the toolbar and click Fill this application. If you apply on a site often, click "Allow on this site" and the Fill button appears there by itself. Chrome asks you first, and you can remove a site any time in Settings. The extension only shows the button on pages that look like a job application, and it never presses Submit, Next or Apply.
 
 REQUIREMENTS
-• Chrome 110 or newer on Mac, Windows or Linux.
-• The free Ollama app. 8 GB of memory is enough; about 3 GB of disk space for the small model.
-
-Open source (MIT): https://github.com/aridawoodi/job-apply-assistant
+Chrome 110 or newer on Mac, Windows or Linux. Filling from your profile works without any AI. For the AI helper, use the browser's built-in AI where it's available, or a free AI app on your computer (8 GB of memory is enough).
 
 ## Single purpose (Privacy practices tab)
 AI Job Application Assistant helps the user complete job applications: it fills application forms from the user's own profile and tailors the user's resume to the job, using an AI model that runs locally on the user's computer.
@@ -69,8 +69,11 @@ Note for the "data is transmitted" questions: data is processed on the user's de
 ## Privacy policy URL
 https://github.com/aridawoodi/job-apply-assistant/blob/main/PRIVACY.md
 
-## Support / homepage URL
-https://github.com/aridawoodi/job-apply-assistant
+## Homepage URL
+https://aridawoodi.github.io/job-apply-assistant/
+
+## Support URL
+https://github.com/aridawoodi/job-apply-assistant/issues
 
 ## Images (store-assets/)
 - Small promo tile 440x280: `store-assets/promo-tile-440x280.png`
