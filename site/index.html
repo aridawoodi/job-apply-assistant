@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Free AI Job Application Autofill, Private &amp; Local | AI Job Application Assistant</title>
+<meta name="description" content="Free Chrome extension that autofills job applications from your resume and writes answers, tailored resumes and cover letters with AI that runs on your computer. No account. Open source.">
+<link rel="canonical" href="https://aridawoodi.github.io/job-apply-assistant/">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Ari Dawoodi">
+<meta name="theme-color" content="#4f46e5">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'none'">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AI Job Application Assistant">
+<meta property="og:title" content="Free AI Job Application Autofill, Private &amp; Local | AI Job Application Assistant">
+<meta property="og:description" content="Free Chrome extension that autofills job applications from your resume and writes answers, tailored resumes and cover letters with AI that runs on your computer. No account. Open source.">
+<meta property="og:url" content="https://aridawoodi.github.io/job-apply-assistant/">
+<meta property="og:image" content="https://aridawoodi.github.io/job-apply-assistant/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="AI Job Application Assistant: free AI job application autofill. Your resume stays on your computer.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Free AI Job Application Autofill, Private &amp; Local | AI Job Application Assistant">
+<meta name="twitter:description" content="Free Chrome extension that autofills job applications from your resume and writes answers, tailored resumes and cover letters with AI that runs on your computer. No account. Open source.">
+<meta name="twitter:image" content="https://aridawoodi.github.io/job-apply-assistant/assets/og-image.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="assets/inter-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/site.css">
+<link rel="alternate" type="text/plain" title="LLM summary" href="llms.txt">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"AI Job Application Assistant","alternateName":"AI Job Application Assistant by Ari Dawoodi","description":"Free, open-source Chrome extension that autofills job applications from your resume, drafts answers, tailors your resume and writes cover letters with AI that runs on your own computer. No account, no subscription, never clicks Submit.","applicationCategory":"BusinessApplication","applicationSubCategory":"Job application autofill","operatingSystem":"Chrome","browserRequirements":"Google Chrome 110 or newer","softwareVersion":"0.6.6","url":"https://aridawoodi.github.io/job-apply-assistant/","downloadUrl":"https://chromewebstore.google.com/detail/ai-job-application-assist/ianfkblcpiejjcjammkdloflpjhodaen","installUrl":"https://chromewebstore.google.com/detail/ai-job-application-assist/ianfkblcpiejjcjammkdloflpjhodaen","image":"https://aridawoodi.github.io/job-apply-assistant/assets/og-image.png","screenshot":"https://aridawoodi.github.io/job-apply-assistant/assets/shot-fill.webp","license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Person","name":"Ari Dawoodi","url":"https://github.com/aridawoodi"},"sameAs":["https://chromewebstore.google.com/detail/ai-job-application-assist/ianfkblcpiejjcjammkdloflpjhodaen","https://github.com/aridawoodi/job-apply-assistant"],"featureList":["Autofill job applications from your resume","Import PDF or Word resume","AI answers to open questions","Resume tailoring with fact checks","Cover letters","Resume match score and keywords","Application tracker","Never clicks Submit","AI runs locally (Chrome built-in AI or Ollama)","No account, no analytics"]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is it really free?","acceptedAnswer":{"@type":"Answer","text":"Yes. There is no paid plan, no credits, no trial and no in-app purchase. Every feature is free. It can stay free because the AI runs on your own computer, so there is no server bill to pass on to you. The code is open source under the MIT license."}},{"@type":"Question","name":"Does my resume leave my computer?","acceptedAnswer":{"@type":"Answer","text":"No. Your profile, resume, answers and application tracker are stored only in your browser on your computer. The AI runs on your device: Chrome’s built-in AI or the free Ollama app. The extension has no account, no server, no analytics and no remote code. Equal-opportunity (EEO) answers and salary are never sent to the AI, not even the local one. Read the privacy policy."}},{"@type":"Question","name":"Which job sites does it work on?","acceptedAnswer":{"@type":"Answer","text":"It fills applications best on Greenhouse, Lever and Ashby, with basic support for Workday and LinkedIn Easy Apply. On any other site you can copy any part of your profile with one click from the side panel. A built-in practice application lets you try it safely before you apply for real."}},{"@type":"Question","name":"Do I need Ollama?","acceptedAnswer":{"@type":"Answer","text":"Not necessarily. You need one local AI for the writing features, and the setup page picks for you. If your Chrome (138 or newer) supports its built-in AI, there is nothing to install; that usually needs about 16 GB of memory or a strong graphics card. Otherwise it walks you through the free Ollama app, with no terminal. 8 GB of memory is enough, plus about 3 GB of disk space for the small model."}},{"@type":"Question","name":"Does it submit applications for me?","acceptedAnswer":{"@type":"Answer","text":"No. It never presses Submit, Next or Apply. It fills the form, colour-codes every field so you can see what came from your profile and what the AI drafted, and you review and submit."}},{"@type":"Question","name":"Will the AI make things up?","acceptedAnswer":{"@type":"Answer","text":"Tailored resumes and cover letters are fact-checked against your own resume. Invented employers, job titles, dates, numbers and tools are blocked, and you approve every change before anything is used."}},{"@type":"Question","name":"Is it open source?","acceptedAnswer":{"@type":"Answer","text":"Yes, MIT licensed. The code is plain JavaScript with no build step, so you can read exactly what it does: github.com/aridawoodi/job-apply-assistant."}},{"@type":"Question","name":"Is it the same as other extensions with similar names?","acceptedAnswer":{"@type":"Answer","text":"No. There are other Chrome extensions with similar names, and some of them sell paid features. This one is made by Ari Dawoodi, is 100% free, MIT open source and has no in-app purchases. Its Chrome Web Store ID is ianfkblcpiejjcjammkdloflpjhodaen. Use the Add to Chrome links on this page to be sure you get it."}}]}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top"><div class="wrap">
+<a class="brand" href="./"><img src="assets/icon-64.png" width="30" height="30" alt="">AI Job Application Assistant</a>
+<nav class="nav" aria-label="Main"><a href="#how">How it works</a><a href="#features">Features</a><a href="#privacy">Privacy</a><a href="#compare">Compare</a><a href="#faq">FAQ</a></nav>
+<a class="btn btn-primary btn-sm" href="https://chromewebstore.google.com/detail/ai-job-application-assist/ianfkblcpiejjcjammkdloflpjhodaen?utm_source=website&utm_medium=nav&utm_campaign=evergreen">Add to Chrome</a>
+</div></header>
+<main id="main">
+
+<section class="hero"><div class="wrap">
+<div>
+<p class="eyebrow"><span class="dot" aria-hidden="true"></span>Free &amp; open source · Chrome extension</p>
+<h1>Free AI job application autofill that keeps your resume on your computer</h1>
+<p class="lede">Import your resume once. It fills application forms, drafts answers to open questions, tailors your resume and writes cover letters, using AI that runs on your own computer. No account, no subscription, and it never clicks Submit.</p>
+<div class="cta-row"><a class="btn btn-primary" href="https://chromewebstore.google.com/detail/ai-job-application-assist/ianfkblcpiejjcjammkdloflpjhodaen?utm_source=website&utm_medium=hero&utm_campaign=evergreen"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 8h9M8.5 14 4 6.2M15.5 14 11 21.8" stroke="currentColor" stroke-width="2" fill="none"/></svg>Add to Chrome, it’s free</a><a class="btn btn-ghost" href="https://github.com/aridawoodi/job-apply-assistant"><svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.34c-2.23.49-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.22 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.66 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>View the code</a></div>
+<ul class="facts"><li>No account</li><li>No paid plan</li><li>No analytics</li><li>MIT license</li></ul>
+</div>
+<div class="hero-media">
+<div class="shot"><img src="assets/shot-hero.webp" srcset="assets/shot-hero-330.webp 330w, assets/shot-hero.webp 660w" sizes="(max-width: 900px) 100vw, 600px" width="660" height="470" alt="The extension’s side panel filling a practice job application: 7 fields filled from the profile, 1 drafted by local AI, 3 that need you. Filled fields are outlined in green." fetchpriority="high"></div>
+<div class="datacard">
+<b>Where your data goes</b>
+<ol><li><span>Profile &amp; resume</span><span>Your browser</span></li><li><span>AI processing</span><span>Your computer</span></li><li><span>Sent to the developer</span><span>Nothing</span></li><li><span>Analytics &amp; trackers</span><span>None</span></li></ol>
+</div>
+</div>
+</div></section>
+
+<section id="how"><div class="wrap">
+<div class="head"><p class="kicker">How it works</p><h2>Three steps, about thirty seconds to understand</h2>
+<p>It does the retyping. You keep the judgment calls and the Submit button.</p></div>
+<ol class="steps">
+<li><span class="t">Once</span><h3>Import your resume</h3><p>Drop in a PDF or Word file. It builds your profile on your computer: contact details, work history, education and skills. You check it and answer a few things resumes don’t say, like work authorization.</p></li>
+<li><span class="t">Each job</span><h3>Open an application, click Fill</h3><p>It fills what it knows from your profile, drafts the open questions with local AI, and asks you, one at a time, about anything it can’t answer.</p></li>
+<li><span class="t">Always you</span><h3>Review the colours, then submit</h3><p>Every field is colour-coded so you see where each answer came from. You make the edits and you press Submit. It never does.</p></li>
+</ol>
+<ul class="legend">
+<li><span class="sw p" aria-hidden="true"></span>From your profile</li>
+<li><span class="sw a" aria-hidden="true"></span>Drafted by local AI</li>
+<li><span class="sw y" aria-hidden="true"></span>Typed by you</li>
+<li><span class="sw n" aria-hidden="true"></span>Needs you</li>
+</ul>
+</div></section>
+
+<section id="features" class="tint"><div class="wrap">
+<div class="head"><p class="kicker">Features</p><h2>Everything between “found a job” and “pressed Submit”</h2>
+<p>Real screenshots of the extension, with made-up practice data.</p></div>
+<div class="features">
+<article class="feature wide"><figure><img src="assets/shot-fill.webp" srcset="assets/shot-fill-600.webp 600w, assets/shot-fill.webp 1200w" sizes="(max-width: 820px) 100vw, 560px" width="1200" height="650" alt="A job application with filled fields and the assistant panel showing required and optional progress." loading="lazy" decoding="async"></figure>
+<div class="body"><h3>Fills the application for you</h3><p>Name, contact details, links, work history, education, work authorization and your resume file. Live progress shows what’s required and what’s optional, and the panel asks you about anything it couldn’t fill.</p></div></article>
+<article class="feature"><figure><img src="assets/shot-match.webp" srcset="assets/shot-match-600.webp 600w, assets/shot-match.webp 1200w" sizes="(max-width: 820px) 100vw, 560px" width="1200" height="650" alt="Resume match card listing covered and missing keywords for a job posting." loading="lazy" decoding="async"></figure>
+<div class="body"><h3>See how your resume matches the job</h3><p>Which keywords from the posting you already cover and which are missing, worked out on your computer. Then tailor your resume in one click.</p></div></article>
+<article class="feature"><figure><img src="assets/shot-cover.webp" srcset="assets/shot-cover-600.webp 600w, assets/shot-cover.webp 1200w" sizes="(max-width: 820px) 100vw, 560px" width="1200" height="650" alt="Cover letter editor with fact checks and export to PDF or Word." loading="lazy" decoding="async"></figure>
+<div class="body"><h3>Cover letters that stick to the facts</h3><p>Drafted from your resume and the job. Anything it can’t back up from your resume is blocked. Paste it in, or export PDF or Word.</p></div></article>
+<article class="feature"><figure><img src="assets/shot-tour.webp" srcset="assets/shot-tour-600.webp 600w, assets/shot-tour.webp 1200w" sizes="(max-width: 820px) 100vw, 560px" width="1200" height="650" alt="The practice tour with the Refine toolbar suggesting shorter or more technical wording." loading="lazy" decoding="async"></figure>
+<div class="body"><h3>Learn it in two minutes, refine any answer</h3><p>A practice tour with a made-up person shows everything first. Then make any long answer shorter, more technical or more enthusiastic in one click.</p></div></article>
+<article class="feature"><figure><img src="assets/shot-tracker.webp" srcset="assets/shot-tracker-600.webp 600w, assets/shot-tracker.webp 1200w" sizes="(max-width: 820px) 100vw, 560px" width="1200" height="650" alt="Application tracker table with stages, notes and follow-up dates." loading="lazy" decoding="async"></figure>
+<div class="body"><h3>Every application, tracked</h3><p>Stages from Saved to Offer, notes, follow-up reminders and CSV export. It tracks when you press Submit, even if you filled the form yourself.</p></div></article>
+</div>
+<ul class="more">
+<li><b>Tailored resumes</b> that reword and reorder only what’s already true, exported as Word or PDF.</li>
+<li><b>Your own rules</b> for tailoring, like “Keep to 2 pages” or “Don’t change job titles”.</li>
+<li><b>One-click copy</b> of any profile detail on any website.</li>
+<li><b>EEO questions</b> are never filled by AI and are always optional.</li>
+<li><b>Backups</b> to a file you keep, restored in one click.</li>
+<li><b>Mac, Windows and Linux</b>, in Chrome 110 or newer.</li>
+</ul>
+</div></section>
+
+<section id="privacy"><div class="wrap privacy">
+<div>
+<div class="head tight"><p class="kicker">Privacy</p><h2>Your job search is nobody else’s business</h2>
+<p>Job applications hold your address, phone number, work history and sometimes your salary. So this extension was built to never need a server.</p></div>
+<ul class="points">
+<li><h3>Stored in your browser</h3><p>Profile, resume, answers, cover letters and tracker live in Chrome’s extension storage on your computer.</p></li>
+<li><h3>AI on your device</h3><p>Chrome’s built-in AI or the free Ollama app. Your resume is never sent to a cloud AI.</p></li>
+<li><h3>Nothing to sign up for</h3><p>No account, no email, no analytics, no ads, no remote code.</p></li>
+<li><h3>Check it yourself</h3><p>The code is open source. <a href="https://github.com/aridawoodi/job-apply-assistant/blob/main/PRIVACY.md">Privacy policy</a> · <a href="https://github.com/aridawoodi/job-apply-assistant">Source code</a></p></li>
+</ul>
+</div>
+<dl class="flow">
+<div class="flow-row"><dt>Your resume and profile</dt><dd>Your browser only</dd></div>
+<div class="flow-row"><dt>Text sent to the AI</dt><dd>Your computer only</dd></div>
+<div class="flow-row"><dt>EEO answers and salary</dt><dd class="no">Never sent to any AI</dd></div>
+<div class="flow-row"><dt>Data sent to the developer</dt><dd class="no">None</dd></div>
+<div class="flow-row"><dt>Analytics, cookies, trackers</dt><dd class="no">None</dd></div>
+<div class="flow-row"><dt>Accounts or sign-in</dt><dd class="no">None</dd></div>
+</dl>
+<p class="flow-foot">The same is true of this website: no cookies, no scripts, no analytics.</p>
+</div></section>
+
+<section id="compare" class="tint"><div class="wrap">
+<div class="head"><p class="kicker">Compare</p><h2>How the free tiers compare</h2>
+<p>Most tools give autofill away and charge for the AI writing, because cloud AI costs them money every time you use it. Running the AI on your computer is what lets this one keep everything free.</p></div>
+<figure class="table-wrap" aria-label="Comparison of free job application tools" tabindex="0">
+<table class="cmp">
+<caption>Free tiers only. Checked on each tool’s own website on October 31, 2026. Prices and limits change, so check their sites before you decide.</caption>
+<thead><tr><th scope="col">Tool</th><th scope="col">Free autofill?</th><th scope="col">Free AI answers, tailoring &amp; cover letters?</th><th scope="col">Account required?</th><th scope="col">Data leaves your computer?</th><th scope="col">Submits for you?</th></tr></thead>
+<tbody>
+<tr class="us"><th scope="row">AI Job Application Assistant<small>This extension</small></th><td><span class="y">Yes, unlimited</span></td><td><span class="y">Yes, unlimited</span><small>Runs on your computer</small></td><td><span class="y">No</span></td><td><span class="y">No</span><small>Stored in your browser</small></td><td><span class="y">Never</span></td></tr>
+<tr><th scope="row">Simplify Copilot<small><a href="https://help.simplify.jobs/articles/5623502-whats-included-in-simplify-features-and-pricing" rel="nofollow noopener">Source</a></small></th><td><span class="y">Yes</span></td><td><span class="n">No, needs Simplify+</span><small>$19.99/week, $39.99/month or $89.99/3 months</small></td><td><span class="n">Yes</span></td><td><span class="n">Yes</span><small>Profile kept in your Simplify account</small></td><td><span class="p">Only Autopilot</span><small>Simplify+, no review step</small></td></tr>
+<tr><th scope="row">DonutApply<small><a href="https://donutapply.com/" rel="nofollow noopener">Source</a></small></th><td><span class="y">Yes, unlimited</span><small>One application at a time</small></td><td><span class="p">Limited</span><small>Free AI allowance; tailoring trial on 2 jobs, then Pro</small></td><td><span class="n">Yes</span><small>US only</small></td><td><span class="n">Yes</span><small>US cloud AI providers, zero retention (their claim)</small></td><td><span class="y">Never</span></td></tr>
+<tr><th scope="row">VeloApply<small><a href="https://veloapply.com/pricing" rel="nofollow noopener">Source</a></small></th><td><span class="y">Yes, unlimited</span><small>On supported forms</small></td><td><span class="p">Limited</span><small>Allowance shown in your account; paid plans $19–$99/month</small></td><td><span class="n">Yes</span></td><td><span class="n">Yes</span><small>AI writing uses a paid cloud model</small></td><td><span class="y">Never</span></td></tr>
+<tr><th scope="row">Jobply<small><a href="https://jobply.ai/" rel="nofollow noopener">Source</a></small></th><td><span class="y">Yes, says unlimited</span></td><td><span class="y">Yes, says no limits</span></td><td><span class="p">Check their site</span><small>Not stated on the homepage</small></td><td><span class="n">Processed by their service</span><small>See their privacy policy</small></td><td><span class="p">Optional</span><small>Auto-submit toggle</small></td></tr>
+<tr><th scope="row">ApplyBtn<small><a href="https://applybtn.app/" rel="nofollow noopener">Source</a></small></th><td><span class="y">Yes</span></td><td><span class="p">Credits</span><small>1,000 welcome credits (about 100 forms), then paid</small></td><td><span class="n">Yes</span></td><td><span class="n">Yes</span><small>AI providers listed in their privacy policy</small></td><td><span class="y">Never</span></td></tr>
+<tr><th scope="row">Resumly<small><a href="https://www.resumly.ai/pricing" rel="nofollow noopener">Source</a></small></th><td><span class="p">No browser autofill</span><small>Cloud auto-apply: 10 jobs on the free plan</small></td><td><span class="p">Within free-plan limits</span></td><td><span class="n">Yes</span></td><td><span class="n">Yes</span><small>Cloud service</small></td><td><span class="n">Yes</span><small>Auto-applies for you</small></td></tr>
+</tbody></table></figure>
+<div class="fair">
+<div><h3>Where others are stronger</h3><ul>
+<li>Larger tools support many more application systems and career sites.</li>
+<li>Some include job search, a job board or a mobile app.</li>
+<li>Cloud AI needs no capable computer, and big cloud models write more fluently than small local ones.</li>
+</ul></div>
+<div><h3>Where this one is different</h3><ul>
+<li>Every feature is free, with no credits or limits.</li>
+<li>No account, and your resume never leaves your computer.</li>
+<li>Open source, so anyone can check what it does.</li>
+</ul></div>
+</div>
+<p class="note">More detail: <a href="free-job-application-autofill/">what’s actually free in job application autofill</a> · <a href="simplify-alternative/">compared with Simplify Copilot</a>.</p>
+</div></section>
+
+<section id="faq"><div class="wrap">
+<div class="head"><p class="kicker">FAQ</p><h2>Questions people ask first</h2></div>
+<div class="faq">
+<details><summary>Is it really free?</summary><div class="a"><p>Yes. There is no paid plan, no credits, no trial and no in-app purchase. Every feature is free.</p><p>It can stay free because the AI runs on your own computer, so there is no server bill to pass on to you. The code is open source under the MIT license.</p></div></details>
+<details><summary>Does my resume leave my computer?</summary><div class="a"><p>No. Your profile, resume, answers and application tracker are stored only in your browser on your computer. The AI runs on your device: Chrome’s built-in AI or the free Ollama app.</p><p>The extension has no account, no server, no analytics and no remote code. Equal-opportunity (EEO) answers and salary are never sent to the AI, not even the local one. <a href="https://github.com/aridawoodi/job-apply-assistant/blob/main/PRIVACY.md">Read the privacy policy</a>.</p></div></details>
+<details><summary>Which job sites does it work on?</summary><div class="a"><p>It fills applications best on Greenhouse, Lever and Ashby, with basic support for Workday and LinkedIn Easy Apply. On any other site you can copy any part of your profile with one click from the side panel.</p><p>A built-in practice application lets you try it safely before you apply for real.</p></div></details>
+<details><summary>Do I need Ollama?</summary><div class="a"><p>Not necessarily. You need one local AI for the writing features, and the setup page picks for you. If your Chrome (138 or newer) supports its built-in AI, there is nothing to install; that usually needs about 16 GB of memory or a strong graphics card.</p><p>Otherwise it walks you through the free Ollama app, with no terminal. 8 GB of memory is enough, plus about 3 GB of disk space for the small model.</p></div></details>
+<details><summary>Does it submit applications for me?</summary><div class="a"><p>No. It never presses Submit, Next or Apply. It fills the form, colour-codes every field so you can see what came from your profile and what the AI drafted, and you review and submit.</p></div></details>
+<details><summary>Will the AI make things up?</summary><div class="a"><p>Tailored resumes and cover letters are fact-checked against your own resume. Invented employers, job titles, dates, numbers and tools are blocked, and you approve every change before anything is used.</p></div></details>
+<details><summary>Is it open source?</summary><div class="a"><p>Yes, MIT licensed. The code is plain JavaScript with no build step, so you can read exactly what it does: <a href="https://github.com/aridawoodi/job-apply-assistant">github.com/aridawoodi/job-apply-assistant</a>.</p></div></details>
+<details><summary>Is it the same as other extensions with similar names?</summary><div class="a"><p>No. There are other Chrome extensions with similar names, and some of them sell paid features. This one is made by Ari Dawoodi, is 100% free, MIT open source and has no in-app purchases.</p><p>Its Chrome Web Store ID is <code>ianfkblcpiejjcjammkdloflpjhodaen</code>. Use the Add to Chrome links on this page to be sure you get it.</p></div></details>
+</div>
+</div></section>
+
+<section class="closing flush"><div class="wrap"><div class="box">
+<h2>Stop retyping your resume</h2>
+<p>Install it, import your resume and try it on the built-in practice application. It’s free, and nothing is ever submitted without you.</p>
+<div class="cta-row"><a class="btn btn-primary" href="https://chromewebstore.google.com/detail/ai-job-application-assist/ianfkblcpiejjcjammkdloflpjhodaen?utm_source=website&utm_medium=closing&utm_campaign=evergreen"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 8h9M8.5 14 4 6.2M15.5 14 11 21.8" stroke="currentColor" stroke-width="2" fill="none"/></svg>Add to Chrome, it’s free</a><a class="btn btn-ghost" href="https://github.com/aridawoodi/job-apply-assistant"><svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.34c-2.23.49-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.22 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.66 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg>Star it on GitHub</a></div>
+</div></div></section>
+
+</main>
+<footer><div class="wrap">
+<div class="cols">
+<div>
+<a class="brand" href="./"><img src="assets/icon-64.png" width="30" height="30" alt="">AI Job Application Assistant</a>
+<p class="blurb">Free, open-source Chrome extension that fills job applications with AI that runs on your own computer. Made by Ari Dawoodi, a solo developer.</p>
+<p class="id">Chrome Web Store ID: <code>ianfkblcpiejjcjammkdloflpjhodaen</code> · v0.6.6 · No in-app purchases</p>
+</div>
+<div><h2>Product</h2><ul>
+<li><a href="https://chromewebstore.google.com/detail/ai-job-application-assist/ianfkblcpiejjcjammkdloflpjhodaen?utm_source=website&utm_medium=footer&utm_campaign=evergreen">Chrome Web Store</a></li>
+<li><a href="https://github.com/aridawoodi/job-apply-assistant">Source code on GitHub</a></li>
+<li><a href="https://github.com/aridawoodi/job-apply-assistant/blob/main/PRIVACY.md">Privacy policy</a></li>
+<li><a href="https://github.com/aridawoodi/job-apply-assistant/blob/main/CHANGELOG.md">Changelog</a></li>
+<li><a href="https://github.com/aridawoodi/job-apply-assistant/issues">Report a problem</a></li>
+</ul></div>
+<div><h2>Guides</h2><ul>
+<li><a href="free-job-application-autofill/">Free job application autofill</a></li>
+<li><a href="simplify-alternative/">A free alternative to Simplify+</a></li>
+<li><a href="local-ai-job-applications/">Job applications with local AI</a></li>
+<li><a href="https://github.com/aridawoodi/job-apply-assistant/blob/main/docs/USER-GUIDE.md">User guide</a></li>
+</ul></div>
+</div>
+<p class="legal">MIT license. Not affiliated with Google, Ollama, or any job site or tool named on this site. Product names belong to their owners and are used only to describe compatibility and for comparison. This site uses no cookies, analytics or trackers.</p>
+</div></footer>
+</body>
+</html>

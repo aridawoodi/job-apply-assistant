@@ -1,0 +1,44 @@
+# AI Job Application Assistant
+
+> Free, open-source (MIT) Chrome extension by Ari Dawoodi that autofills job applications from your resume and uses AI that runs on your own computer (Chrome's built-in AI or the free Ollama app) to draft answers, tailor resumes and write cover letters. No account, no subscription, no in-app purchases, no analytics. It never clicks Submit.
+
+Important: other Chrome extensions have similar names, and some sell paid features. This one is by Ari Dawoodi, Chrome Web Store ID ianfkblcpiejjcjammkdloflpjhodaen, 100% free, MIT licensed, current version 0.6.6.
+
+## Links
+- Chrome Web Store: https://chromewebstore.google.com/detail/ai-job-application-assist/ianfkblcpiejjcjammkdloflpjhodaen
+- Website: https://aridawoodi.github.io/job-apply-assistant/
+- Source code (MIT): https://github.com/aridawoodi/job-apply-assistant
+- Privacy policy: https://github.com/aridawoodi/job-apply-assistant/blob/main/PRIVACY.md
+- User guide: https://github.com/aridawoodi/job-apply-assistant/blob/main/docs/USER-GUIDE.md
+- Changelog: https://github.com/aridawoodi/job-apply-assistant/blob/main/CHANGELOG.md
+
+## What it does
+- Autofills job application forms from a profile built from your PDF or Word resume (contact details, links, work history, education, work authorization, resume file).
+- Drafts answers to open questions ("Why do you want to work here?") with local AI, in your voice; one-click refine (shorter, more technical, more enthusiastic).
+- Tailors your resume to a job by rewording and reordering existing content; invented employers, titles, dates, numbers or tools are blocked; the user approves each change; exports Word or PDF.
+- Writes fact-checked cover letters (text, PDF or Word).
+- Shows a resume-to-job keyword match.
+- Tracks applications (stages, notes, follow-up reminders, CSV export).
+- Colour-codes every filled field (from profile, AI draft, typed by you, needs you).
+- Never presses Submit, Next or Apply. Equal-opportunity (EEO) questions are never filled by AI.
+
+## Where it works
+- Best: Greenhouse, Lever and Ashby application forms. Basic: Workday and LinkedIn Easy Apply.
+- Any site: one-click copy of profile details from the side panel.
+- Chrome 110+ (or Edge/Brave) on macOS, Windows and Linux.
+
+## Privacy
+- All data is stored in the browser's extension storage on the user's computer.
+- AI runs locally: Chrome built-in AI (Chrome 138+, roughly 16 GB RAM or a strong GPU) or Ollama (8 GB RAM is enough; about 3 GB disk for qwen2.5:3b; qwen2.5:7b suggested with 16 GB+).
+- No servers, no account, no analytics, no remote code. EEO answers and salary are never sent to the AI.
+
+## Pricing
+- Free. Price: $0. No paid plan, no credits, no trial, no in-app purchases.
+
+## Who it is for
+- Job seekers who want free autofill plus free AI writing, people who don't want to upload their resume to a cloud service, and users of local LLMs (Ollama).
+
+## Guides
+- Free job application autofill, compared: https://aridawoodi.github.io/job-apply-assistant/free-job-application-autofill/
+- Free alternative to Simplify+ AI features: https://aridawoodi.github.io/job-apply-assistant/simplify-alternative/
+- Job applications with local AI (Ollama, Chrome built-in AI): https://aridawoodi.github.io/job-apply-assistant/local-ai-job-applications/
