@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AI Job Application Assistant",
   "short_name": "AI Job Apply",
-  "version": "0.6.7",
+  "version": "0.6.8",
   "description": "Autofill job applications from your resume with free, private AI that runs on your computer. Cover letters too. You click Submit.",
   "minimum_chrome_version": "110",
   "permissions": [

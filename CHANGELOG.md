@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.6.8 (2026-10-31): Trust fixes and a review panel (local, not submitted)
+- **Fixed:** a saved "I don't wish to answer" / "Decline to self-identify" self-identification answer always
+  picks the form's own decline option (any wording), and never "Yes" or a near match. Self-identification
+  questions use strict matching only, and are still never sent to the AI.
+- **Fixed:** on Ashby-style forms the resume goes into the Resume field, never the "Autofill from resume" box.
+- **Fixed:** the tracker takes the company and job title from the page (job posting data, site name, page
+  title) instead of the web address, so there are no "localhost" rows.
+- **New:** answer guard. Numbers, employers, schools, tools and dates in an AI answer must appear in your
+  resume or profile. Unsupported sentences in long answers are removed; short answers get one stricter retry;
+  anything still unsupported is flagged for you to check.
+- **New:** review panel after a fill: **Needs you**, **Check these** (AI answers, guessed choices, similar saved
+  answers) and **Filled**, each with a plain one-line reason. AI answers show the resume lines they used and
+  highlight claims that aren't in your resume. Click a row (or use the arrow keys and Enter) to jump to the
+  field. **Rewrite with instruction** and **Mark as fine** on AI answers. Page outlines: solid = filled,
+  double = check this, dashed = needs you.
+- No permission changes. Nothing is counted or sent anywhere.
+
 ## 0.6.7 (2026-10-30): First-run activation
 - **Changed:** the welcome page now leads with one thing: **Import your resume** (the same import and review
   as before). Right after saving, **Try it on a sample form** opens the built-in practice application, so you

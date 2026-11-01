@@ -119,7 +119,7 @@ content/netwatch.js runs in the page's main world (MAIN) on ATS hosts only. This
 
 **Site access is granted only by the user, per site.** Outside the built-in hosts, the extension reads a page only when the user clicks the toolbar button on that tab (activeTab), or on a site the user explicitly allowed with "Allow on this site" (an optional host permission for that one origin, granted through Chrome's own prompt and removable in Settings → Sites). The extension never asks for access to all sites, and the list of allowed sites stays in the browser.
 
-**Note on "transmitted off-device"**: All data is processed on the user's device. The extension sends data only to the Ollama server on the user's own computer (127.0.0.1), never to the developer or any third party. EEO answers, salary, SSN/date of birth and personal details are never sent to the AI.
+**Note on "transmitted off-device"**: All data is processed on the user's device. When the optional AI helper is used, the extension sends data only to the Ollama server on the user's own computer (127.0.0.1) or to Chrome's built-in on-device AI, never to the developer or any third party. EEO answers, salary, SSN/date of birth and personal details are never sent to the AI.
 
 ### Data Use Certification
 - [x] Data is NOT sold to third parties
@@ -154,6 +154,7 @@ https://aridawoodi.github.io/job-apply-assistant/
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 0.6.8 | 2026-10-31 | Fixes: saved "decline to answer" self-identification (EEO) answers always pick the form's decline option and never "Yes" or a fuzzy guess (strict matching for EEO, still never sent to AI); on Ashby-style forms the resume goes into the Resume field, never the "Autofill from resume" box; tracker company/title come from the page (JSON-LD, site name, title) instead of the hostname. New: answer guard for AI-written answers (claims not in the resume or profile, such as numbers, employers, schools or tools, are removed, retried once with a stricter prompt, or flagged); review panel after a fill (Needs you / Check these / Filled with a plain reason per field, the resume lines an AI answer used, click to jump to the field, Rewrite with instruction, Mark as fine; outline styles so status isn't shown by colour alone). No permission changes. No telemetry. | Local, not submitted |
 | 0.6.7 | 2026-10-30 | First-run activation: welcome leads with "Import your resume" then a practice fill on a fuller built-in sample form; "Getting started" checklist (popup, Options, welcome) stored locally; welcome opens once on install only; rating links use the canonical listing URL with utm_source=extension. Works on any job application form: toolbar Fill on any http(s) page (activeTab), job-application detection before the Fill button shows, opt-in "Allow on this site" (per-origin optional host permission + dynamic content script), Settings → Sites to review/remove. Required permissions unchanged; adds optional_host_permissions https://*/*, http://*/* (no install or update prompt; requested per site only on the user's click). New store summary and description (no third-party brand names; see store-listing/0.6.7-draft.md). No telemetry. | Submitted |
 | 0.6.6 | 2026-10-29 | Work history editor (job cards, "I currently work here", reorder, Check-this hints); fix: a resume import no longer collapses to one "current" job, and "current" comes from end dates only; Yes/No choice mapping (no invented values); Lever location autocomplete picks a suggestion. No permission changes. | Published (live) |
 | 0.6.5 | 2026-10-29 | Fix: cover-letter upload card no longer says "Add your resume". Refreshed screenshots and promo tile (new look). No permission changes. | Published (superseded by 0.6.6) |
@@ -169,8 +170,8 @@ https://aridawoodi.github.io/job-apply-assistant/
 ### Known Issues / Limitations
 - LinkedIn support is limited to Easy Apply only; does not work on LinkedIn's standard application flow.
 - Workday support covers basic fields; complex custom Workday forms may need manual completion.
-- The extension requires the free Ollama app to be installed and running. Setup wizard guides users through installation.
-- First AI answer after starting Ollama can take up to a minute on 8 GB machines while the model loads into memory.
+- AI is optional (since 0.6.7). Without it, the extension fills from the saved profile and answers and leaves open questions for the user. To review the AI features, use Chrome's built-in on-device AI where available, or install the free Ollama app (the setup wizard guides this; no terminal needed).
+- With Ollama, the first AI answer after starting it can take up to a minute on 8 GB machines while the model loads into memory.
 
 ### Rejection History
 
@@ -183,7 +184,7 @@ This extension mentions Greenhouse, Lever, Ashby, Workday and LinkedIn only to d
 
 ### Additional Notes for Reviewers
 - The extension is open source (MIT license): https://github.com/aridawoodi/job-apply-assistant
-- All AI processing happens on the user's device via Ollama (localhost). No data is sent to external servers.
+- AI is optional. When it is used, all AI processing happens on the user's device (Ollama on localhost, or Chrome's built-in on-device AI). No data is sent to external servers.
 - EEO (equal employment opportunity) fields are handled with special care: always optional, never pre-filled, never sent to AI, explicit user consent required.
 - The extension never automatically submits forms. It fills fields and the user must click Submit themselves.
 - Test data in screenshots and developer tests uses only fictional people (Sam Taylor, Jordan Rivera, Sam Sample).
