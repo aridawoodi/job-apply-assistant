@@ -25,7 +25,8 @@
     .menu.open{display:flex}
     input{flex:1;min-width:160px;font:12px inherit;border:1px solid #cbd5e1;border-radius:7px;padding:5px 7px}
     .st{color:#64748b;font-size:11.5px;margin-left:4px}
-    .st.err{color:#b91c1c}`;
+    .st.err{color:#b91c1c}
+    .st.warn{color:#92400e}`;
 
   let enabled = null;
   async function isOn() {
@@ -71,10 +72,14 @@
     if (!res.ok) { st.className = 'st err'; st.textContent = 'Could not put it in the box: ' + (res.why || ''); return; }
     C().mark(f, 'jaa-ai');
     ta.__jaaUndo = prev;
-    const it = stateItem(ta); if (it) Object.assign(it, { status: 'ai', source: 'ai', value: res.shown || text, reviewed: false });
+    const g = r.guard || null;
+    const it = stateItem(ta); if (it) Object.assign(it, { status: 'ai', source: 'ai', value: res.shown || text, reviewed: false, guard: g, sources: (g && g.sources) || [], flagged: g && g.flagged && g.flagged.length ? g.flagged : null, fine: false });
     bar.querySelector('[data-act="undo"]').hidden = !prev;
     bar.querySelectorAll('[data-act="up"],[data-act="down"]').forEach(b => b.classList.remove('on'));
-    st.textContent = '✦ Done: read it and edit anything that isn\'t right.';
+    const gn = JAA.chat && JAA.chat.guardNote ? JAA.chat.guardNote(g) : '';
+    st.className = g && g.flagged && g.flagged.length ? 'st warn' : 'st';
+    st.textContent = gn ? '✦ ' + gn : '✦ Done: read it and edit anything that isn\'t right.';
+    if (JAA.ui && JAA.ui.refreshTriage) JAA.ui.refreshTriage();
     if (JAA.chat && JAA.chat.updateCount) JAA.chat.updateCount();
   }
   async function vote(ta, v, bar, btn) {

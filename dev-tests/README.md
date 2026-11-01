@@ -164,3 +164,11 @@ Run from `dev-tests/` with `NODE_PATH` pointing at a folder where Playwright is 
 - `node e2e-v068.js`: Ashby resume goes into the Resume field and never the "Autofill from resume" box (built-in
   host and toolbar popup), and tracker rows from five pages carry the page's company and title.
 - `e2e-v4.js`: the Options "rules + format saved" check waits for the async save (was flaky).
+- `unit-v068.js` answer guard (`lib/guard.js`): invented percentages, employers, schools, tools, dates and money
+  in AI answers (made-up Casey Morgan profile). Unsupported sentences are removed from long answers; one-sentence
+  and short answers are retried with a stricter prompt; what's left is flagged with the exact claim; job-description
+  tools are flagged, not removed; years computed from resume dates, the company/title being applied to, today's date
+  and ordinary words pass; source resume lines are returned.
+- `e2e-v068.js` (3): a mock model invents "55% faster at Contoso Health", "Salesforce Service Cloud" and "Azure";
+  the background removes the sentence, retries once per batch with a stricter prompt, and the page gets the clean
+  or flagged answers.

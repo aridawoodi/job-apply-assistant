@@ -4,7 +4,7 @@
  * A declarativeNetRequest rule (installOriginRules) removes the Origin header from THIS
  * extension's own requests to the local Ollama port, so no OLLAMA_ORIGINS setup is needed. */
 'use strict';
-importScripts('lib/defaults.js', 'lib/tailor.js', 'lib/cover.js', 'lib/resume.js', 'lib/extract.js', 'lib/rating.js', 'lib/activation.js');
+importScripts('lib/defaults.js', 'lib/tailor.js', 'lib/guard.js', 'lib/cover.js', 'lib/resume.js', 'lib/extract.js', 'lib/rating.js', 'lib/activation.js');
 
 const ORIGINS_HINT =
   'Ollama refused the request (403). The extension normally fixes this by itself. Make sure Chrome is up to date (version 110 or newer), ' +
@@ -125,7 +125,8 @@ function buildPrompt(profile, answerBank, questions, kind, company, extra) {
     (essay
       ? `These are open-ended questions: write a first-person draft of ${len} each, grounded in the facts and resume, tailored to the job description, in the candidate's own voice; the candidate will edit it. `
       : 'For short free-text questions answer in a few words. ') +
-    'Do not think out loud. Reply with JSON only: {"answers": {"<id>": <answer or null>}}.';
+    'Do not think out loud. Reply with JSON only: {"answers": {"<id>": <answer or null>}}.' +
+    (extra.strict ? ' ' + extra.strict : '');
   const user =
     `Today: ${today}\n` +
     `Candidate facts (JSON): ${JSON.stringify(facts)}\n` +
@@ -282,7 +283,7 @@ async function answerWithChromeAI(questions, opts) {
   const cached = {};
   
   // Try session cache for short answers
-  if (kind === 'short') {
+  if (kind === 'short' && !opts.noCache) {
     const c = await cacheGet();
     const cacheKey = (q) => 'chrome|' + JAA.normText(q.question) + '|' + (q.options || []).map(JAA.normText).join('/') + '|' + (q.type || '');
     for (const q of questions) { const v = c[cacheKey(q)]; if (v != null) cached[q.id] = v; }
@@ -290,8 +291,8 @@ async function answerWithChromeAI(questions, opts) {
     if (!questions.length) return { ok: true, answers: cached, cached: Object.keys(cached).length, engine: 'chrome' };
   }
 
-  const { system, user } = buildPrompt(profile, answerBank, questions, kind, opts.company, { 
-    jobTitle: opts.jobTitle, jobDescription: opts.jobDescription, draftLength: opts.draftLength || 'short' 
+  const { system, user } = buildPrompt(profile, answerBank, questions, kind, opts.company, {
+    jobTitle: opts.jobTitle, jobDescription: opts.jobDescription, draftLength: opts.draftLength || 'short', strict: opts.strict
   });
   
   let session;
@@ -364,7 +365,50 @@ async function polishWithRewriter(text, instruction) {
   }
 }
 
+// v0.6.8 answer guard (lib/guard.js): free-text AI answers are checked against the candidate's own data
+// before they go back to the page. Unsupported sentences are removed from long answers; anything that can't
+// be removed is retried once with a stricter prompt; what is still unsupported comes back flagged, with the
+// exact claim, so the page shows it under "Check these".
 async function answerQuestions(questions, opts) {
+  opts = opts || {};
+  const r = await answerQuestionsRaw(questions, opts);
+  if (!r || !r.ok || !r.answers) return r;
+  try { return await guardAnswers(questions, r, opts); } catch (e) { console.warn('answer guard', e); return r; }
+}
+async function guardAnswers(questions, r, opts) {
+  const { profile, answerBank } = await JAA.loadAll();
+  const essay = opts.kind === 'essay';
+  const ctx = { profile, answerBank, essay, company: opts.company, title: opts.jobTitle, jobDescription: opts.jobDescription };
+  const freeText = q => q && !(q.options && q.options.length);
+  const byId = Object.fromEntries((questions || []).map(q => [q.id, q]));
+  const guard = {};
+  const retry = [];
+  for (const [id, a] of Object.entries(r.answers)) {
+    if (typeof a !== 'string' || !a.trim() || !freeText(byId[id])) continue;
+    const g = JAA.guard.review(a, Object.assign({ question: byId[id].question }, ctx));
+    if (g.retry) retry.push({ q: byId[id], g });
+    else { r.answers[id] = g.text; guard[id] = g; }
+  }
+  if (retry.length) {
+    const terms = Array.from(new Set(retry.flatMap(x => x.g.flagged.map(f => f.term))));
+    const again = await answerQuestionsRaw(retry.map(x => x.q), Object.assign({}, opts, { strict: JAA.guard.strictNote(terms), noCache: true }));
+    for (const { q, g } of retry) {
+      const b = again && again.ok && again.answers ? again.answers[q.id] : null;
+      const use = typeof b === 'string' && b.trim() ? b : r.answers[q.id];
+      const g2 = JAA.guard.review(use, Object.assign({ question: q.question, final: true }, ctx));
+      g2.retried = true;
+      if (!g2.flagged.length && g.flagged.length) g2.fixed = g.flagged.map(f => f.term);
+      r.answers[q.id] = g2.text; guard[q.id] = g2;
+    }
+  }
+  const slim = {};
+  for (const [id, g] of Object.entries(guard)) {
+    if (g.removed.length || g.flagged.length || g.sources.length || g.retried) slim[id] = { removed: g.removed, flagged: g.flagged, sources: g.sources, retried: !!g.retried, fixed: g.fixed || [] };
+  }
+  return Object.assign(r, { guard: slim });
+}
+
+async function answerQuestionsRaw(questions, opts) {
   opts = opts || {};
   const { profile, answerBank, settings } = await JAA.loadAll();
   if (!settings.useLLM) return { ok: false, error: 'Local AI is turned off in Options.' };
@@ -397,7 +441,7 @@ async function answerQuestions(questions, opts) {
     // short factual answers are cached for this browser session: the same question on the
     // next application (or a re-fill) is answered instantly
     const cached = {};
-    if (kind === 'short') {
+    if (kind === 'short' && !opts.noCache) {
       const c = await cacheGet();
       for (const q of questions) { const v = c[cacheKey(settings.model, q)]; if (v != null) cached[q.id] = v; }
       questions = questions.filter(q => !(q.id in cached));
@@ -406,7 +450,7 @@ async function answerQuestions(questions, opts) {
     if (warm.promise) await warm.promise; // don't queue behind a model load twice
     const base = trimUrl(settings.ollamaUrl);
     const timeoutSec = Number(opts.timeoutSec) || settings.llmTimeoutSec || 90;
-    const { system, user } = buildPrompt(profile, answerBank, questions, kind, opts.company, { jobTitle: opts.jobTitle, jobDescription: opts.jobDescription, draftLength: settings.draftLength });
+    const { system, user } = buildPrompt(profile, answerBank, questions, kind, opts.company, { jobTitle: opts.jobTitle, jobDescription: opts.jobDescription, draftLength: settings.draftLength, strict: opts.strict });
     const perQ = kind === 'essay' ? ({ short: 220, medium: 320, long: 480 }[settings.draftLength] || 220) : 60;
     const body = {
       model: settings.model,
@@ -435,7 +479,7 @@ async function answerQuestions(questions, opts) {
     const parsed = parseModelJson(r.text);
     if (!parsed) return { ok: false, error: 'The model reply was not valid JSON. Try again, or use qwen2.5:3b.', engine: 'ollama' };
     const answers = parsed.answers && typeof parsed.answers === 'object' ? parsed.answers : parsed;
-    if (kind === 'short') {
+    if (kind === 'short' && !opts.noCache) {
       const put = {};
       for (const q of questions) if (answers[q.id] != null && answers[q.id] !== '') put[cacheKey(settings.model, q)] = answers[q.id];
       cachePut(put);
@@ -538,8 +582,15 @@ chrome.runtime.onConnect.addListener(port => {
     if (!r.ok && !r.timeout) return post({ type: 'error', error: `Ollama error HTTP ${r.status}: ${String(r.error || '').slice(0, 200)}` });
     warm.at = Date.now(); warm.model = settings.model;
     if (draft) {
-      const txt = stripThink(r.text).replace(/^["“]|["”]$/g, '').trim();
-      return post({ type: 'done', text: txt, timeout: !!r.timeout, error: r.timeout ? 'The model stopped before finishing (timeout).' + SLOW_MODEL_HINT : '' });
+      let txt = stripThink(r.text).replace(/^["“]|["”]$/g, '').trim();
+      // answer guard: unsupported sentences removed, anything left is flagged with the exact claim
+      let guard = null;
+      try {
+        const g = JAA.guard.review(txt, { profile, answerBank, essay: true, final: true, question: msg.question, company: msg.company, title: msg.title, jobDescription: msg.jobDescription });
+        if (g.text) txt = g.text;
+        guard = { removed: g.removed, flagged: g.flagged, sources: g.sources };
+      } catch (e) { console.warn('answer guard', e); }
+      return post({ type: 'done', text: txt, guard, timeout: !!r.timeout, error: r.timeout ? 'The model stopped before finishing (timeout).' + SLOW_MODEL_HINT : '' });
     }
     const { reply, action } = splitAction(r.text);
     post({ type: 'done', text: reply, action, timeout: !!r.timeout, error: r.timeout ? 'The model took too long and was cut off.' + SLOW_MODEL_HINT : '' });

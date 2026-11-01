@@ -3,9 +3,12 @@
 //     on the built-in host (floating button) and on a site that isn't built in (toolbar popup).
 // (2) Tracker company / title come from the page (JSON-LD, og:site_name, the title's pattern), not the
 //     hostname: no "localhost" rows.
+// (3) Answer guard: a mock model invents facts ("55% faster", an employer, tools); unsupported sentences are
+//     removed, a short answer is retried once with a stricter prompt, and what's still unsupported is flagged.
 // Needs Chromium's --enable-unsafe-extension-debugging (CDP Extensions.triggerAction). Run under
 // `unshare -rn sh -c 'ip link set lo up && node e2e-v068.js'` if a real local AI server holds :11434.
 const { chromium } = require('playwright');
+const { createMock } = require('./mock-ollama-v4');
 const fs = require('fs');
 const path = require('path');
 const EXT = path.resolve(__dirname, '..');
@@ -18,7 +21,16 @@ const read = f => fs.readFileSync(path.join(__dirname, f), 'utf8');
 const LD_PAGE = read('anysite-mocks/plain-apply.html')
   .replace(/<title>[^<]*<\/title>/, '<title>Apply</title>')
   .replace('</head>', '<script type="application/ld+json">{"@context":"https://schema.org","@type":"JobPosting","title":"Field Support Technician","hiringOrganization":{"@type":"Organization","name":"Northwind Example"}}</script></head>');
+const GUARD_PAGE = `<!doctype html><html><head><title>Job Application for Support Engineer at Guardco</title></head><body>
+<h1 class="app-title">Support Engineer</h1><form id="application-form" onsubmit="window.__submitted=true;return false">
+<label for="first_name">First Name *<input id="first_name" name="first_name" required></label>
+<label for="email">Email *<input id="email" name="email" type="email" required></label>
+<label for="tools">Which ticketing tools have you used?<input id="tools" name="tools"></label>
+<label for="cloud">Describe your cloud platform experience<input id="cloud" name="cloud"></label>
+<label for="why">Why do you want to work at Guardco?<textarea id="why" name="why"></textarea></label>
+<button type="submit">Submit application</button></form></body></html>`;
 const PAGES = {
+  'https://job-boards.greenhouse.io/guardco/jobs/1001': GUARD_PAGE,
   'https://jobs.ashbyhq.com/acme/5678/application': read('mocks/ashby.html'),
   'http://localhost:8799/ashby-copy/application': read('mocks/ashby.html'),
   'http://localhost:8799/jobs/support-engineer/apply': read('anysite-mocks/plain-apply.html'),
@@ -32,6 +44,25 @@ const PROFILE = {
 };
 
 (async () => {
+  // mock model for (3): invents facts on the first try; the stricter retry fixes one answer, not the other
+  const prompts = [];
+  const route = (sys, j) => {
+    const all = (j.messages || []).map(m => m.content).join('\n');
+    const m = all.match(/Questions \(JSON\): (\[.*\])/);
+    if (!m) return null;
+    prompts.push(all); if (process.env.DBG) console.log('PROMPT', (all.match(/STRICT:[^.]*/) || [''])[0], m[1].slice(0, 100));
+    const strict = /STRICT: a previous draft claimed/.test(all);
+    let qs = []; try { qs = JSON.parse(m[1]); } catch (_) { /* ignore */ }
+    const answers = {};
+    for (const q of qs) {
+      if (/ticketing/i.test(q.question)) answers[q.id] = strict ? 'Zendesk and Jira' : 'Salesforce Service Cloud and Zendesk';
+      else if (/cloud platform/i.test(q.question)) answers[q.id] = 'Kubernetes on Azure';
+      else if (/why do you want/i.test(q.question)) answers[q.id] = 'At Bluefin Devices I resolved 40 tickets a week in Zendesk and Jira, and I cut onboarding time by 30% with Python scripts. Before that I made our deployments 55% faster at Contoso Health. I would bring the same care for users to Guardco.';
+      else answers[q.id] = null;
+    }
+    return JSON.stringify({ answers });
+  };
+  const mock = await createMock({ port: 11434, models: ['qwen2.5:3b'], allowExtensionOrigin: true, chatChunkMs: 1, route });
   const ctx = await chromium.launchPersistentContext('/tmp/jaa-v068-' + Date.now(), {
     channel: 'chromium', headless: true, viewport: { width: 1180, height: 860 },
     args: [`--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`, '--enable-unsafe-extension-debugging']
@@ -41,7 +72,7 @@ const PROFILE = {
     const u = r.request().url().split('#')[0];
     if (PAGES[u] && r.request().method() === 'GET') return r.fulfill({ status: 200, contentType: 'text/html', body: PAGES[u] });
     if (/favicon/.test(u)) return r.fulfill({ status: 404, body: '' });
-    if (/^http:\/\/(127\.0\.0\.1|localhost):11434\//.test(u)) return r.fulfill({ status: 503, body: 'no local AI in this test' });
+    if (/^http:\/\/(127\.0\.0\.1|localhost):11434\//.test(u)) return r.continue(); // the mock model below
     net.push(r.request().method() + ' ' + u); return r.fulfill({ status: 404, body: 'blocked' });
   });
   let [sw] = ctx.serviceWorkers(); if (!sw) sw = await ctx.waitForEvent('serviceworker');
@@ -109,8 +140,27 @@ const PROFILE = {
   check(row(/support-engineer/).company === 'Example Company' && row(/support-engineer/).title === 'Support Engineer', '"Support Engineer · Example Company Careers": Example Company / Support Engineer');
   check(row(/lever-copy/).company === 'Acme' && row(/lever-copy/).title === 'Data Analyst', '"Acme - Data Analyst": Acme / Data Analyst');
   check(row(/northwind/).company === 'Northwind Example' && row(/northwind/).title === 'Field Support Technician', 'JSON-LD JobPosting: Northwind Example / Field Support Technician');
+
+  console.log('\n(3) answer guard: invented facts never go in unflagged');
+  await sw.evaluate(async () => {
+    const { settings, profile } = await chrome.storage.local.get(['settings', 'profile']);
+    profile.skills = ['Python', 'SQL', 'Linux', 'Zendesk', 'Jira'];
+    profile.resumeText = 'Casey Morgan\nIT Support Specialist, Bluefin Devices, 2021 – Present\n• Resolved 40 tickets a week in Zendesk and Jira\n• Cut onboarding time by 30% with Python scripts\nLakeview State University, B.S. Information Systems, 2012 – 2016';
+    await chrome.storage.local.set({ profile, settings: Object.assign({}, settings, { useLLM: true, aiEngine: 'ollama', model: 'qwen2.5:3b', ollamaUrl: 'http://127.0.0.1:11434', warmUp: false }) });
+  });
+  const gp = await ctx.newPage(); await gp.goto('https://job-boards.greenhouse.io/guardco/jobs/1001');
+  await buttonFill(gp);
+  await gp.waitForFunction(() => !document.getElementById('jaa-host').shadowRoot.querySelector('.prog'), null, { timeout: 40000 }).catch(() => {});
+  await sleep(1200);
+  const gv = await gp.evaluate(() => ({ tools: tools.value, cloud: cloud.value, why: why.value, sub: !!window.__submitted }));
+  check(!/55%|Contoso/.test(gv.why) && /40 tickets a week/.test(gv.why) && /Guardco/.test(gv.why), 'long answer: the sentence with "55% faster at Contoso Health" removed, the supported rest kept: ' + JSON.stringify(gv.why));
+  check(gv.tools === 'Zendesk and Jira', 'short answer with "Salesforce Service Cloud": retried once with a stricter prompt, now only resume tools: ' + gv.tools);
+  check(gv.cloud === 'Kubernetes on Azure', 'answer still unsupported after the retry: kept for you to check: ' + gv.cloud);
+  const strictP = prompts.filter(p => /STRICT: a previous draft claimed/.test(p));
+  check(strictP.length === 2 && /Salesforce/.test(strictP[0]) && /Kubernetes/.test(strictP[1]) && !/Guardco\?/.test(strictP[1].match(/Questions \(JSON\): (.*)/)[1]), 'one stricter retry per batch, only for the answers that need it, naming the invented claims (' + strictP.length + ' of ' + prompts.length + ' prompts)');
+  check(!gv.sub, 'nothing submitted');
   check(!net.length, 'no other network requests: ' + (net.join(', ') || 'none'));
-  await ctx.close();
+  await ctx.close(); await mock.close();
   console.log(failures ? `\n${failures} FAILED` : '\nALL PASSED');
   process.exit(failures ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

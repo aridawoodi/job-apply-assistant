@@ -149,5 +149,64 @@ console.log('tracker: company + job title from the page (lib/jobdetect.js jobInf
   check(D.brandFromHost('localhost') === '' && D.brandFromHost('jobs.example.org') === 'Example', 'brandFromHost basics');
 }
 
+console.log('answer guard (lib/guard.js): invented facts in AI answers');
+{
+  require(path.join(ROOT, 'lib/tailor.js'));
+  const G = require(path.join(ROOT, 'lib/guard.js'));
+  // Casey Morgan, the made-up person in fixtures/casey-morgan-resume.pdf
+  const profile = {
+    firstName: 'Casey', lastName: 'Morgan', city: 'Lakeview', state: 'OR',
+    workHistory: [
+      { title: 'IT Support Specialist', company: 'Bluefin Devices', start: '2021', end: 'Present', bullets: ['Resolved 40 tickets a week in Zendesk and Jira', 'Cut onboarding time by 30% with Python scripts'] },
+      { title: 'Volunteer Instructor', company: 'Lakeview Code Club', start: '2018', end: '2021', bullets: ['Taught Python basics to 25 students'] },
+      { title: 'Help Desk Technician', company: 'Harbor Cloud', start: '2016', end: '2018', bullets: [] }
+    ],
+    skills: ['Python', 'SQL', 'Linux', 'Zendesk', 'Jira'],
+    educationList: [{ school: 'Lakeview State University', degree: "Bachelor's", field: 'Information Systems', start: '2012', end: '2016' }],
+    resumeText: 'Casey Morgan\nIT Support Specialist, Bluefin Devices, 2021 – Present\n• Resolved 40 tickets a week in Zendesk and Jira\n• Cut onboarding time by 30% with Python scripts\nVolunteer Instructor, Lakeview Code Club, 2018 – 2021\n• Taught Python basics to 25 students\nHelp Desk Technician, Harbor Cloud, 2016 – 2018\nLakeview State University, B.S. Information Systems, 2012 – 2016\nSkills: Python, SQL, Linux, Zendesk, Jira'
+  };
+  const ctx = (o) => Object.assign({ profile, company: 'Acme', title: 'Support Engineer' }, o || {});
+  const terms = g => g.flagged.map(f => f.term);
+  let g = G.review('At Bluefin Devices I resolved 40 tickets a week in Zendesk and Jira. I also made our deployments 55% faster. I would bring the same care to Acme.', ctx({ essay: true }));
+  check(!/55%/.test(g.text) && /40 tickets/.test(g.text) && g.removed.includes('55%') && !g.flagged.length, '"55% faster" (not in the resume) removed from a long answer, the rest kept: ' + g.text);
+  check(g.sources.some(l => /40 tickets/.test(l)), 'source resume line for the answer: ' + JSON.stringify(g.sources));
+  g = G.review('I led the help desk at Contoso Health for three years. At Harbor Cloud I worked as a help desk technician. I enjoy supporting people.', ctx({ essay: true }));
+  check(!/Contoso/.test(g.text) && g.removed.some(t => /Contoso/.test(t)), 'an employer that isn\'t in the resume is removed: ' + g.text);
+  g = G.review('I studied computer science at Stanford University. I taught Python basics to 25 students at Lakeview Code Club. I like explaining things clearly.', ctx({ essay: true }));
+  check(!/Stanford/.test(g.text) && g.removed.some(t => /Stanford/.test(t)), 'a school that isn\'t in the resume is removed');
+  g = G.review('I have hands-on experience with Kubernetes and Terraform.', ctx({ essay: true, jobDescription: 'You will run Kubernetes clusters with Terraform.' }));
+  check(!g.retry && terms(g).includes('Kubernetes') && /job description/.test(g.flagged[0].why) && g.text.includes('Kubernetes'), 'tools only the job description names: kept but flagged "Check this" with the claim and why: ' + JSON.stringify(g.flagged));
+  g = G.review('I have hands-on experience with Kubernetes.', ctx({ essay: true }));
+  check(g.retry && terms(g).includes('Kubernetes'), 'one-sentence answer claiming a tool from nowhere: retried with a stricter prompt (can\'t be trimmed)');
+  g = G.review('I have hands-on experience with Kubernetes.', ctx({ essay: true, final: true }));
+  check(!g.retry && terms(g).includes('Kubernetes') && /isn't in your resume/.test(g.flagged[0].why), 'still there after the retry: flagged with the exact claim');
+  g = G.review('Yes, 3 years of Salesforce administration.', ctx({ question: 'Do you have Salesforce experience?' }));
+  check(g.retry && terms(g).includes('Salesforce'), 'short answer: the question naming a tool doesn\'t make the claim true (retry)');
+  g = G.review('Yes, 3 years of Salesforce administration.', ctx({ question: 'Do you have Salesforce experience?', final: true }));
+  check(!g.retry && terms(g).includes('Salesforce') && g.text === 'Yes, 3 years of Salesforce administration.', 'short answer after the retry: kept, flagged with "Salesforce"');
+  g = G.review('I have about 10 years of IT support experience, most recently at Bluefin Devices.', ctx());
+  check(!g.flagged.length && !g.retry, 'years computed from the resume dates are fine (10 years): ' + JSON.stringify(g.flagged));
+  g = G.review('I have 35 years of experience.', ctx({ final: true }));
+  check(terms(g).includes('35'), '35 years (more than the resume spans) flagged');
+  g = G.review('My salary at Bluefin Devices was $150k.', ctx({ final: true }));
+  check(terms(g).some(t => /150k/.test(t)), 'an invented money figure is flagged: ' + JSON.stringify(terms(g)));
+  g = G.review('I have worked in IT support since 2010.', ctx({ final: true }));
+  check(terms(g).includes('2010'), 'a date that isn\'t in the resume is flagged');
+  g = G.review('I resolved 40 tickets a week in Zendesk and Jira at Bluefin Devices, and cut onboarding time by 30% with Python scripts. I am excited about Acme and the Support Engineer role. I can start on a Monday and work in English.', ctx({ essay: true }));
+  check(!g.flagged.length && !g.removed.length && !g.retry, 'a fully supported answer is untouched (company and title being applied to, weekdays, languages are fine): ' + JSON.stringify(g.flagged));
+  g = G.review('I can start two weeks from today, on ' + new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10) + '.', ctx());
+  check(!g.retry, 'a start date in the next year is fine (today is in the prompt)');
+  g = G.review('Lakeview, OR', ctx());
+  check(!g.flagged.length, 'a city from the profile is fine');
+  g = G.review('Salesforce and HubSpot', ctx({ final: true }));
+  check(terms(g).includes('Salesforce') && terms(g).includes('HubSpot'), 'short list answer: first-word names count too: ' + JSON.stringify(terms(g)));
+  g = G.review('Zendesk and Jira', ctx());
+  check(!g.flagged.length, 'short list answer from the resume is fine');
+  g = G.review('Absolutely, I enjoy explaining technical problems in plain words to customers and teammates.', ctx({ essay: true }));
+  check(!g.flagged.length && !g.retry, 'an ordinary capitalised first word is not a claim');
+  check(/"Kubernetes"/.test(G.strictNote(['Kubernetes', '55%'])) && /NOT in the candidate/.test(G.strictNote(['x'])), 'strict retry prompt names the claims');
+  check(G.review('', ctx()).text === '' && G.review(null, ctx()).flagged.length === 0, 'empty answers pass through');
+}
+
 console.log(failures ? `\n${failures} FAILURE(S), ${passes} passed` : `\nALL PASSED (${passes} checks)`);
 process.exit(failures ? 1 : 0);

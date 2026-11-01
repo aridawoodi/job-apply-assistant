@@ -215,7 +215,7 @@
     }
     if (q.blue.length) {
       if (first || (current && current.kind === 'question')) bot(`${q.blue.length} answer${q.blue.length > 1 ? 's are' : ' is'} AI-drafted (blue). Please check ${q.blue.length > 1 ? 'each one' : 'it'}.`);
-      return draftCard(q.blue[0], q.blue.length);
+      return draftCard(q.blue[0], q.blue.length, guardNote(q.blue[0].guard));
     }
     current = null;
     if (reviewShownForRun !== runs) { reviewShownForRun = runs; reviewCard(); }
@@ -326,6 +326,15 @@
     setTimeout(() => { try { box.focus({ preventScroll: true }); } catch (_) { /* ignore */ } }, 50);
   }
 
+  // v0.6.8 answer guard, in words: what was removed and what still needs checking
+  function guardNote(g) {
+    if (!g) return '';
+    const q = a => a.slice(0, 3).map(t => `“${trunc(String(t), 40)}”`).join(', ');
+    const out = [];
+    if (g.flagged && g.flagged.length) out.push(`Check this: ${q(g.flagged.map(f => f.term))} ${g.flagged.length > 1 ? 'aren\'t' : 'isn\'t'} in your resume or profile.`);
+    if (g.removed && g.removed.length) out.push(`I removed a sentence that claimed ${q(g.removed)} (not in your resume).`);
+    return out.join(' ');
+  }
   function draftCard(item, left, note) {
     const f = fieldOf(item);
     if (!f) { item.reviewed = true; return askNext(); }
@@ -413,11 +422,12 @@
     const undo = { value: prev, state: { status: item.status, value: item.value, source: item.source, reviewed: item.reviewed } };
     const res = await JAA.fillField(f, text);
     if (!res.ok) { bot('Couldn\'t put the draft in the field: ' + res.why); return askNext(); }
-    Object.assign(item, { status: 'ai', value: res.shown, source: 'ai', reviewed: false, skipped: false, undo });
+    Object.assign(item, { status: 'ai', value: res.shown, source: 'ai', reviewed: false, skipped: false, undo, guard: r.guard || null, sources: (r.guard && r.guard.sources) || [], flagged: r.guard && r.guard.flagged && r.guard.flagged.length ? r.guard.flagged : null, fine: false });
     C.mark(f, 'jaa-ai');
     remember('bot', `Drafted “${trunc(item.label, 50)}”: ${trunc(text, 300)}`);
     updateCount();
-    draftCard(item, 1, r.error || '');
+    if (JAA.ui && JAA.ui.refreshTriage) JAA.ui.refreshTriage();
+    draftCard(item, 1, [r.error || '', guardNote(r.guard)].filter(Boolean).join(' '));
   }
 
   /* ---------- review ---------- */
@@ -644,5 +654,5 @@
     if (!runs && !greeted && !(JAA.isRunning && JAA.isRunning())) { greeted = true; await greet(); }
     else if (JAA.panel) JAA.panel.fillTop();
   }
-  JAA.chat = { openPanel, stream, say: t => bot(t), tailorResume, onButton, onHeader, onUserText, onSummary, afterRun, beginRun, attention, updateCount, reviewCard, askNext, ensureIntro, applyAction, hasRun: () => runs > 0, _hist: () => hist };
+  JAA.chat = { openPanel, stream, guardNote, regenerate, say: t => bot(t), tailorResume, onButton, onHeader, onUserText, onSummary, afterRun, beginRun, attention, updateCount, reviewCard, askNext, ensureIntro, applyAction, hasRun: () => runs > 0, _hist: () => hist };
 })();

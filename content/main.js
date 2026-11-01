@@ -255,7 +255,12 @@
                 a = f.kind === 'checkboxGroup' && Array.isArray(a) ? a : pick.text;
               }
               const out = await fillVerified(f, a);
-              if (out.ok) { ai++; item.status = 'ai'; item.value = out.shown; item.source = 'ai'; item.essay = isEssay(f); C.mark(f, 'jaa-ai'); }
+              if (out.ok) {
+                ai++; item.status = 'ai'; item.value = out.shown; item.source = 'ai'; item.essay = isEssay(f); C.mark(f, 'jaa-ai');
+                // answer guard (background): claims it removed / still flags, and the resume lines it drew on
+                const g = res.guard && res.guard[f.id];
+                if (g) { item.guard = g; item.sources = g.sources || []; if (g.flagged && g.flagged.length) item.flagged = g.flagged; }
+              }
               else if (out.unstuck) { unstuck.push(item.label); item.why = out.why; item.unstuck = true; }
               else item.why = 'AI answer didn\'t fit: ' + out.why;
             }
