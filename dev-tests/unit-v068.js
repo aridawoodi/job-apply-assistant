@@ -129,5 +129,25 @@ console.log('chooseOption: decline wording outside EEO');
   check(C.chooseOption('No', opts(['No', 'Yes', 'No answer'])).text === 'No', '"No" is not read as "No answer"');
 }
 
+console.log('tracker: company + job title from the page (lib/jobdetect.js jobInfo)');
+{
+  const D = require(path.join(ROOT, 'lib/jobdetect.js'));
+  const J = (src, title, company, m) => { const r = D.jobInfo(src); check(r.title === title && r.company === company, `${m}: ${JSON.stringify(r)}`); };
+  J({ docTitle: 'Job Application for Software Engineer at Acme', hostname: 'localhost' }, 'Software Engineer', 'Acme', 'Greenhouse-style title');
+  J({ docTitle: 'Product Engineer @ Acme', hostname: 'localhost' }, 'Product Engineer', 'Acme', 'Ashby-style title');
+  J({ docTitle: 'Acme - Data Analyst', hostname: '127.0.0.1' }, 'Data Analyst', 'Acme', 'Lever-style title, company first');
+  J({ docTitle: 'Support Engineer · Example Company Careers', hostname: 'localhost' }, 'Support Engineer', 'Example Company', '"· Company Careers"');
+  J({ docTitle: 'Contoso Careers | Customer Success Manager', hostname: 'jobs.contoso.com' }, 'Customer Success Manager', 'Contoso', '"Company Careers | Title"');
+  J({ docTitle: 'Apply', h1: 'Apply', ld: { '@type': 'JobPosting', title: 'Field Support Technician', hiringOrganization: { name: 'Northwind Example' } }, hostname: 'localhost' }, 'Field Support Technician', 'Northwind Example', 'JSON-LD JobPosting wins');
+  J({ docTitle: 'Senior Analyst', ogSiteName: 'Fabrikam Careers', hostname: 'apply.fabrikam-example.com' }, 'Senior Analyst', 'Fabrikam', 'og:site_name without "Careers"');
+  J({ docTitle: 'Apply · Data Analyst', hostname: 'localhost' }, 'Data Analyst', '', 'no company anywhere: empty, never "localhost"');
+  J({ docTitle: 'Application form', hostname: '192.168.1.20' }, '', '', 'an IP address is never a company');
+  J({ docTitle: 'Application form', hostname: 'careers.example-company.test' }, '', 'Example Company', 'hostname brand (careers. stripped)');
+  J({ docTitle: 'Apply now', hostname: 'www.contoso.co.uk' }, '', 'Contoso', 'co.uk hostname brand');
+  J({ docTitle: 'Apply', hostname: 'apply.workable.com', pathname: '/tailspin-toys/j/ABC123/' }, '', 'Tailspin Toys', 'hosted ATS: company from the path, not "Workable"');
+  J({ docTitle: 'Jobs', h1: 'Careers at Contoso', hostname: 'localhost' }, '', '', 'generic headings are not a job title');
+  check(D.brandFromHost('localhost') === '' && D.brandFromHost('jobs.example.org') === 'Example', 'brandFromHost basics');
+}
+
 console.log(failures ? `\n${failures} FAILURE(S), ${passes} passed` : `\nALL PASSED (${passes} checks)`);
 process.exit(failures ? 1 : 0);

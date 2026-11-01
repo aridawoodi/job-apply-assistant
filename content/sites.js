@@ -209,8 +209,10 @@
     match: () => true,
     formRoot: () => document,
     ignore: commonIgnore,
+    // v0.6.8: JSON-LD, og:site_name and the page title's pattern instead of the hostname ("localhost")
     jobInfo() {
-      return { title: meta('og:title') || t(q('h1')) || document.title, company: meta('og:site_name') || location.hostname.replace(/^www\./, '') };
+      if (JAA.jobDetect && JAA.jobDetect.readJobInfo) return JAA.jobDetect.readJobInfo(document, location);
+      return { title: meta('og:title') || t(q('h1')) || document.title, company: meta('og:site_name') || '' };
     },
     jobDescription: () => descriptionFrom(['[class*="description" i]', 'main', 'article']),
     stepInfo: () => genericStep()
@@ -228,6 +230,19 @@
   };
 
   const LIST = [practice, greenhouse, lever, ashby, workday, linkedin];
+  // v0.6.8: a built-in adapter that can't find the company or title falls back to the page's own data
+  for (const a of LIST) {
+    if (a === practice) continue;
+    const own = a.jobInfo;
+    a.jobInfo = function () {
+      const r = Object.assign({}, own.call(a) || {});
+      if ((!r.company || !r.title) && JAA.jobDetect && JAA.jobDetect.readJobInfo) {
+        const g = JAA.jobDetect.readJobInfo(document, location);
+        r.company = r.company || g.company; r.title = r.title || g.title;
+      }
+      return r;
+    };
+  }
 
   // ---- job card details: location, salary, posted age, logo (v0.5) ----------------------
   // JSON-LD JobPosting first (many boards publish it), then site selectors, then text patterns.

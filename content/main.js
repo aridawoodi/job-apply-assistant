@@ -24,7 +24,18 @@
     if (!root) return []; // e.g. LinkedIn without the Easy Apply modal open
     let fields = C.collect(root, adapter);
     if (!fields.length && root !== document) fields = C.collect(document, adapter);
-    const files = fields.filter(f => f.kind === 'file');
+    // An "Autofill from resume" box next to the real Resume upload: the resume goes into the Resume field
+    // only, so the site's own parser doesn't overwrite answers (Ashby, and copies of it on other sites).
+    let files = fields.filter(f => f.kind === 'file');
+    if (files.length > 1) {
+      const txt = f => f.label + ' ' + f.name + ' ' + f.idAttr;
+      const pane = f => /\bauto[\s-]?fill/i.test(txt(f)) || !!(f.el && f.el.closest && f.el.closest('[class*="autofill" i]'));
+      const panes = files.filter(pane);
+      if (panes.length && files.some(f => !panes.includes(f) && !/cover/i.test(txt(f)) && /resume|cv|curriculum/i.test(txt(f)))) {
+        fields = fields.filter(f => !panes.includes(f));
+        files = files.filter(f => !panes.includes(f));
+      }
+    }
     if (files.length === 1) files[0].isOnlyFile = true;
     return fields;
   }

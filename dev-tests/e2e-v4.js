@@ -294,7 +294,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check(tags.some(t => /Northwind bullets.*checked/.test(t)) && tags.some(t => /Lead with analytics.*AI/.test(t)), 'checkable vs AI-only rules: ' + tags.join(' | '));
   await opt.check('#s_attachTailored');
   await opt.click('#save');
-  const s2 = (await store('settings')).settings;
+  let s2 = (await store('settings')).settings;
+  for (let i = 0; i < 30 && !(s2.tailoringRules.includes('Never remove my Northwind bullets') && s2.preferredResumeFormat === 'docx'); i++) { await new Promise(r => setTimeout(r, 100)); s2 = (await store('settings')).settings; } // save is async
   check(s2.tailoringRules.includes('Never remove my Northwind bullets') && s2.preferredResumeFormat === 'docx', 'rules + format saved');
   await opt.evaluate(() => document.getElementById('tailoring').scrollIntoView());
   await opt.screenshot({ path: SHOTS + '/11-options-tailoring.png' });

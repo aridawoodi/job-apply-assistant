@@ -158,3 +158,9 @@ Run from `dev-tests/` with `NODE_PATH` pointing at a folder where Playwright is 
 - `node e2e-eeo-matrix.js`: the same with the loaded extension on `eeo-mocks/gh-eeo.html`,
   `mocks/greenhouse-classic.html` and `mocks/lever.html` (7 saved-value sets x 3 forms, greedy mock model, all
   traffic routed locally); fields left empty must be marked for you.
+- `unit-v068.js` also covers the tracker's company / job title on sites that aren't built in
+  (`lib/jobdetect.js` `jobInfo`): JSON-LD JobPosting, og:site_name, title patterns ("X at Y", "X @ Y",
+  "X · Y Careers", "Y - X"), the hostname's brand, hosted ATS paths; never "localhost" or an IP.
+- `node e2e-v068.js`: Ashby resume goes into the Resume field and never the "Autofill from resume" box (built-in
+  host and toolbar popup), and tracker rows from five pages carry the page's company and title.
+- `e2e-v4.js`: the Options "rules + format saved" check waits for the async save (was flaky).
