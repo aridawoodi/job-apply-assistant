@@ -80,13 +80,14 @@
       if (!f || !f.el || !f.el.isConnected) continue;
       if (it.status === 'todo' && !C.hasValue(f)) { out.yellow++; if (it.required) out.required++; out.labels.push(it.label); }
       if (it.status === 'ai' && !it.reviewed) { out.blue++; out.labels.push(it.label); }
+      else if (it.status === 'ok' && (it.guessed || it.weak) && !it.reviewed && C.hasValue(f)) { out.blue++; out.labels.push(it.label); }
     }
     out.total = out.yellow + out.blue;
     return out;
   }
   function updateCount() { if (ui().isShown()) ui().setCount(attention().total); refreshChecklists(); }
   let cTimer = null;
-  ['input', 'change'].forEach(t => document.addEventListener(t, e => { if (e.isTrusted) { clearTimeout(cTimer); cTimer = setTimeout(updateCount, 400); } }, true));
+  ['input', 'change'].forEach(t => document.addEventListener(t, e => { if (e.isTrusted && !(e.target && e.target.id === 'jaa-host')) { clearTimeout(cTimer); cTimer = setTimeout(updateCount, 400); } }, true));
 
   /* ---------- run lifecycle (called by main.js) ---------- */
   function beginRun(opts) {
@@ -105,7 +106,7 @@
     const f = fieldOf(it);
     const filledByHand = it.status === 'todo' && f && C.hasValue(f);
     const [ic, cls] = !it.status ? ['⏳', 'wait'] : filledByHand ? ['✓', 'you'] : (ICONS[it.status] || ['•', 'todo']);
-    const note = !it.status ? (it.pendingAI ? 'asking local AI…' : '') : it.status === 'ai' ? 'AI answer · check it' : (it.status === 'todo' && !filledByHand) ? (it.why ? trunc(it.why, 60) : 'needs you') : it.source === 'bank' ? 'saved answer' : it.status === 'kept' ? 'already filled' : '';
+    const note = !it.status ? (it.pendingAI ? 'asking local AI…' : '') : it.status === 'ai' ? 'AI answer · check it' : (it.status === 'todo' && !filledByHand) ? (JAA.triage ? trunc(JAA.triage.needReason(it, { isEeo: f && isEeo(f) }), 60) : 'needs you') : it.source === 'bank' ? 'saved answer' : it.status === 'kept' ? 'already filled' : '';
     return h('li', { class: 'fr ' + cls + (live ? ' live' : ''), 'data-id': it.id },
       h('span', { class: 'fi ' + cls, text: ic }),
       h('button', { class: 'fl', type: 'button', title: 'Jump to this field', text: trunc(it.label || '(unlabelled)', 48), onclick: () => { if (f) C.flash(f); } }),
@@ -148,12 +149,12 @@
       h('span', { class: 'pill ok', text: `${s.filled} filled` }),
       saved ? h('span', { class: 'pill ok', title: 'Green fields that came from your answer bank', text: `${saved} from your saved answers` }) : null,
       h('span', { class: 'pill ai', text: `${s.ai} by local AI (check these)` }),
-      h('span', { class: 'pill todo', text: `${todo} need you` }),
+      running || !JAA.triage ? h('span', { class: 'pill todo', text: `${todo} need you` }) : null, // the review panel's summary has the real count
       s.kept ? h('span', { class: 'pill kept', text: `${s.kept} already filled` }) : null,
       (s.unstuck || []).length ? h('span', { class: 'pill bad', text: `${s.unstuck.length} didn't stick` }) : null));
     if (s.progress) c.appendChild(h('div', { class: 'prog' }, h('span', { class: 'dot' }), '⏳ ' + s.progress));
-    if (s.llmError) c.appendChild(h('div', { class: 'err', text: 'Local AI: ' + s.llmError }));
-    if (!running) c.appendChild(checklists(items));
+    if (s.llmError) c.appendChild(h('div', { class: 'err', text: friendlyAiError(s.llmError) }));
+    if (!running) c.appendChild(JAA.triage ? triage(items) : checklists(items));
     if (s.retryable && !s.progress) c.appendChild(h('div', { class: 'chips' }, h('button', { class: 'chip pri', type: 'button', 'data-act': 'retry', text: '↻ Retry AI for remaining', onclick: () => JAA.run({ retry: true }) })));
     if (!running) {
       const remember = s.remember !== false;
@@ -164,14 +165,51 @@
           const n = JAA.learn ? await JAA.learn.flush('button', true) : 0;
           ui().toast(n ? `Saved ${n} answer${n > 1 ? 's' : ''} to your answer bank` : 'Nothing new to save', n ? 'ok' : 'info', 'AI Job Application Assistant · answer bank');
         } })));
-      c.appendChild(h('div', { class: 'why', text: 'Green = profile / saved answers · ✦ Blue = AI draft · Teal = you · Yellow = needs you. Nothing was submitted.' }));
+      c.appendChild(h('div', { class: 'why', text: JAA.triage ? 'Outlines on the page: solid = filled · double = check this · dashed = needs you. Nothing was submitted.' : 'Green = profile / saved answers · ✦ Blue = AI draft · Teal = you · Yellow = needs you. Nothing was submitted.' }));
     }
     ui().scrollDown();
     updateCount();
   }
+  // never show a raw transport error: say what happened and what to do
+  function friendlyAiError(e) {
+    e = String(e || '').trim();
+    // the extension's own messages are written for people (with advice such as which model to use): keep them
+    const raw = /TypeError|SyntaxError|Failed to fetch|NetworkError|ECONN|\bHTTP\b|status \d{3}|\b[45]\d\d\b|[{}<>]|\bat \w+ \(|undefined|\bnull\b|NaN|stack|exception/i;
+    if (e && e.length <= 400 && !raw.test(e)) return /^Local AI/i.test(e) ? e : 'Local AI: ' + e;
+    if (/time ?out|timed out/i.test(e)) return 'Local AI took too long, so some fields are left for you. Retry AI, or answer them.';
+    if (/403|origin|CORS/i.test(e)) return 'Local AI blocked the request. See Settings → Local AI for the one-time fix.';
+    if (/fetch|connect|ECONN|refused|network|not running|unreachable/i.test(e)) return 'Local AI isn\'t reachable, so AI questions are left for you. Start it, then Retry AI.';
+    if (/model/i.test(e)) return 'The local AI model isn\'t available. Check Settings → Local AI.';
+    return 'Local AI couldn\'t answer some questions, so they\'re left for you.';
+  }
+  // the v0.6.8 review panel (content/triage.js)
+  function triage(items, doneOpen) {
+    return JAA.triage.render(items, { fieldOf, isEeo, isPrivate, doneOpen }, {
+      rewrite: (item, f, ins) => { me(`Rewrite “${trunc(item.label, 40)}”: ${trunc(ins, 120)}`); return regenerate(item, f, ins); },
+      fine: (item, f) => {
+        Object.assign(item, { reviewed: true, fine: true });
+        if (item.status === 'ai') { item.accepted = true; C.mark(f, 'jaa-ok'); } else C.mark(f, 'jaa-ok');
+        updateCount();
+        ui().toast(`Marked “${trunc(item.label, 40)}” as fine`, 'ok', 'AI Job Application Assistant · review');
+      },
+      refresh: () => updateCount()
+    });
+  }
   // keep the checklists current while the user types on the page
   function refreshChecklists() {
     if (!resultCard || !resultCard.isConnected) return;
+    const tri = resultCard.querySelector('.tri');
+    if (tri && JAA.triage) {
+      const root = resultCard.getRootNode();
+      const act = root && root.activeElement;
+      if (act && tri.contains(act) && act.classList.contains('tr-in')) return; // typing a rewrite instruction
+      const d = tri.querySelector('details[data-group="done"]');
+      const focusId = act && tri.contains(act) && act.classList.contains('tr-go') ? act.dataset.id : null;
+      const fresh = triage(st().items || [], d ? d.open : false);
+      tri.replaceWith(fresh);
+      if (focusId) { const b = fresh.querySelector(`.tr-go[data-id="${CSS.escape(focusId)}"]`) || fresh.querySelector('.tr-go'); if (b) b.focus(); }
+      return;
+    }
     const old = resultCard.querySelector('.cls'); if (!old) return;
     const open = Array.from(old.querySelectorAll('details')).map(d => [d.dataset.list, d.open]);
     const fresh = checklists(st().items || []);
@@ -415,19 +453,19 @@
       bubble.textContent = type === 'status' ? '⏳ ' + t : t;
       ui().scrollDown();
     });
-    if (r.error && !r.text) { bubble.textContent = ''; bubble.appendChild(h('div', { class: 'err', text: r.error })); return askNext(); }
+    if (r.error && !r.text) { bubble.textContent = ''; bubble.appendChild(h('div', { class: 'err', text: friendlyAiError(r.error) })); return askNext(); }
     bubble.remove();
     const text = String(r.text || '').trim();
     if (!text) { bot('The model returned nothing. Try again or type it yourself.'); return askNext(); }
     const undo = { value: prev, state: { status: item.status, value: item.value, source: item.source, reviewed: item.reviewed } };
     const res = await JAA.fillField(f, text);
-    if (!res.ok) { bot('Couldn\'t put the draft in the field: ' + res.why); return askNext(); }
+    if (!res.ok) { bot('Couldn\'t put the draft in the field. Copy it from here instead: ' + trunc(text, 600)); return askNext(); }
     Object.assign(item, { status: 'ai', value: res.shown, source: 'ai', reviewed: false, skipped: false, undo, guard: r.guard || null, sources: (r.guard && r.guard.sources) || [], flagged: r.guard && r.guard.flagged && r.guard.flagged.length ? r.guard.flagged : null, fine: false });
     C.mark(f, 'jaa-ai');
     remember('bot', `Drafted “${trunc(item.label, 50)}”: ${trunc(text, 300)}`);
     updateCount();
     if (JAA.ui && JAA.ui.refreshTriage) JAA.ui.refreshTriage();
-    draftCard(item, 1, [r.error || '', guardNote(r.guard)].filter(Boolean).join(' '));
+    draftCard(item, 1, [r.error ? friendlyAiError(r.error) : '', guardNote(r.guard)].filter(Boolean).join(' '));
   }
 
   /* ---------- review ---------- */

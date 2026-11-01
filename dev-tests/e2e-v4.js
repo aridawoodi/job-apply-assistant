@@ -171,6 +171,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await pr.evaluate(() => { window.__submits = 0; document.getElementById('application-form').addEventListener('submit', () => { window.__submits++; }, true); });
   await pr.locator('#jaa-host .btn').click();
   await pr.waitForFunction(() => /Needs you|need you|Nothing left/i.test(document.getElementById('jaa-host').shadowRoot.querySelector('.body').innerText), null, { timeout: 30000 });
+  // let the fill (including its AI batches) finish, so the tailoring request below is the model's last one
+  await pr.waitForFunction(() => { const r = document.getElementById('jaa-host').shadowRoot; return !r.querySelector('.prog') && r.querySelector('.tri, .cls'); }, null, { timeout: 60000 }).catch(() => {});
   const pv = await pr.evaluate(() => ({ f: first_name.value, l: last_name.value, e: email.value, ph: phone.value, auth: q_auth.value, sp: q_sponsor.value, co: current_company.value, sal: salary.value, res: resume.files[0] && resume.files[0].name, consent: consent.checked }));
   check(pv.f === 'Jordan' && pv.l === 'Rivera' && pv.e === 'jordan.rivera@example.com' && pv.auth === 'Yes' && pv.sp === 'No', 'filled from the imported profile: ' + JSON.stringify(pv));
   check(pv.res === 'jordan-rivera-resume.docx', 'master resume attached: ' + pv.res);

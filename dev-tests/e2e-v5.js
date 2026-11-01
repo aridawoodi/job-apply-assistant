@@ -187,11 +187,11 @@ const PROFILE = {
     await gp.screenshot({ path: SHOTS + '/04-fill-checklists.png' });
     // checklist row click jumps to the field
     await gp.evaluate(() => window.scrollTo(0, 0));
-    await inHost(gp, 'details.cl[data-list="required"] summary').click().catch(() => {});
-    const rowBtn = inHost(gp, 'details.cl[data-list="required"] .fl').last();
+    await inHost(gp, 'details.tg[data-group="done"] summary').click().catch(() => {});
+    const rowBtn = inHost(gp, '.tri .tr-go').last();
     await rowBtn.click();
     await sleep(600);
-    check(await gp.evaluate(() => window.scrollY > 100), 'clicking a checklist row scrolls to the field');
+    check(await gp.evaluate(() => window.scrollY > 100), 'clicking a review-panel row scrolls to the field');
     // privacy link
     const [pv] = await Promise.all([ctx.waitForEvent('page'), inHost(gp, '[data-card="privacy"] a').click()]);
     await pv.waitForLoadState();

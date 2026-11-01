@@ -36,7 +36,7 @@ every request. This extension runs the AI **on your own computer** (Chrome's bui
 ## Features
 
 - ⚡ **Autofills job applications** on Greenhouse, Lever and Ashby (plus basic Workday and LinkedIn Easy Apply) from a profile built from your PDF or Word resume.
-- 🎨 **Colour-codes every field**: from your profile, drafted by AI, typed by you, or still needs you.
+- 🎨 **Outlines every field** (solid, double or dashed, not colour alone): filled, check this, or still needs you.
 - 💬 **Drafts answers** to open questions ("Why do you want to work here?") in your voice, and asks you one question at a time about anything it couldn't fill.
 - 📄 **Tailors your resume** to each job by rewording and reordering what's already true. Invented employers, titles, dates, numbers and tools are blocked, and you approve every change. Word or PDF.
 - ✉️ **Writes cover letters**, fact-checked the same way.
@@ -106,7 +106,10 @@ properly, the panel's **Report** tab prepares a report with no personal data.
 
 ### What you'll see
 - **Toolbar icon:** colored on job pages it supports, gray elsewhere. Hover it to see what it found.
-- **The panel** has five tabs. **Assistant** shows live fill progress and Required/Optional checklists.
+- **The panel** has five tabs. **Assistant** shows live fill progress, then a review list in three groups:
+  **Needs you** (empty or blocked), **Check these** (AI answers, guessed choices, similar saved answers) and
+  **Filled**. Each line says why in plain words, AI answers show the resume lines they used, and a click jumps
+  to the field. AI answers can be rewritten with an instruction ("shorter") or marked as fine.
   **Resume** has the match score, *Improve my match* and the cover letter. **Profile** is click-to-copy.
   **Tracker** has the stage, notes and reminder for this job. **Report** is for problems and site requests.
 - **On job postings** a small match card shows how well your resume fits. You can dismiss it or turn it off

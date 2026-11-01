@@ -172,3 +172,8 @@ Run from `dev-tests/` with `NODE_PATH` pointing at a folder where Playwright is 
 - `e2e-v068.js` (3): a mock model invents "55% faster at Contoso Health", "Salesforce Service Cloud" and "Azure";
   the background removes the sentence, retries once per batch with a stricter prompt, and the page gets the clean
   or flagged answers.
+- `e2e-v068.js` (4) review panel: the guard page lands as 1 needs you · 3 to check · 2 filled; three groups in
+  order, each with an icon and a title; Required tag; a plain reason on every row and no raw ids or error
+  strings; the invented claim is highlighted and the long answer shows its resume line; a row click and
+  ArrowDown + Enter focus the field; Mark as fine moves an answer to Filled (solid outline); Rewrite with
+  instruction redrafts with the instruction; typing in the empty field updates the polite live summary.

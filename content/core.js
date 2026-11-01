@@ -52,6 +52,8 @@
     if (t) return t;
     if (el.id) {
       const l = scopeOf(el).querySelector(`label[for="${esc(el.id)}"]`);
+      // <label for=x>Gender<select id=x>…</select></label>: the label text without the option texts
+      if (l && l.querySelector('select, textarea, [role="listbox"]')) { const t = labelTextWithoutControls(l); if (t) return t; }
       if (l && textOf(l)) return textOf(l);
     }
     return '';
@@ -338,51 +340,57 @@
   // `alts.strict` (set for voluntary self-identification fields): only an exact option, the form's own
   // decline wording, or one of the listed alternatives. Never a fuzzy guess: a wrong EEO answer is worse
   // than an empty one, which the user then picks.
+  // How the last chooseOption() call matched: 'exact' | 'decline' | 'alt' | 'yesno' | 'prefix' | 'intent' |
+  // 'fuzzy' | '' (no match). 'intent' and 'fuzzy' are guesses: the review panel lists them under "Check these".
+  let lastMatch = '';
   function chooseOption(value, options, alts) {
+    lastMatch = '';
     if (value == null || !options || !options.length) return null;
+    const hit = (o, how) => { lastMatch = how; return o; };
     const strict = !!(alts && alts.strict);
     const v = norm(value);
     const texts = options.map(o => norm(o.text));
     let i = texts.indexOf(v);
-    if (i >= 0) return options[i];
+    if (i >= 0) return hit(options[i], 'exact');
     // A decline answer maps only to the form's decline option, before any alternative can match.
     if (DECLINE.test(v)) {
       i = texts.findIndex(t => DECLINE.test(t));
-      if (i >= 0) return options[i];
+      if (i >= 0) return hit(options[i], 'decline');
       if (strict) return null;
     }
     for (const re of (alts || [])) {
       i = texts.findIndex(t => re.test(t));
-      if (i >= 0) return options[i];
+      if (i >= 0) return hit(options[i], 'alt');
     }
-    if (v === 'yes' || v === 'true') { i = texts.findIndex(t => /^yes\b/.test(t)); if (i >= 0) return options[i]; }
-    if (v === 'no' || v === 'false') { i = texts.findIndex(t => /^no\b/.test(t)); if (i >= 0) return options[i]; }
+    if (v === 'yes' || v === 'true') { i = texts.findIndex(t => /^yes\b/.test(t)); if (i >= 0) return hit(options[i], 'yesno'); }
+    if (v === 'no' || v === 'false') { i = texts.findIndex(t => /^no\b/.test(t)); if (i >= 0) return hit(options[i], 'yesno'); }
     if (strict) {
       // the saved value written a little differently ("Asian" -> "Asian (Not Hispanic or Latino)"), whole words only
       if (v.length >= 3) {
         const re = new RegExp('^' + v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b');
         i = texts.findIndex(t => re.test(t) && !DECLINE.test(t));
-        if (i >= 0) return options[i];
+        if (i >= 0) return hit(options[i], 'prefix');
       }
       return null;
     }
     // Yes/No (and similar) closed choices: map free text by intent, never invent a third value
     if (isClosedYesNo(options)) {
       const intent = yesNoIntent(value);
-      if (intent === 'yes') { i = texts.findIndex(t => /^yes\b/.test(t)); if (i >= 0) return options[i]; }
-      if (intent === 'no') { i = texts.findIndex(t => /^no\b/.test(t)); if (i >= 0) return options[i]; }
+      if (intent === 'yes') { i = texts.findIndex(t => /^yes\b/.test(t)); if (i >= 0) return hit(options[i], 'intent'); }
+      if (intent === 'no') { i = texts.findIndex(t => /^no\b/.test(t)); if (i >= 0) return hit(options[i], 'intent'); }
       return null; // no confident match → caller leaves it as needs-you
     }
     if (v.length >= 3) {
       i = texts.findIndex(t => t.length >= 3 && (t.startsWith(v) || v.startsWith(t)));
-      if (i >= 0) return options[i];
+      if (i >= 0) return hit(options[i], 'prefix');
       i = texts.findIndex(t => t.length >= 3 && new RegExp('\\b' + v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(t));
-      if (i >= 0) return options[i];
+      if (i >= 0) return hit(options[i], 'prefix');
     }
     let best = null, bestS = 0;
     options.forEach((o, k) => { const s = similarity(value, o.text); if (s > bestS) { bestS = s; best = options[k]; } });
-    return bestS >= 0.6 ? best : null;
+    return bestS >= 0.6 ? hit(best, 'fuzzy') : null;
   }
+  const GUESS = new Set(['intent', 'fuzzy', 'first']);
 
   /* ---------------- profile rules ---------------- */
   // Site wording for each race / ethnicity category. Used only to find the option for the value the user
@@ -642,7 +650,7 @@
       // v === null: the rule chose not to answer (e.g. non-US work authorization); fall through
     }
     const weak = bankOn && bankMatch(label, data.answerBank, 0.6);
-    if (weak) return { value: weak.answer, source: 'bank', key: 'bank: ' + weak.q };
+    if (weak) return { value: weak.answer, source: 'bank', key: 'bank: ' + weak.q, weak: true, bankQ: weak.q };
     return null;
   }
 
@@ -737,6 +745,7 @@
       opts = await waitOptions(input, 600);
     }
     let pick = chooseOption(value, opts, alts);
+    let how = lastMatch;
     const seen = opts.length; // the full menu opened (so "No options appeared" would be wrong if typing filters it to nothing)
     if (!pick) {
       // 2) type to search (async lists like school / location)
@@ -745,8 +754,8 @@
       opts = await waitOptions(input, 2500);
       await sleep(250);
       opts = listOptions(input).length ? listOptions(input) : opts;
-      pick = chooseOption(value, opts, alts);
-      if (!pick && !(alts && alts.strict) && opts.length && similarity(value, opts[0].text) >= 0.4) pick = opts[0];
+      pick = chooseOption(value, opts, alts); how = lastMatch;
+      if (!pick && !(alts && alts.strict) && opts.length && similarity(value, opts[0].text) >= 0.4) { pick = opts[0]; how = 'first'; }
     }
     if (!pick) {
       typeInto(input, '');
@@ -767,7 +776,7 @@
       await sleep(150);
     }
     leave(input);
-    return { ok: true, shown: pick.text };
+    return { ok: true, shown: pick.text, match: how, guessed: GUESS.has(how) };
   }
 
   // Workday-style dropdowns: a <button aria-haspopup="listbox"> that opens a popup list.
@@ -781,11 +790,12 @@
     let opts = [];
     for (let t = 0; t < 12 && !opts.length; t++) { await sleep(120); opts = popupOptions(doc); }
     const pick = chooseOption(value, opts, alts);
+    const how = lastMatch;
     if (!pick) { fire(f.el, 'keydown', { key: 'Escape', code: 'Escape', keyCode: 27 }); try { f.el.click(); } catch (_) { /* ignore */ } return { ok: false, why: opts.length ? 'No matching option for "' + value + '"' : 'No options appeared' }; }
     fire(pick.el, 'mousedown', { button: 0 }); fire(pick.el, 'mouseup', { button: 0 });
     safeClick(pick.el);
     await sleep(200);
-    return { ok: true, shown: pick.text };
+    return { ok: true, shown: pick.text, match: how, guessed: GUESS.has(how) };
   }
 
   // Open a dropdown just to read its options (for chat quick-replies), then close it.
@@ -898,21 +908,23 @@
       case 'select': {
         const o = chooseOption(Array.isArray(value) ? value[0] : value, f.options, alts);
         if (!o) return { ok: false, why: 'No matching option for "' + value + '"' };
+        const how = lastMatch;
         setNativeValue(f.el, o.value);
         o.el.selected = true;
         fire(f.el, 'input'); fire(f.el, 'change'); leave(f.el);
-        return { ok: true, shown: o.text };
+        return { ok: true, shown: o.text, match: how, guessed: GUESS.has(how) };
       }
       case 'radio': case 'buttons': {
         const o = chooseOption(Array.isArray(value) ? value[0] : value, f.options, alts);
         if (!o) return { ok: false, why: 'No matching option for "' + value + '"' };
+        const how = lastMatch;
         if (f.kind === 'radio') {
           if (!o.el.checked) safeClick(o.el);
           if (!o.el.checked) { o.el.checked = true; fire(o.el, 'input'); fire(o.el, 'change'); }
         } else {
           safeClick(o.el);
         }
-        return { ok: true, shown: o.text };
+        return { ok: true, shown: o.text, match: how, guessed: GUESS.has(how) };
       }
       case 'checkboxGroup': {
         const vals = Array.isArray(value) ? value : String(value).split(/\s*[;|]\s*/);
@@ -953,10 +965,11 @@
     const s = doc.createElement('style');
     s.id = 'jaa-style';
     s.textContent =
-      '.jaa-ok{outline:2px solid #16a34a!important;outline-offset:2px!important;background-color:rgba(22,163,74,.07)!important}' +
-      '.jaa-ai{outline:2px solid #2563eb!important;outline-offset:2px!important;background-color:rgba(37,99,235,.07)!important}' +
-      '.jaa-todo{outline:2px dashed #eab308!important;outline-offset:2px!important;background-color:rgba(234,179,8,.12)!important}' +
-      '.jaa-you{outline:2px solid #0d9488!important;outline-offset:2px!important;background-color:rgba(13,148,136,.08)!important}' +
+      // Outlines differ by line style as well as colour: solid = filled, double = check this, dashed = needs you.
+      '.jaa-ok{outline:2px solid #22c55e!important;outline-offset:2px!important;background-color:rgba(34,197,94,.05)!important}' +
+      '.jaa-you{outline:2px solid #059669!important;outline-offset:2px!important;background-color:rgba(5,150,105,.05)!important}' +
+      '.jaa-ai,.jaa-check{outline:3px double #6366f1!important;outline-offset:2px!important;background-color:rgba(99,102,241,.06)!important}' +
+      '.jaa-todo{outline:2px dashed #d97706!important;outline-offset:2px!important;background-color:rgba(245,158,11,.09)!important}' +
       '@keyframes jaaflash{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0)}50%{box-shadow:0 0 0 6px rgba(99,102,241,.45)}}' +
       '.jaa-flash{animation:jaaflash .6s ease-in-out 3!important}' +
       '@media (prefers-reduced-motion: reduce){.jaa-flash{animation:none!important;box-shadow:0 0 0 4px rgba(99,102,241,.45)!important}}';
@@ -979,12 +992,12 @@
     const t = highlightTarget(f);
     if (!t) return;
     ensureStyle(ownerDoc(t));
-    t.classList.remove('jaa-ok', 'jaa-ai', 'jaa-todo', 'jaa-you');
+    t.classList.remove('jaa-ok', 'jaa-ai', 'jaa-check', 'jaa-todo', 'jaa-you');
     if (cls) t.classList.add(cls);
     f.hl = t;
   }
   function clearMarks(doc) {
-    (doc || document).querySelectorAll('.jaa-ok, .jaa-ai, .jaa-todo, .jaa-you').forEach(e => e.classList.remove('jaa-ok', 'jaa-ai', 'jaa-todo', 'jaa-you'));
+    (doc || document).querySelectorAll('.jaa-ok, .jaa-ai, .jaa-check, .jaa-todo, .jaa-you').forEach(e => e.classList.remove('jaa-ok', 'jaa-ai', 'jaa-check', 'jaa-todo', 'jaa-you'));
   }
   function flash(f) {
     const t = f.hl || highlightTarget(f);

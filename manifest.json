@@ -85,6 +85,7 @@
         "content/core.js",
         "content/sites.js",
         "content/ui.js",
+        "content/triage.js",
         "content/learn.js",
         "content/chat.js",
         "content/panel.js",

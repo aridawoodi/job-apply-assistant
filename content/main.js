@@ -142,7 +142,14 @@
         const r = C.resolve(f, data);
         if (r && 'value' in r) {
           const res = await fillVerified(f, r.value, r.alts);
-          if (res.ok) { filled++; item.status = 'ok'; item.value = res.shown; item.source = r.source; item.ruleKey = r.key; C.mark(f, 'jaa-ok'); continue; }
+          if (res.ok) {
+            filled++; item.status = 'ok'; item.value = res.shown; item.source = r.source; item.ruleKey = r.key;
+            // low confidence: an option guessed from the saved wording, or a saved answer to a similar question
+            if (res.guessed && !r.eeo) { item.guessed = true; item.from = String(Array.isArray(r.value) ? r.value[0] : r.value).slice(0, 80); }
+            if (r.weak) { item.weak = true; item.bankQ = String(r.bankQ || '').slice(0, 120); }
+            C.mark(f, item.guessed || item.weak ? 'jaa-check' : 'jaa-ok');
+            continue;
+          }
           if (res.unstuck) { unstuck.push(item.label); item.status = 'todo'; item.why = res.why; item.unstuck = true; C.mark(f, 'jaa-todo'); continue; }
           // option not found: EEO answers are never guessed by the model
           if (r.eeo || f.kind === 'file') { item.status = 'todo'; item.why = res.why; C.mark(f, 'jaa-todo'); continue; }

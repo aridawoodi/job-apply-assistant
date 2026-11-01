@@ -5,6 +5,8 @@
 //     hostname: no "localhost" rows.
 // (3) Answer guard: a mock model invents facts ("55% faster", an employer, tools); unsupported sentences are
 //     removed, a short answer is retried once with a stricter prompt, and what's still unsupported is flagged.
+// (4) Review panel: Needs you / Check these / Filled with plain reasons, resume sources, claim highlights,
+//     click-to-focus, arrow keys, aria-live summary, Mark as fine and Rewrite with instruction.
 // Needs Chromium's --enable-unsafe-extension-debugging (CDP Extensions.triggerAction). Run under
 // `unshare -rn sh -c 'ip link set lo up && node e2e-v068.js'` if a real local AI server holds :11434.
 const { chromium } = require('playwright');
@@ -27,6 +29,7 @@ const GUARD_PAGE = `<!doctype html><html><head><title>Job Application for Suppor
 <label for="email">Email *<input id="email" name="email" type="email" required></label>
 <label for="tools">Which ticketing tools have you used?<input id="tools" name="tools"></label>
 <label for="cloud">Describe your cloud platform experience<input id="cloud" name="cloud"></label>
+<label for="team">Preferred team name *<input id="team" name="team" required></label>
 <label for="why">Why do you want to work at Guardco?<textarea id="why" name="why"></textarea></label>
 <button type="submit">Submit application</button></form></body></html>`;
 const PAGES = {
@@ -48,6 +51,8 @@ const PROFILE = {
   const prompts = [];
   const route = (sys, j) => {
     const all = (j.messages || []).map(m => m.content).join('\n');
+    const ins = all.match(/Instruction from the candidate: (.*)/);
+    if (ins) { prompts.push(all); return /shorter/.test(ins[1]) ? 'Zendesk and Jira, daily.' : null; }
     const m = all.match(/Questions \(JSON\): (\[.*\])/);
     if (!m) return null;
     prompts.push(all); if (process.env.DBG) console.log('PROMPT', (all.match(/STRICT:[^.]*/) || [''])[0], m[1].slice(0, 100));
@@ -159,6 +164,55 @@ const PROFILE = {
   const strictP = prompts.filter(p => /STRICT: a previous draft claimed/.test(p));
   check(strictP.length === 2 && /Salesforce/.test(strictP[0]) && /Kubernetes/.test(strictP[1]) && !/Guardco\?/.test(strictP[1].match(/Questions \(JSON\): (.*)/)[1]), 'one stricter retry per batch, only for the answers that need it, naming the invented claims (' + strictP.length + ' of ' + prompts.length + ' prompts)');
   check(!gv.sub, 'nothing submitted');
+
+  console.log('\n(4) review panel');
+  const tri = sel => gp.locator('#jaa-host').locator('.tri ' + sel);
+  const triText = async () => gp.evaluate(() => document.getElementById('jaa-host').shadowRoot.querySelector('.tri').innerText);
+  const sum = gp.locator('#jaa-host').locator('.tri-sum');
+  check(await sum.getAttribute('role') === 'status' && await sum.getAttribute('aria-live') === 'polite', 'summary is a polite live region');
+  let st = await sum.innerText();
+  check(/1 needs you · 3 to check · 2 filled/.test(st) && /Required 2 of 3/.test(st), 'summary counts: ' + st.replace(/\n/g, ' | '));
+  const groups = await gp.evaluate(() => [...document.getElementById('jaa-host').shadowRoot.querySelectorAll('.tri .tg')].map(g => ({ g: g.dataset.group, icon: g.querySelector('.tg-ic').textContent, title: g.querySelector('.tg-t').textContent, rows: [...g.querySelectorAll('.tr')].map(r => r.querySelector('.tr-l').textContent + ' — ' + r.querySelector('.tr-r').textContent) })));
+  console.log('    ' + JSON.stringify(groups));
+  check(groups.map(g => g.g).join() === 'need,check,done' && groups.every(g => g.icon && g.title), 'three groups in order, each with an icon and a text title (not colour alone)');
+  const need = groups[0] || { rows: [] }, chk = groups[1] || { rows: [] }, done = groups[2] || { rows: [] };
+  check(need.rows.length === 1 && /Preferred team name\s*Required/.test(need.rows[0]) && /—\s*\S/.test(need.rows[0]), 'Needs you: the empty required field, tagged Required, with a reason');
+  check(chk.rows.length === 3 && chk.rows.every(r => /—\s*\S/.test(r)), 'Check these: the three AI answers, each with a reason');
+  check(/First Name/.test(done.rows.join()) && /Email/.test(done.rows.join()), 'Filled: the profile fields');
+  const all = await triText();
+  check(!/\bf\d+\b|HTTP|undefined|null|NaN|Error|AI had no answer|\{|\}/.test(all), 'no raw ids or error strings in the panel');
+  check(await tri('.tr.check mark.claim').count() >= 1 && /Kubernetes|Azure/.test(await tri('.tr.check mark.claim').first().innerText()), 'invented claim highlighted: ' + await tri('.tr.check mark.claim').first().innerText().catch(() => ''));
+  check(/Based on your resume/.test(all) && /40 tickets a week/.test(all), 'AI answer shows the resume line it drew on');
+  // click a row: the field scrolls into view and gets focus
+  await gp.evaluate(() => window.scrollTo(0, 0));
+  await tri('.tr.need .tr-go').first().click();
+  await sleep(700);
+  check(await gp.evaluate(() => document.activeElement && document.activeElement.id) === 'team', 'clicking "Preferred team name" focuses that field');
+  // keyboard: arrow keys move between rows
+  await tri('.tr-go').first().focus();
+  await gp.keyboard.press('ArrowDown');
+  const foc = await gp.evaluate(() => { const r = document.getElementById('jaa-host').shadowRoot; const a = r.activeElement; return a && a.classList.contains('tr-go') ? a.closest('.tr').className + ' / ' + a.querySelector('.tr-l').textContent : String(a && a.tagName); });
+  check(/tr check \/ Describe your cloud/.test(foc), 'ArrowDown moves to the next row: ' + foc);
+  await gp.keyboard.press('Enter'); await sleep(700);
+  check(['cloud', 'tools', 'why'].includes(await gp.evaluate(() => document.activeElement.id)), 'Enter on a row focuses its field');
+  // Mark as fine
+  await gp.locator('#jaa-host').locator('.tr.check', { hasText: 'Describe your cloud' }).locator('.tr-btn', { hasText: 'Mark as fine' }).click();
+  await sleep(500);
+  st = await sum.innerText();
+  check(/2 to check · 3 filled/.test(st) && await gp.evaluate(() => cloud.classList.contains('jaa-ok')), 'Mark as fine moves it to Filled and the outline to solid: ' + st.replace(/\n/g, ' | '));
+  // Rewrite with instruction
+  await gp.locator('#jaa-host').locator('.tr.check', { hasText: 'ticketing tools' }).locator('.tr-btn', { hasText: 'Rewrite with instruction' }).click();
+  await gp.locator('#jaa-host').locator('.tr.check', { hasText: 'ticketing tools' }).locator('.tr-in').fill('shorter');
+  await gp.keyboard.press('Enter');
+  await gp.waitForFunction(() => tools.value === 'Zendesk and Jira, daily.', null, { timeout: 15000 }).catch(() => {});
+  check(await gp.evaluate(() => tools.value) === 'Zendesk and Jira, daily.' && /Instruction from the candidate: shorter/.test(prompts[prompts.length - 1]), 'Rewrite with instruction redrafts the answer with the instruction: ' + await gp.evaluate(() => tools.value));
+  // typing in the needed field updates the counts
+  await gp.locator('#team').fill('Support');
+  await sleep(900);
+  st = await sum.innerText();
+  check(/0 need you · 2 to check · 4 filled/.test(st) && /Required 3 of 3/.test(st), 'filling the field by hand updates the live summary: ' + st.replace(/\n/g, ' | '));
+  await gp.screenshot({ path: SHOTS + '/v068-triage-guard.png' });
+  check(!gv.sub && !(await gp.evaluate(() => !!window.__submitted)), 'still nothing submitted');
   check(!net.length, 'no other network requests: ' + (net.join(', ') || 'none'));
   await ctx.close(); await mock.close();
   console.log(failures ? `\n${failures} FAILED` : '\nALL PASSED');
