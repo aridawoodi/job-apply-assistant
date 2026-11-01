@@ -148,3 +148,13 @@ Run from `dev-tests/` with `NODE_PATH` pointing at a folder where Playwright is 
   Allow flow uses `http://localhost:8799` because localhost is already a required host, so Chrome resolves the
   request without a prompt; the real prompt for other hosts can't be clicked headless. Screenshots go to
   `$ANY_SHOTS` (default `/workspace/any-site`).
+
+## v0.6.8 tests
+- `node unit-v068.js` (no browser): voluntary self-identification. Every EEO question (gender, transgender, sexual
+  orientation, race, Hispanic/Latino, veteran, disability) x every saved value (the Options choices, 20 decline
+  wordings, unknown values, not set) x real form wordings, as select and radio. A saved decline maps only to the
+  form's decline option, or stays empty for you when the form has none; a real answer maps to its own option or
+  stays empty; nothing becomes "Yes" or another category, and nothing goes to the model.
+- `node e2e-eeo-matrix.js`: the same with the loaded extension on `eeo-mocks/gh-eeo.html`,
+  `mocks/greenhouse-classic.html` and `mocks/lever.html` (7 saved-value sets x 3 forms, greedy mock model, all
+  traffic routed locally); fields left empty must be marked for you.

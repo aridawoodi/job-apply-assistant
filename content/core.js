@@ -312,7 +312,9 @@
   }
 
   /* ---------------- option choosing ---------------- */
-  const DECLINE = /\b(don t wish|do not wish|not wish|prefer not|decline|choose not|rather not|not to (answer|say|disclose|self identify|identify)|wish to answer)\b/;
+  // "I don't wish to answer", "Decline to self-identify", "Prefer not to say", "I do not want to answer",
+  // "Choose not to disclose", "Rather not say", "Not declared", … (on text already passed through norm()).
+  const DECLINE = /\b(don t wish|dont wish|do not wish|not wish|prefer not|decline[ds]?|declining|choose not|chose not|rather not|(do not|don t|dont|not) want to (answer|say|disclose|self identify|identify|state|share|provide|specify)|not to (answer|say|disclose|self identify|identify|state|share|provide|specify)|wish to answer|no answer|not (declared|disclosed|specified)|undisclosed|not say)\b/;
   // Small closed lists (Yes/No, True/False, …): map free-text intent instead of inventing a value.
   function isClosedYesNo(options) {
     if (!options || options.length < 2 || options.length > 6) return false;
@@ -333,19 +335,37 @@
     if (/^no\b|\b(not interested|prefer not)\b/.test(v)) return 'no';
     return null;
   }
+  // `alts.strict` (set for voluntary self-identification fields): only an exact option, the form's own
+  // decline wording, or one of the listed alternatives. Never a fuzzy guess: a wrong EEO answer is worse
+  // than an empty one, which the user then picks.
   function chooseOption(value, options, alts) {
     if (value == null || !options || !options.length) return null;
+    const strict = !!(alts && alts.strict);
     const v = norm(value);
     const texts = options.map(o => norm(o.text));
     let i = texts.indexOf(v);
     if (i >= 0) return options[i];
+    // A decline answer maps only to the form's decline option, before any alternative can match.
+    if (DECLINE.test(v)) {
+      i = texts.findIndex(t => DECLINE.test(t));
+      if (i >= 0) return options[i];
+      if (strict) return null;
+    }
     for (const re of (alts || [])) {
       i = texts.findIndex(t => re.test(t));
       if (i >= 0) return options[i];
     }
     if (v === 'yes' || v === 'true') { i = texts.findIndex(t => /^yes\b/.test(t)); if (i >= 0) return options[i]; }
     if (v === 'no' || v === 'false') { i = texts.findIndex(t => /^no\b/.test(t)); if (i >= 0) return options[i]; }
-    if (DECLINE.test(v)) { i = texts.findIndex(t => DECLINE.test(t)); if (i >= 0) return options[i]; }
+    if (strict) {
+      // the saved value written a little differently ("Asian" -> "Asian (Not Hispanic or Latino)"), whole words only
+      if (v.length >= 3) {
+        const re = new RegExp('^' + v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b');
+        i = texts.findIndex(t => re.test(t) && !DECLINE.test(t));
+        if (i >= 0) return options[i];
+      }
+      return null;
+    }
     // Yes/No (and similar) closed choices: map free text by intent, never invent a third value
     if (isClosedYesNo(options)) {
       const intent = yesNoIntent(value);
@@ -376,6 +396,14 @@
     [/hawaiian|pacific islander/, /hawaiian|pacific islander/],
     [/^white/, /^white\b/],
     [/two or more|multiracial|mixed/, /two or more|multiracial|multi racial|mixed/]
+  ];
+  const ORIENTATION_ALTS = [
+    [/heterosexual|straight/, /\b(heterosexual|straight)\b/],
+    [/^gay\b/, /^gay\b/],
+    [/lesbian/, /\blesbian\b/],
+    [/bisexual/, /\bbisexual\b/],
+    [/queer/, /\bqueer\b/],
+    [/asexual/, /\basexual\b/]
   ];
   const yesAlt = [/^yes\b/], noAlt = [/^no\b/];
   const NON_US = /\b(canada|canadian|uk|united kingdom|britain|british|england|scotland|europe|european|eu|germany|german|india|indian|australia|australian|ireland|irish|mexico|mexican|brazil|france|french|spain|netherlands|dutch|singapore|singaporean|japan|japanese|israel|poland|philippines|ontario|quebec|london|china|chinese|hong kong|taiwan|korea|korean|switzerland|swiss|sweden|norway|denmark|finland|italy|portugal|belgium|austria|new zealand|uae|emirates|dubai|saudi|qatar|iraq|iraqi|turkey|egypt|nigeria|kenya|south africa|argentina|chile|colombia|peru|vietnam|thailand|malaysia|indonesia|pakistan|bangladesh|romania|czech|hungary|greece|ukraine|russia|costa rica|puerto rico|apac|emea|latam)\b/;
@@ -496,12 +524,13 @@
     ['signature', /\b(signature|e ?sign|electronically sign|sign (your )?(full )?name|type your (full )?name)\b/, p => p.signature || [p.firstName, p.lastName].filter(Boolean).join(' ')],
     ['date', /^(date|today s date|todays date|signature date|date signed)$/, (p, f) => today(f)],
     // EEO (never sent to the model: if the option isn't there, the user picks it)
-    ['transgender', /\btransgender\b|\btrans\b/, p => p.eeo.transgender, { eeo: true, alts: v => /^no/i.test(v) ? [/^no\b/, /\bnot transgender\b|\bcisgender\b/] : [] }],
-    ['sexualOrientation', /\bsexual orientation\b/, p => p.eeo.sexualOrientation, { eeo: true }],
-    ['gender', /\b(gender|sex)\b/, p => p.eeo.gender, { eeo: true, alts: v => /^male$/i.test(v) ? [/^(male|man)\b/, /\bman\b/] : (/^female$/i.test(v) ? [/^(female|woman)\b/] : []) }],
-    ['hispanic', /^(?!.*\b(race|racial)\b).*(\bhispanic|latin[oax]\b)/, p => p.eeo.hispanicLatino, { eeo: true, alts: v => /^no/i.test(v) ? [/^no\b/, /\bnot hispanic\b/] : [/^yes\b/] }],
+    ['transgender', /\btransgender\b|\btrans\b/, p => p.eeo.transgender, { eeo: true, alts: v => /^no/i.test(v) ? [/^no\b/, /\bnot transgender\b|\bcisgender\b/] : (/^yes/i.test(v) ? [/^yes\b/] : []) }],
+    ['sexualOrientation', /\bsexual orientation\b/, p => p.eeo.sexualOrientation, { eeo: true, alts: v => ORIENTATION_ALTS.filter(([re]) => re.test(norm(v))).map(([, alt]) => alt) }],
+    ['gender', /\b(gender|sex)\b/, p => p.eeo.gender, { eeo: true, alts: v => /^male$/i.test(v) ? [/^(male|man)\b/, /\bman\b/] : (/^female$/i.test(v) ? [/^(female|woman)\b/] : (/non ?binary/i.test(norm(v)) ? [/\bnon ?binary\b/] : [])) }],
+    ['hispanic', /^(?!.*\b(race|racial)\b).*(\bhispanic|latin[oax]\b)/, p => p.eeo.hispanicLatino, { eeo: true, alts: v => /^no/i.test(v) ? [/^no\b/, /\bnot hispanic\b/] : (/^yes/i.test(v) ? [/^yes\b/] : []) }],
     ['ethnicity', /\b(race|ethnicity|ethnic|racial)\b/, p => p.eeo.ethnicity, { eeo: true, alts: v => ETHNICITY_ALTS.filter(([re]) => re.test(norm(v))).map(([, alt]) => alt) }],
-    ['veteran', /\b(veteran|military|armed forces|protected veteran)\b/, p => p.eeo.veteran, { eeo: true, alts: v => /no|not/i.test(v) ? [/\bnot a (protected )?veteran\b/, /\bno military\b/, /\b(never|have not|did not|not) served\b/, /^no\b/, /^i am not\b/] : [] }],
+    ['veteran', /\b(veteran|military|armed forces|protected veteran)\b/, p => p.eeo.veteran, { eeo: true, alts: v => /^(no|i am not)\b|\bnot a (protected )?veteran\b/i.test(norm(v)) ? [/\bnot a (protected )?veteran\b/, /\bno military\b/, /\b(never|have not|did not|not) served\b/, /^no\b/, /^i am not\b/]
+      : (/^yes\b|\bidentify as (one or more|a (protected )?veteran)|^i am a (protected )?veteran\b/i.test(norm(v)) ? [/\bidentify as (one or more|a (protected )?veteran)/, /^i am a (protected )?veteran\b/, /^yes\b/] : []) }],
     ['disability', /\bdisabilit/, p => p.eeo.disability, { eeo: true, alts: v => /^no/i.test(v) ? [/^no\b/, /\b(do not|don t) have a disability\b/] : (/^yes/i.test(v) ? [/^yes\b/] : []) }]
   ];
 
@@ -559,6 +588,12 @@
     return pick ? { name: pick.name, type: pick.mime, dataUrl: pick.dataUrl } : null;
   }
 
+  // Alternatives for a rule's value; EEO rules get strict matching (see chooseOption).
+  function altsFor(r, v) {
+    const a = (r.flags.alts ? r.flags.alts(String(v)) : []).slice();
+    if (r.flags.eeo) a.strict = true;
+    return a;
+  }
   // -> {value, source, key, alts} | {missing:key, noLLM} | {skip:reason} | null (ask model)
   function resolve(f, data) {
     const p = data.profile;
@@ -588,7 +623,7 @@
     if ((r0 && r0.flags.eeo) || isEeoField(f)) {
       const v = r0 && r0.flags.eeo ? r0.fn(p, f, r0.L) : '';
       if (v === '' || v == null) return { missing: r0 && r0.flags.eeo ? r0.key : 'eeo', noLLM: true, eeo: true, why: 'Voluntary self-identification: not set in your profile, so it\'s yours to answer (or set it in Settings → Profile).' };
-      return { value: v, source: 'rule', key: r0.key, alts: r0.flags.alts ? r0.flags.alts(String(v)) : [], eeo: true };
+      return { value: v, source: 'rule', key: r0.key, alts: altsFor(r0, v), eeo: true };
     }
     const strong = bankOn && bankMatch(label, data.answerBank, 0.85);
     if (strong) return { value: strong.answer, source: 'bank', key: 'bank: ' + strong.q };
@@ -602,7 +637,7 @@
       const v = r.fn(p, f, r.L);
       if (v === '' || v === undefined) return { missing: r.key, noLLM: true }; // not in profile: the user fills it
       if (v !== null) {
-        return { value: v, source: 'rule', key: r.key, alts: r.flags.alts ? r.flags.alts(String(v)) : [], eeo: !!r.flags.eeo };
+        return { value: v, source: 'rule', key: r.key, alts: altsFor(r, v), eeo: !!r.flags.eeo };
       }
       // v === null: the rule chose not to answer (e.g. non-US work authorization); fall through
     }
@@ -711,7 +746,7 @@
       await sleep(250);
       opts = listOptions(input).length ? listOptions(input) : opts;
       pick = chooseOption(value, opts, alts);
-      if (!pick && opts.length && similarity(value, opts[0].text) >= 0.4) pick = opts[0];
+      if (!pick && !(alts && alts.strict) && opts.length && similarity(value, opts[0].text) >= 0.4) pick = opts[0];
     }
     if (!pick) {
       typeInto(input, '');
