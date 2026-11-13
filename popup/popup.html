@@ -10,11 +10,27 @@
   <div id="whatsnew" class="wn" hidden><b>✨ New in v<span id="wnv"></span></b><button id="wnx" class="icon" type="button" title="Dismiss">×</button>
     <ul><li>A short “Getting started” checklist</li><li>A practice form to try Fill safely</li><li>Easier work history editing</li><li>Resume match score, cover letters, tracker</li></ul>
     <a href="#" id="wntour">Take the 2-minute tour →</a></div>
-  <div class="site"><span id="site" class="tag"></span><span id="note" class="note"></span></div>
+  <nav class="flow" aria-label="How it works">
+    <span class="fs on" data-step="1">1 Detect</span>
+    <span class="fs" data-step="2">2 Fill</span>
+    <span class="fs" data-step="3">3 Review</span>
+    <span class="fs" data-step="4">4 You submit</span>
+  </nav>
+  <div class="site">
+    <div class="site-row">
+      <span id="site" class="tag"></span>
+      <span id="cap" class="cap" hidden></span>
+    </div>
+    <span id="note" class="note"></span>
+  </div>
   <button id="fill" class="primary" type="button">⚡ Fill this application</button>
-  <button id="generic" class="secondary" type="button" hidden>Try generic fill on this page</button>
+  <button id="generic" class="secondary" type="button" hidden>Try fill on this page</button>
   <button id="profile" class="secondary" type="button" title="Open your details with click-to-copy on this page">👤 My profile: click to copy</button>
   <div id="result"></div>
+  <div id="nextHint" class="next" hidden>
+    <b>Next:</b> <span id="nextTxt">Review highlighted fields on the page, then press the site’s Submit yourself.</span>
+    <button id="openPanel" class="linkish" type="button">Open assistant on page →</button>
+  </div>
   <div id="siteCard" class="rate sitecard" role="region" aria-label="Use on this site automatically" hidden>
     <p class="rate-q">Use on <span id="scHost"></span> automatically?</p>
     <p class="rate-sub muted">The Fill button will appear by itself on job applications on this site. Chrome asks you to confirm. You can remove it any time in Settings → Sites.</p>

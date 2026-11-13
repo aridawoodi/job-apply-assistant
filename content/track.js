@@ -116,7 +116,7 @@
     return r;
   }
 
-  // "Application tracked ✓" with optional notes + reminder date (stored only in the tracker)
+  // Friendly "Application Submitted!" modal (Quiet Chrome + clear next action)
   let modalShown = false;
   function trackedModal(row, ent) {
     if (modalShown || !row || !document.body) return false;
@@ -127,17 +127,23 @@
     const root = host.attachShadow({ mode: 'open' });
     const css = document.createElement('style');
     css.textContent = `:host{all:initial}
-      .bd{position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:2147483646;display:flex;align-items:center;justify-content:center;font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0f172a}
-      .m{background:#fff;border-radius:16px;box-shadow:0 20px 50px rgba(15,23,42,.3);width:min(400px,92vw);padding:20px 22px}
-      .ic{width:44px;height:44px;border-radius:50%;background:#dcfce7;color:#15803d;display:flex;align-items:center;justify-content:center;font:800 22px/1 inherit;margin-bottom:8px}
-      h2{margin:0 0 2px;font-size:18px}.sub{color:#475569;font-size:13px;margin-bottom:12px}
+      .bd{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:2147483646;display:flex;align-items:center;justify-content:center;font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0f172a}
+      .m{background:#fff;border-radius:16px;box-shadow:0 20px 50px rgba(15,23,42,.28);width:min(400px,92vw);overflow:hidden}
+      .accent{height:3px;background:linear-gradient(90deg,#4f46e5,#7c3aed)}
+      .body{padding:20px 22px 18px}
+      .ic{width:52px;height:52px;border-radius:50%;background:#dcfce7;color:#15803d;display:flex;align-items:center;justify-content:center;font:800 24px/1 inherit;margin:4px auto 12px}
+      h2{margin:0 0 6px;font-size:20px;text-align:center;color:#0f172a}
+      .luck{color:#475569;font-size:13px;text-align:center;margin:0 0 14px}
+      .job{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;font-size:12.5px;color:#334155;margin-bottom:12px;text-align:center}
       label{display:block;font-size:12px;font-weight:600;color:#334155;margin:8px 0 4px}
       textarea,input{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:8px;font:13px/1.4 inherit}
-      textarea{min-height:70px;resize:vertical}
-      .row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
-      button{border:0;border-radius:9px;padding:9px 14px;font:700 13px/1 inherit;cursor:pointer}
-      .p{background:#4f46e5;color:#fff}.s{background:#f1f5f9;color:#334155}
-      .lock{color:#94a3b8;font-size:11px;margin-top:10px}`;
+      textarea{min-height:64px;resize:vertical}
+      .row{display:flex;gap:8px;justify-content:stretch;margin-top:14px}
+      button{border-radius:10px;padding:11px 14px;font:700 13px/1 inherit;cursor:pointer;flex:1}
+      .p{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;box-shadow:0 2px 8px rgba(79,70,229,.25)}
+      .s{background:#fff;color:#0f172a;border:1px solid #cbd5e1}
+      .s:hover{border-color:#4f46e5;color:#3730a3}
+      .lock{color:#94a3b8;font-size:11px;margin-top:12px;text-align:center}`;
     const notes = h('textarea', { placeholder: 'Notes (optional): who referred you, what to follow up on…' });
     const rem = h('input', { type: 'date' });
     const close = () => host.remove();
@@ -146,12 +152,24 @@
       close();
       toast('Saved to your tracker ✓', 'ok', 'AI Job Application Assistant · tracker');
     };
-    const m = h('div', { class: 'm', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Application tracked' },
-      h('div', { class: 'ic', text: '✓' }), h('h2', { text: 'Application tracked ✓' }),
-      h('div', { class: 'sub', text: [row.company, row.title].filter(Boolean).join(' · ') + ' · stage: Applied' }),
-      h('label', { text: 'Notes' }), notes, h('label', { text: 'Remind me to follow up on' }), rem,
-      h('div', { class: 'row' }, h('button', { class: 's', type: 'button', 'data-act': 'close', text: 'Close', onclick: close }), h('button', { class: 'p', type: 'button', 'data-act': 'save', text: 'Save', onclick: save })),
-      h('div', { class: 'lock', text: '🔒 Stored only in your tracker on this computer.' }));
+    const openTracker = async () => {
+      if (notes.value.trim() || rem.value) await send({ type: 'tracker:update', entry: ent || { key: row.key }, patch: { notes: notes.value.trim(), reminderAt: rem.value } });
+      close();
+      try { chrome.runtime.sendMessage({ type: 'options:open', section: 'tracker' }, () => { void chrome.runtime.lastError; }); } catch (_) { /* ignore */ }
+    };
+    const m = h('div', { class: 'm', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'jaa-applied-title' },
+      h('div', { class: 'accent' }),
+      h('div', { class: 'body' },
+        h('div', { class: 'ic', text: '✓' }),
+        h('h2', { id: 'jaa-applied-title', text: 'Application Submitted!' }),
+        h('p', { class: 'luck', text: 'Added to your Applied list. Good luck with your application!' }),
+        h('div', { class: 'job', text: [row.company, row.title].filter(Boolean).join(' · ') || 'Tracked locally' }),
+        h('label', { text: 'Notes' }), notes,
+        h('label', { text: 'Remind me to follow up on' }), rem,
+        h('div', { class: 'row' },
+          h('button', { class: 's', type: 'button', 'data-act': 'close', text: 'Close', onclick: close }),
+          h('button', { class: 'p', type: 'button', 'data-act': 'tracker', text: 'Open tracker', onclick: openTracker })),
+        h('div', { class: 'lock', text: 'Stored only in your tracker on this computer · never auto-submitted by the assistant' })));
     const bd = h('div', { class: 'bd' }, m);
     bd.addEventListener('click', e => { if (e.target === bd) close(); });
     ['keydown', 'keyup', 'keypress'].forEach(ev => bd.addEventListener(ev, e => { e.stopPropagation(); if (ev === 'keydown' && e.key === 'Escape') close(); }));

@@ -96,6 +96,7 @@
     resultCard = null;
     current = null;
     key = JAA.jobKey(location.href);
+    if (JAA.ui && JAA.ui.setGuide) JAA.ui.setGuide(2);
   }
 
   // One card per run: live progress while filling ("Scanning page… N fields found", then each
@@ -128,6 +129,7 @@
   }
   function onSummary(s) {
     ui().open();
+    if (JAA.ui && JAA.ui.setGuide) JAA.ui.setGuide(s && s.scanning ? 2 : 3);
     if (!resultCard) {
       resultCard = ui().add('bot', '', 'card fillcard');
     }
@@ -221,6 +223,7 @@
     opts = opts || {};
     ui().header((s.company ? s.company + ' · ' : '') + 'AI Job Application Assistant', s.title || '');
     ui().setStep(s.step);
+    if (ui().setGuide) ui().setGuide(3);
     const need = s.items.filter(i => i.status === 'todo').length;
     const stepTxt = s.step && (s.step.n || s.step.pct != null) ? (s.step.total ? `Step ${s.step.n} of ${s.step.total}` : (s.step.n ? `Step ${s.step.n}` : `${s.step.pct}% done`)) : '';
     if (opts.source === 'step') {
