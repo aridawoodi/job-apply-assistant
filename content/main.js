@@ -79,11 +79,26 @@
     opts = opts || {};
     if (running) return { ok: false, error: 'Already filling.' };
     running = true;
-    const adapter = opts.generic ? JAA.sites.generic : JAA.sites.detect(location);
+    let adapter = opts.generic ? JAA.sites.generic : JAA.sites.detect(location);
     try {
+      // Detect-only ATS: keep the site name for UI/tracker, but fill with generic scanning
+      // (friendlier than a hard stop — user still reviews; we never submit).
       if (adapter.stub && !opts.generic) {
-        JAA.ui.message(adapter.name, adapter.note);
-        return { ok: false, stub: true, error: adapter.note };
+        const detectedName = adapter.name;
+        const note = adapter.note || (`${detectedName} detected. Trying a careful generic fill — review before you submit.`);
+        adapter = Object.assign({}, JAA.sites.generic, {
+          name: detectedName,
+          detectOnly: true,
+          stub: true,
+          note,
+          jobInfo: adapter.jobInfo || JAA.sites.generic.jobInfo,
+          jobDescription: adapter.jobDescription || JAA.sites.generic.jobDescription,
+          stepInfo: adapter.stepInfo || JAA.sites.generic.stepInfo
+        });
+        if (JAA.ui && JAA.ui.open) {
+          JAA.ui.open();
+          JAA.ui.add('sys', note);
+        }
       }
       if (adapter.accountPage && adapter.accountPage()) {
         JAA.ui.message('Sign in yourself', adapter.accountNote);

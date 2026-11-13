@@ -227,7 +227,37 @@
     stepInfo: () => null
   };
 
-  const LIST = [practice, greenhouse, lever, ashby, workday, linkedin];
+  // ---- Detect-only ATS (badge + tracker label; fill uses generic scan for now) ----------
+  // Inspired by common ATS URL maps (Taleo, BambooHR, Workable, …). Full adapters come later.
+  function detectOnly(name, matchFn, extras) {
+    return Object.assign({
+      name,
+      stub: true,
+      detectOnly: true,
+      match: matchFn,
+      formRoot: () => q('form') || document,
+      ignore: commonIgnore,
+      note: `${name} detected. Full fill for this ATS is next — trying a careful generic fill on this page. Review everything; I never press Submit.`,
+      jobInfo() {
+        return { title: meta('og:title') || t(q('h1')) || document.title, company: meta('og:site_name') || location.hostname.replace(/^www\./, '') };
+      },
+      jobDescription: () => descriptionFrom(['[class*="description" i]', 'main', 'article', '#content']),
+      stepInfo: () => genericStep()
+    }, extras || {});
+  }
+  const taleo = detectOnly('Taleo', l => /(^|\.)taleo\.net$/.test(l.hostname));
+  const bamboohr = detectOnly('BambooHR', l => /(^|\.)bamboohr\.com$/.test(l.hostname) && /\/careers\//i.test(l.pathname));
+  const workable = detectOnly('Workable', l => /(^|\.)workable\.com$/.test(l.hostname));
+  const rippling = detectOnly('Rippling', l => /(^|\.)rippling\.com$/.test(l.hostname) || /(^|\.)rippling-ats\.com$/.test(l.hostname));
+  const jazzhr = detectOnly('JazzHR', l => /(^|\.)applytojob\.com$/.test(l.hostname) || /(^|\.)jazz\.co$/.test(l.hostname));
+  const smartrecruiters = detectOnly('SmartRecruiters', l => /(^|\.)smartrecruiters\.com$/.test(l.hostname));
+  const icims = detectOnly('iCIMS', l => /(^|\.)icims\.com$/.test(l.hostname));
+  const eightfold = detectOnly('Eightfold', l => /(^|\.)eightfold\.ai$/.test(l.hostname));
+  const successfactors = detectOnly('SuccessFactors', l => /(^|\.)successfactors\.com$|(^|\.)successfactors\.eu$|(^|\.)sapsf\.com$/.test(l.hostname));
+  const oraclecloud = detectOnly('Oracle Cloud HCM', l => /(^|\.)oraclecloud\.com$/.test(l.hostname) && /CandidateExperience|hcmUI/i.test(l.pathname));
+
+  const LIST = [practice, greenhouse, lever, ashby, workday, linkedin,
+    taleo, bamboohr, workable, rippling, jazzhr, smartrecruiters, icims, eightfold, successfactors, oraclecloud];
 
   // ---- job card details: location, salary, posted age, logo (v0.5) ----------------------
   // JSON-LD JobPosting first (many boards publish it), then site selectors, then text patterns.
