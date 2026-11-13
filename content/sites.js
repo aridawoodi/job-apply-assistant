@@ -227,15 +227,14 @@
     stepInfo: () => null
   };
 
-  // ---- Detect-only ATS (badge + tracker label; fill uses generic scan for now) ----------
-  // Inspired by common ATS URL maps (Taleo, BambooHR, Workable, …). Full adapters come later.
+  // ---- Expanded ATS adapters (patterns from public ATS DOM conventions; implemented from scratch) ----
   function detectOnly(name, matchFn, extras) {
     return Object.assign({
       name,
       stub: true,
       detectOnly: true,
       match: matchFn,
-      formRoot: () => q('form') || document,
+      formRoot: () => q('form') || q('[role="form"]') || document,
       ignore: commonIgnore,
       note: `${name} detected. Full fill for this ATS is next — trying a careful generic fill on this page. Review everything; I never press Submit.`,
       jobInfo() {
@@ -245,19 +244,235 @@
       stepInfo: () => genericStep()
     }, extras || {});
   }
-  const taleo = detectOnly('Taleo', l => /(^|\.)taleo\.net$/.test(l.hostname));
-  const bamboohr = detectOnly('BambooHR', l => /(^|\.)bamboohr\.com$/.test(l.hostname) && /\/careers\//i.test(l.pathname));
-  const workable = detectOnly('Workable', l => /(^|\.)workable\.com$/.test(l.hostname));
-  const rippling = detectOnly('Rippling', l => /(^|\.)rippling\.com$/.test(l.hostname) || /(^|\.)rippling-ats\.com$/.test(l.hostname));
-  const jazzhr = detectOnly('JazzHR', l => /(^|\.)applytojob\.com$/.test(l.hostname) || /(^|\.)jazz\.co$/.test(l.hostname));
-  const smartrecruiters = detectOnly('SmartRecruiters', l => /(^|\.)smartrecruiters\.com$/.test(l.hostname));
-  const icims = detectOnly('iCIMS', l => /(^|\.)icims\.com$/.test(l.hostname));
-  const eightfold = detectOnly('Eightfold', l => /(^|\.)eightfold\.ai$/.test(l.hostname));
-  const successfactors = detectOnly('SuccessFactors', l => /(^|\.)successfactors\.com$|(^|\.)successfactors\.eu$|(^|\.)sapsf\.com$/.test(l.hostname));
-  const oraclecloud = detectOnly('Oracle Cloud HCM', l => /(^|\.)oraclecloud\.com$/.test(l.hostname) && /CandidateExperience|hcmUI/i.test(l.pathname));
+
+  // Workable — data-ui hooks on apply.workable.com
+  const workable = {
+    name: 'Workable',
+    match: l => /(^|\.)workable\.com$/.test(l.hostname),
+    formRoot: () => q('[data-ui="application-form"]') || q('form[data-ui]') || q('#application-form') || q('form') || document,
+    needsApplyPage: () => !/\/apply\/?$|\/j\//i.test(location.pathname) && !q('[data-ui="application-form"], form input[type="email"], form input[name*="email" i]'),
+    applyHint: 'Open the Workable Apply page first, then press Fill.',
+    ignore: el => commonIgnore(el) || el.type === 'password',
+    labelFor(el) {
+      const box = el.closest('[data-ui="section-fields"], [data-ui="section"], [class*="field" i], fieldset, label');
+      if (!box) return '';
+      const l = box.querySelector('label, [data-ui*="label" i], legend, [class*="label" i]');
+      return l ? t(l) : (el.getAttribute('aria-label') || '');
+    },
+    jobInfo() {
+      const title = t(q('[data-ui="job-title"]')) || t(q('h1')) || meta('og:title') || document.title;
+      const company = meta('og:site_name') || titleCase(pathPart(0)) || location.hostname.replace(/^www\./, '');
+      return { title, company };
+    },
+    jobDescription: () => descriptionFrom(['[data-ui="job-description"]', '[class*="description" i]', 'main']),
+    stepInfo: () => genericStep()
+  };
+
+  // BambooHR careers / jobs boards
+  const bamboohr = {
+    name: 'BambooHR',
+    match: l => /(^|\.)bamboohr\.com$/.test(l.hostname) && /\/(careers|jobs)/i.test(l.pathname),
+    formRoot: () => q('#careers-apply-form') || q('form[action*="careers"]') || q('.BambooHR-ATS-Jobs-Item') || q('form') || document,
+    needsApplyPage: () => !q('form input[type="file"], form input[type="email"], #careers-apply-form') && !/apply/i.test(location.pathname),
+    applyHint: 'Open the BambooHR application form for this job, then press Fill.',
+    ignore: commonIgnore,
+    labelFor(el) {
+      const box = el.closest('.field, .form-group, [class*="Field" i], fieldset, label');
+      const l = box && box.querySelector('label, legend, .label');
+      return l ? t(l) : '';
+    },
+    jobInfo() {
+      return {
+        title: t(q('h1')) || t(q('.ResAts__title')) || meta('og:title') || document.title,
+        company: meta('og:site_name') || titleCase(location.hostname.split('.')[0])
+      };
+    },
+    jobDescription: () => descriptionFrom(['.ResAts__card', '[class*="description" i]', 'main']),
+    stepInfo: () => genericStep()
+  };
+
+  // Taleo (Oracle) careersection apply forms
+  const taleo = {
+    name: 'Taleo',
+    match: l => /(^|\.)taleo\.net$/.test(l.hostname),
+    formRoot: () => q('#editTemplateForm') || q('form[name*="Application" i]') || q('form[action*="jobapply"]') || q('form') || document,
+    needsApplyPage: () => !/jobapply\.ftl|\/apply/i.test(location.pathname + location.search) && !q('#editTemplateForm, form input[type="file"], form input[type="email"]'),
+    applyHint: 'Open Taleo’s Apply page (jobapply), then press Fill. Multi-step: fill what’s visible; you press Next.',
+    ignore: el => commonIgnore(el) || el.type === 'password' || /captcha/i.test(el.id + el.name),
+    labelFor(el) {
+      const box = el.closest('tr, .form-group, [class*="fieldset" i], fieldset, td');
+      if (!box) return '';
+      const l = box.querySelector('label, .label, span[id*="Label"], legend');
+      return l ? t(l) : '';
+    },
+    jobInfo() {
+      const title = t(q('#requisitionDescriptionInterface\\.reqTitleLinkAction\\.row1')) ||
+        t(q('[id*="reqTitle" i]')) || t(q('h1')) || meta('og:title') || document.title;
+      const company = meta('og:site_name') || meta('itemprop="hiringOrganization"') || titleCase(location.hostname.split('.')[0]);
+      return { title, company };
+    },
+    jobDescription: () => descriptionFrom(['.oracletaleocwsv2-job-description', '#requisitionDescriptionInterface\\.panel', '[id*="jobDescription" i]', 'main']),
+    stepInfo: () => genericStep()
+  };
+
+  // JazzHR (applytojob.com)
+  const jazzhr = {
+    name: 'JazzHR',
+    match: l => /(^|\.)applytojob\.com$/.test(l.hostname) || /(^|\.)jazz\.co$/.test(l.hostname),
+    formRoot: () => q('#resumator-submit-resume') || q('form#application') || q('form[action*="apply"]') || q('form') || document,
+    needsApplyPage: () => !/\/apply\//i.test(location.pathname) && !q('form input[type="email"], #resumator-submit-resume'),
+    applyHint: 'Open the JazzHR /apply page, then press Fill.',
+    ignore: commonIgnore,
+    labelFor(el) {
+      const box = el.closest('.field, .form-group, label, fieldset, tr');
+      const l = box && box.querySelector('label, .label, th, legend');
+      return l ? t(l) : '';
+    },
+    jobInfo() {
+      return {
+        title: t(q('.job-header h1')) || t(q('h1')) || meta('og:title') || document.title,
+        company: meta('og:site_name') || titleCase(location.hostname.split('.')[0])
+      };
+    },
+    jobDescription: () => descriptionFrom(['#job-description', '.job-description', 'main']),
+    stepInfo: () => genericStep()
+  };
+
+  // SmartRecruiters
+  const smartrecruiters = {
+    name: 'SmartRecruiters',
+    match: l => /(^|\.)smartrecruiters\.com$/.test(l.hostname) || /(^|\.)smartr\.me$/.test(l.hostname),
+    formRoot: () => q('[data-test="application-form"]') || q('#st-applicationForm') || q('form') || document,
+    needsApplyPage: () => !/\/apply/i.test(location.pathname) && !q('form input[type="email"], form input[name*="email" i]'),
+    applyHint: 'Click Apply on SmartRecruiters, then press Fill on the application form.',
+    ignore: el => commonIgnore(el) || el.type === 'password',
+    labelFor(el) {
+      const box = el.closest('[class*="field" i], .MuiFormControl-root, label, fieldset');
+      const l = box && box.querySelector('label, legend, .MuiFormLabel-root');
+      return l ? t(l) : '';
+    },
+    jobInfo() {
+      return {
+        title: t(q('h1')) || meta('og:title') || document.title,
+        company: meta('og:site_name') || titleCase(pathPart(0))
+      };
+    },
+    jobDescription: () => descriptionFrom(['[class*="description" i]', 'main', 'article']),
+    stepInfo: () => genericStep()
+  };
+
+  // Rippling ATS
+  const rippling = {
+    name: 'Rippling',
+    match: l => /(^|\.)rippling\.com$/.test(l.hostname) || /(^|\.)rippling-ats\.com$/.test(l.hostname),
+    formRoot: () => q('form') || q('[role="form"]') || document,
+    needsApplyPage: () => !/\/apply/i.test(location.pathname) && !q('form input, form textarea'),
+    applyHint: 'Open the Rippling apply flow, then press Fill on the visible step.',
+    ignore: el => commonIgnore(el) || el.type === 'password',
+    labelFor(el) {
+      const box = el.closest('[class*="field" i], label, fieldset, .MuiFormControl-root');
+      const l = box && box.querySelector('label, legend, .MuiFormLabel-root');
+      return l ? t(l) : '';
+    },
+    jobInfo() {
+      return { title: t(q('h1')) || meta('og:title') || document.title, company: meta('og:site_name') || 'Rippling' };
+    },
+    jobDescription: () => descriptionFrom(['[class*="description" i]', 'main']),
+    stepInfo: () => genericStep()
+  };
+
+  // iCIMS
+  const icims = {
+    name: 'iCIMS',
+    match: l => /(^|\.)icims\.com$/.test(l.hostname),
+    formRoot: () => q('form[name*="Form" i]') || q('form') || document,
+    needsApplyPage: () => !/\/jobs\/\d+|\/job\//i.test(location.pathname) && !q('form input[type="email"], form input[type="file"]'),
+    applyHint: 'Open the iCIMS application form (may be inside a frame). Fill works on the form document you see.',
+    ignore: el => commonIgnore(el) || el.type === 'password',
+    labelFor(el) {
+      const box = el.closest('.iCIMS_TableRow, tr, .field, label, fieldset');
+      const l = box && box.querySelector('label, .iCIMS_InfoMsg, th, legend');
+      return l ? t(l) : '';
+    },
+    jobInfo() {
+      return {
+        title: t(q('h1')) || t(q('.iCIMS_Header')) || meta('og:title') || document.title,
+        company: meta('og:site_name') || titleCase(location.hostname.split('.')[0])
+      };
+    },
+    jobDescription: () => descriptionFrom(['.iCIMS_JobContent', '[class*="description" i]', 'main']),
+    stepInfo: () => genericStep()
+  };
+
+  // Eightfold career hub apply
+  const eightfold = {
+    name: 'Eightfold',
+    match: l => /(^|\.)eightfold\.ai$/.test(l.hostname),
+    formRoot: () => q('#applyForm') || q('#applyFormWrapper') || q('form') || document,
+    needsApplyPage: () => !/\/apply/i.test(location.pathname + location.hash) && !q('#applyForm, form input[type="email"]'),
+    applyHint: 'Open Eightfold’s apply flow, then press Fill.',
+    ignore: commonIgnore,
+    labelFor(el) {
+      const box = el.closest('.field, [class*="form-group" i], label, fieldset');
+      const l = box && box.querySelector('label, legend');
+      return l ? t(l) : '';
+    },
+    jobInfo() {
+      return { title: t(q('h1')) || meta('og:title') || document.title, company: meta('og:site_name') || 'Eightfold' };
+    },
+    jobDescription: () => descriptionFrom(['[class*="description" i]', 'main']),
+    stepInfo: () => genericStep()
+  };
+
+  // SuccessFactors / SAP — still lighter (multi-tenant UIs vary a lot)
+  const successfactors = {
+    name: 'SuccessFactors',
+    match: l => /(^|\.)successfactors\.com$|(^|\.)successfactors\.eu$|(^|\.)sapsf\.com$/.test(l.hostname),
+    formRoot: () => q('form') || q('[role="form"]') || document,
+    needsApplyPage: () => !q('form input, form textarea, form select'),
+    applyHint: 'Navigate to the SuccessFactors application form, then press Fill on the visible step.',
+    ignore: el => commonIgnore(el) || el.type === 'password',
+    jobInfo() {
+      return { title: t(q('h1')) || meta('og:title') || document.title, company: meta('og:site_name') || 'SuccessFactors' };
+    },
+    jobDescription: () => descriptionFrom(['[class*="description" i]', 'main']),
+    stepInfo: () => genericStep()
+  };
+
+  // Oracle Cloud HCM Candidate Experience
+  const oraclecloud = {
+    name: 'Oracle Cloud HCM',
+    match: l => /(^|\.)oraclecloud\.com$/.test(l.hostname) && /CandidateExperience|hcmUI/i.test(l.pathname),
+    formRoot: () => q('form') || q('[role="form"]') || document,
+    needsApplyPage: () => !/\/apply/i.test(location.pathname) && !q('form input, form textarea'),
+    applyHint: 'Open the Oracle apply step, then press Fill. You press Continue/Submit yourself.',
+    ignore: el => commonIgnore(el) || el.type === 'password',
+    jobInfo() {
+      return { title: t(q('h1')) || meta('og:title') || document.title, company: meta('og:site_name') || 'Oracle Cloud' };
+    },
+    jobDescription: () => descriptionFrom(['[class*="description" i]', 'main']),
+    stepInfo: () => genericStep()
+  };
+
+  // Long-tail detect-only (badge + generic fill) — expands JobRight-like coverage map
+  const brassring = detectOnly('BrassRing', l => /(^|\.)brassring\.com$/.test(l.hostname));
+  const clearcompany = detectOnly('ClearCompany', l => /(^|\.)clearcompany\.com$/.test(l.hostname));
+  const comeet = detectOnly('Comeet', l => /(^|\.)comeet\.com$|(^|\.)comeet\.co$/.test(l.hostname));
+  const recruitee = detectOnly('Recruitee', l => /(^|\.)recruitee\.com$/.test(l.hostname));
+  const paylocity = detectOnly('Paylocity', l => /(^|\.)paylocity\.com$/.test(l.hostname));
+  const ukg = detectOnly('UKG / UltiPro', l => /(^|\.)ultipro\.com$|(^|\.)ultipro\.ca$|(^|\.)ukg\.net$/.test(l.hostname));
+  const jobvite = detectOnly('Jobvite', l => /(^|\.)jobvite\.com$/.test(l.hostname));
+  const breezy = detectOnly('Breezy', l => /(^|\.)breezy\.hr$/.test(l.hostname));
+  const personio = detectOnly('Personio', l => /(^|\.)personio\.com$|(^|\.)personio\.de$/.test(l.hostname));
+  const dayforce = detectOnly('Dayforce', l => /(^|\.)dayforcehcm\.com$|(^|\.)dayforce\.com$/.test(l.hostname));
+  const teamtailor = detectOnly('Teamtailor', l => /(^|\.)teamtailor\.com$/.test(l.hostname));
+  const pinpointhq = detectOnly('Pinpoint', l => /(^|\.)pinpointhq\.com$/.test(l.hostname));
+  const freshteam = detectOnly('Freshteam', l => /(^|\.)freshteam\.com$/.test(l.hostname));
+  const avature = detectOnly('Avature', l => /(^|\.)avature\.net$/.test(l.hostname));
 
   const LIST = [practice, greenhouse, lever, ashby, workday, linkedin,
-    taleo, bamboohr, workable, rippling, jazzhr, smartrecruiters, icims, eightfold, successfactors, oraclecloud];
+    workable, bamboohr, taleo, jazzhr, smartrecruiters, rippling, icims, eightfold, successfactors, oraclecloud,
+    brassring, clearcompany, comeet, recruitee, paylocity, ukg, jobvite, breezy, personio, dayforce, teamtailor, pinpointhq, freshteam, avature];
 
   // ---- job card details: location, salary, posted age, logo (v0.5) ----------------------
   // JSON-LD JobPosting first (many boards publish it), then site selectors, then text patterns.

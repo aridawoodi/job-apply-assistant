@@ -3,29 +3,51 @@ const $ = id => document.getElementById(id);
 const CONTENT_FILES = ['lib/defaults.js', 'lib/match.js', 'content/core.js', 'content/sites.js', 'content/ui.js', 'content/learn.js', 'content/chat.js', 'content/panel.js', 'content/refine.js', 'content/steps.js', 'content/track.js', 'content/main.js', 'content/match.js'];
 
 // Keep in sync with content/sites.js (popup can't import content scripts).
-const DETECT_ONLY = [
-  { re: /(^|\.)taleo\.net$/, name: 'Taleo' },
-  { re: /(^|\.)bamboohr\.com$/, name: 'BambooHR', path: /\/careers\//i },
+const FULL = [
+  { re: /(^|\.)greenhouse\.io$/, name: 'Greenhouse' },
+  { re: /(^|\.)lever\.co$/, name: 'Lever' },
+  { re: /(^|\.)ashbyhq\.com$/, name: 'Ashby' },
+  { re: /myworkdayjobs\.com$|myworkday\.com$|myworkdaysite\.com$/, name: 'Workday (basic)', wizard: true },
+  { re: /(^|\.)linkedin\.com$/, name: 'LinkedIn Easy Apply', wizard: true },
   { re: /(^|\.)workable\.com$/, name: 'Workable' },
-  { re: /(^|\.)rippling\.com$|(^|\.)rippling-ats\.com$/, name: 'Rippling' },
+  { re: /(^|\.)bamboohr\.com$/, name: 'BambooHR', path: /\/(careers|jobs)/i },
+  { re: /(^|\.)taleo\.net$/, name: 'Taleo' },
   { re: /(^|\.)applytojob\.com$|(^|\.)jazz\.co$/, name: 'JazzHR' },
-  { re: /(^|\.)smartrecruiters\.com$/, name: 'SmartRecruiters' },
+  { re: /(^|\.)smartrecruiters\.com$|(^|\.)smartr\.me$/, name: 'SmartRecruiters' },
+  { re: /(^|\.)rippling\.com$|(^|\.)rippling-ats\.com$/, name: 'Rippling' },
   { re: /(^|\.)icims\.com$/, name: 'iCIMS' },
   { re: /(^|\.)eightfold\.ai$/, name: 'Eightfold' },
   { re: /(^|\.)successfactors\.com$|(^|\.)successfactors\.eu$|(^|\.)sapsf\.com$/, name: 'SuccessFactors' },
   { re: /(^|\.)oraclecloud\.com$/, name: 'Oracle Cloud HCM', path: /CandidateExperience|hcmUI/i }
 ];
+const DETECT_ONLY = [
+  { re: /(^|\.)brassring\.com$/, name: 'BrassRing' },
+  { re: /(^|\.)clearcompany\.com$/, name: 'ClearCompany' },
+  { re: /(^|\.)comeet\.com$|(^|\.)comeet\.co$/, name: 'Comeet' },
+  { re: /(^|\.)recruitee\.com$/, name: 'Recruitee' },
+  { re: /(^|\.)paylocity\.com$/, name: 'Paylocity' },
+  { re: /(^|\.)ultipro\.com$|(^|\.)ultipro\.ca$|(^|\.)ukg\.net$/, name: 'UKG / UltiPro' },
+  { re: /(^|\.)jobvite\.com$/, name: 'Jobvite' },
+  { re: /(^|\.)breezy\.hr$/, name: 'Breezy' },
+  { re: /(^|\.)personio\.com$|(^|\.)personio\.de$/, name: 'Personio' },
+  { re: /(^|\.)dayforcehcm\.com$|(^|\.)dayforce\.com$/, name: 'Dayforce' },
+  { re: /(^|\.)teamtailor\.com$/, name: 'Teamtailor' },
+  { re: /(^|\.)pinpointhq\.com$/, name: 'Pinpoint' },
+  { re: /(^|\.)freshteam\.com$/, name: 'Freshteam' },
+  { re: /(^|\.)avature\.net$/, name: 'Avature' }
+];
 
 function siteOf(url) {
   let u; try { u = new URL(url); } catch (_) { return { name: 'Unknown' }; }
   const h = u.hostname;
-  if (/(^|\.)greenhouse\.io$/.test(h)) return { name: 'Greenhouse', supported: true, level: 'full' };
-  if (/(^|\.)lever\.co$/.test(h)) return { name: 'Lever', supported: true, level: 'full' };
-  if (/(^|\.)ashbyhq\.com$/.test(h)) return { name: 'Ashby', supported: true, level: 'full' };
-  if (/myworkdayjobs\.com$|myworkday\.com$|myworkdaysite\.com$/.test(h)) return { name: 'Workday (basic)', supported: true, wizard: true, level: 'full' };
-  if (/(^|\.)linkedin\.com$/.test(h)) return { name: 'LinkedIn Easy Apply', supported: true, wizard: true, level: 'full' };
+  const pathq = u.pathname + u.search;
+  for (const d of FULL) {
+    if (d.re.test(h) && (!d.path || d.path.test(pathq))) {
+      return { name: d.name, supported: true, wizard: !!d.wizard, level: 'full' };
+    }
+  }
   for (const d of DETECT_ONLY) {
-    if (d.re.test(h) && (!d.path || d.path.test(u.pathname + u.search))) {
+    if (d.re.test(h) && (!d.path || d.path.test(pathq))) {
       return { name: d.name, stub: true, level: 'detect' };
     }
   }
@@ -116,7 +138,7 @@ async function fill(generic) {
   setFlow(1);
   if (s.blocked) { $('fill').disabled = true; $('note').textContent = 'Open a job application page first.'; }
   else if (s.stub) {
-    $('note').textContent = `${s.name} detected. Full adapter is next — try fill now with careful generic matching. You still review and submit.`;
+    $('note').textContent = `${s.name} detected. Using careful generic fill for now — review everything; you still submit.`;
     $('fill').textContent = '⚡ Try fill on this page';
     $('generic').hidden = true;
   }

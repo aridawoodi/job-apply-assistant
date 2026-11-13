@@ -37,7 +37,8 @@
     const cs = getComputedStyle(el);
     return cs.visibility !== 'hidden' && cs.display !== 'none';
   }
-  const CONTROL_SEL = 'input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=reset]):not([type=image]), textarea, select';
+  // Include contenteditable / ARIA textboxes used by modern ATS (Workable, Rippling, …)
+  const CONTROL_SEL = 'input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=reset]):not([type=image]), textarea, select, [role="textbox"]:not(input):not(textarea), [contenteditable="true"]';
   function esc(id) { return (window.CSS && CSS.escape) ? CSS.escape(id) : id.replace(/"/g, '\\"'); }
   function ownerDoc(el) { return el.ownerDocument || document; }
 
@@ -79,8 +80,8 @@
 
   // Containers that hold exactly one question on the supported ATSs, and the element
   // inside them that carries the question text.
-  const QUESTION_BOX = '.application-question, [class*="field-entry" i], [data-automation-id^="formField"], .field-wrapper, .field, fieldset, [class*="question" i], [class*="form-group" i], [class*="form-field" i], [data-test-form-element], .fb-dash-form-element, .jobs-easy-apply-form-section__grouping';
-  const QUESTION_TITLE = ':scope legend, :scope .application-label, :scope [class*="question-title" i], :scope [class*="questionTitle" i], :scope [data-automation-id="formLabel"], :scope label, :scope [class*="label" i], :scope [class*="title" i]';
+  const QUESTION_BOX = '.application-question, [class*="field-entry" i], [data-automation-id^="formField"], .field-wrapper, .field, fieldset, [class*="question" i], [class*="form-group" i], [class*="form-field" i], [data-test-form-element], .fb-dash-form-element, .jobs-easy-apply-form-section__grouping, [data-ui="section-fields"], [data-ui="section"], .ant-form-item, .MuiFormControl-root, [class*="FormField" i], [class*="formField" i], .RCMFormField, [class*="apply-flow" i]';
+  const QUESTION_TITLE = ':scope legend, :scope .application-label, :scope [class*="question-title" i], :scope [class*="questionTitle" i], :scope [data-automation-id="formLabel"], :scope label, :scope [class*="label" i], :scope [class*="title" i], :scope .MuiFormLabel-root, :scope .ant-form-item-label';
   function boxLabel(el, ownControls) {
     let box = el.parentElement;
     for (let d = 0; box && d < 6; d++, box = box.parentElement) {
@@ -153,9 +154,14 @@
   }
 
   function isCombobox(el) {
+    if (el.getAttribute('role') === 'combobox' || el.getAttribute('aria-haspopup') === 'listbox') return true;
     if (el.tagName !== 'INPUT') return false;
-    return el.getAttribute('role') === 'combobox' || el.getAttribute('aria-autocomplete') === 'list' ||
+    return el.getAttribute('aria-autocomplete') === 'list' ||
       /select__input|react-select/.test(el.className + ' ' + (el.id || ''));
+  }
+  function isAriaTextbox(el) {
+    if (!el || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') return false;
+    return el.getAttribute('role') === 'textbox' || el.getAttribute('contenteditable') === 'true';
   }
 
   /* ---------------- collect ---------------- */
@@ -166,6 +172,10 @@
     let n = 0;
     const push = f => { f.id = 'f' + (n++); if (f.el && !f.desc) f.desc = describe(f.el); fields.push(f); };
     const controls = Array.from(root.querySelectorAll(CONTROL_SEL));
+    // Also pick standalone ARIA combobox buttons (Workday-like listbuttons on other ATS)
+    root.querySelectorAll('button[aria-haspopup="listbox"], [role="combobox"]').forEach(el => {
+      if (!controls.includes(el)) controls.push(el);
+    });
     for (const el of controls) {
       if (seen.has(el) || el.disabled) continue;
       // react-select & co. render aria-hidden "requiredInput" helpers: not real questions
@@ -208,8 +218,16 @@
         push(Object.assign(base, { kind: 'select', el, label: labelForControl(el, adapter), options, multiple: el.multiple }));
         continue;
       }
+      if (tag === 'BUTTON' && el.getAttribute('aria-haspopup') === 'listbox') {
+        push(Object.assign(base, { kind: 'listbutton', el, label: labelForControl(el, adapter) }));
+        continue;
+      }
       if (isCombobox(el)) {
         push(Object.assign(base, { kind: 'combobox', el, label: labelForControl(el, adapter) }));
+        continue;
+      }
+      if (isAriaTextbox(el)) {
+        push(Object.assign(base, { kind: 'textarea', el, label: labelForControl(el, adapter), ariaTextbox: true }));
         continue;
       }
       if (tag === 'TEXTAREA' || /^(text|email|tel|url|number|date|month|search)$/.test(type)) {
@@ -224,7 +242,9 @@
   /* ---------------- current state ---------------- */
   function hasValue(f) {
     switch (f.kind) {
-      case 'text': case 'textarea': return !!f.el.value.trim();
+      case 'text': case 'textarea':
+        if (f.ariaTextbox) return !!(f.el.innerText || f.el.textContent || '').trim();
+        return !!f.el.value.trim();
       case 'select': return f.el.selectedIndex > 0 || (!!f.el.value && f.options.some(o => o.value === f.el.value));
       case 'radio': case 'checkboxGroup': return f.els.some(e => e.checked);
       case 'checkbox': return f.el.checked;
@@ -252,7 +272,9 @@
   // Current value of a field as text (what the user would see).
   function readValue(f) {
     switch (f.kind) {
-      case 'text': case 'textarea': return f.el.type === 'password' ? '' : f.el.value.trim();
+      case 'text': case 'textarea':
+        if (f.ariaTextbox) return (f.el.innerText || f.el.textContent || '').replace(/\s+/g, ' ').trim();
+        return f.el.type === 'password' ? '' : f.el.value.trim();
       case 'select': { const o = f.el.selectedOptions && f.el.selectedOptions[0]; return o && o.value !== '' && !/^(select|choose|please select|--)/i.test(o.text.trim()) ? o.text.trim() : ''; }
       case 'radio': { const o = f.options.find(x => x.el.checked); return o ? o.text : ''; }
       case 'checkboxGroup': return f.options.filter(x => x.el.checked).map(x => x.text).join('; ');
@@ -713,6 +735,12 @@
         if (f.inputType === 'number') { const m = v.match(/-?\d+(\.\d+)?/); if (!m) return { ok: false, why: 'Not a number' }; v = m[0]; }
         if (f.inputType === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(v)) return { ok: false, why: 'Needs a date (YYYY-MM-DD)' };
         if (f.el.maxLength > 0 && v.length > f.el.maxLength) v = v.slice(0, f.el.maxLength);
+        if (f.ariaTextbox) {
+          f.el.focus();
+          f.el.textContent = v;
+          fire(f.el, 'input'); fire(f.el, 'change'); leave(f.el);
+          return { ok: true, shown: v };
+        }
         typeInto(f.el, v); leave(f.el);
         return { ok: true, shown: v };
       }
