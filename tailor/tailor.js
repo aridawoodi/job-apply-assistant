@@ -9,7 +9,69 @@
   const jobId = params.get('job');
   let job = {}, master = null, resume = null, settings = null, profile = null, changes = [], lastEntry = null;
 
+  function setStep(n) {
+    document.querySelectorAll('.stepper .st').forEach(el => {
+      const s = +el.dataset.step;
+      el.classList.toggle('on', s === n);
+      el.classList.toggle('done', s < n);
+    });
+  }
+  function resumePlain() {
+    return (master && master.blocks ? master.blocks.map(b => b.text).join('\n') : '') || JAA.match.lib.resumeTextOf(profile || {}, null);
+  }
+  function renderDiff() {
+    const jd = ($('#jd').value || '').trim();
+    const rt = resumePlain();
+    const body = $('#gapBody');
+    body.innerHTML = '';
+    if (jd.length < 80 || !rt || rt.length < 40) {
+      body.appendChild(h('tr', {}, h('td', { colSpan: 3, class: 'muted' }, 'Paste a job description and add a resume to compare.')));
+      $('#gaugeVal').textContent = '—';
+      $('#bandPill').textContent = '—';
+      $('#bandPill').className = 'band warn';
+      $('#diffHeadline').textContent = 'See how your resume compares';
+      $('#diffAlert').innerHTML = '';
+      return null;
+    }
+    const m = JAA.match.lib.analyze(jd, rt, { company: job.company || '', title: job.title || '' });
+    const band = m.band;
+    const score10 = m.score10 != null ? m.score10 : Math.round(m.score / 10 * 10) / 10;
+    $('#gaugeVal').textContent = String(score10);
+    const gauge = $('#gauge');
+    gauge.style.setProperty('--p', String(m.score));
+    gauge.style.setProperty('--c', m.score >= 70 ? '#16a34a' : m.score >= 45 ? '#d97706' : '#dc2626');
+    $('#bandPill').textContent = band.label;
+    $('#bandPill').className = 'band ' + band.tone;
+    $('#diffHeadline').textContent = band.key === 'strong'
+      ? 'Your resume is a strong match for this job'
+      : band.key === 'decent'
+        ? 'Your resume is a decent match for this job'
+        : 'Your resume is a low match for this job';
+    $('#diffAlert').innerHTML = '';
+    if (band.key === 'low') {
+      $('#diffAlert').appendChild(h('div', { class: 'alert' }, 'Scores under 4.5/10 often struggle with ATS keyword filters — we\'ll help you align wording using only facts already in your resume.'));
+    } else if (band.key === 'decent') {
+      $('#diffAlert').appendChild(h('div', { class: 'alert warn' }, 'A bit of tailoring can lift keyword coverage before you apply.'));
+    }
+    const icon = s => s === 'ok' ? '✓' : s === 'bad' ? '✕' : '!';
+    (m.gaps || []).forEach(row => {
+      const tr = h('tr', {});
+      tr.appendChild(h('td', { class: 'sticon ' + row.status }, icon(row.status)));
+      if (row.id === 'keywords') {
+        tr.appendChild(h('td', {}, h('div', {}, h('b', {}, row.label)),
+          h('div', { class: 'kw' }, (row.missing || []).slice(0, 10).map(k => h('span', { class: 'miss' }, k)))));
+        tr.appendChild(h('td', {}, h('div', { class: 'muted small' }, 'In your resume'),
+          h('div', { class: 'kw' }, (row.matched || []).slice(0, 10).map(k => h('span', { class: 'hit' }, k)))));
+      } else {
+        tr.appendChild(h('td', {}, h('div', {}, h('b', {}, row.label)), h('div', { class: 'muted small' }, row.job || '')));
+        tr.appendChild(h('td', {}, h('div', { class: 'muted small' }, row.resume || '')));
+      }
+      body.appendChild(tr);
+    });
+    return m;
+  }
   async function init() {
+    setStep(1);
     const st = await chrome.storage.local.get(['tailorJobs', 'resume', 'resumeMaster']);
     job = (st.tailorJobs || {})[jobId] || {};
     const all = await JAA.loadAll(); settings = all.settings; profile = all.profile;
@@ -17,7 +79,7 @@
     $('#jobMeta').textContent = !job.url ? 'Paste the job description below.' : /^chrome-extension:/.test(job.url) ? 'Practice application (fake job)' : new URL(job.url).hostname + (job.site ? ' · ' + job.site : '');
     $('#jd').value = job.description || '';
     $('#jdLen').textContent = String($('#jd').value.length);
-    $('#jd').addEventListener('input', () => { $('#jdLen').textContent = String($('#jd').value.length); });
+    $('#jd').addEventListener('input', () => { $('#jdLen').textContent = String($('#jd').value.length); renderDiff(); });
     if (!job.description) $('#jobCard details').open = true;
     $('#format').value = settings.preferredResumeFormat || 'both';
     const rules = settings.tailoringRules || [];
@@ -25,7 +87,7 @@
     if (!rules.length) $('#rules').appendChild(h('li', {}, 'None yet. Add rules in Settings → Tailoring (e.g. "Keep to 2 pages").'));
     rules.forEach(r => $('#rules').appendChild(h('li', {}, r)));
     resume = st.resume || null;
-    if (!resume) { $('#masterInfo').innerHTML = ''; $('#masterInfo').append('No resume yet. ', h('a', { href: '../options/options.html#resume', target: '_blank' }, 'Add your resume'), ' (PDF or Word), then reload this page.'); $('#suggest').disabled = true; return; }
+    if (!resume) { $('#masterInfo').innerHTML = ''; $('#masterInfo').append('No resume yet. ', h('a', { href: '../options/options.html#resume', target: '_blank' }, 'Add your resume'), ' (PDF or Word), then reload this page.'); $('#suggest').disabled = true; $('#goAlign').disabled = true; renderDiff(); return; }
     master = st.resumeMaster && st.resumeMaster.name === resume.name ? st.resumeMaster : null;
     if (!master) {
       // resumes saved before v0.4: parse once now
@@ -33,14 +95,20 @@
         const p = await JAA.resume.parseFile({ name: resume.name, type: resume.type, data: await dataUrlToAb(resume.dataUrl) });
         master = { kind: p.kind, name: resume.name, blocks: p.blocks, pages: p.pages || 0, pageWidth: p.pageWidth || 0, pageHeight: p.pageHeight || 0, bodySize: p.bodySize || 0, at: Date.now() };
         await chrome.storage.local.set({ resumeMaster: master });
-      } catch (e) { $('#masterInfo').textContent = 'Could not read your resume: ' + e.message; $('#suggest').disabled = true; return; }
+      } catch (e) { $('#masterInfo').textContent = 'Could not read your resume: ' + e.message; $('#suggest').disabled = true; $('#goAlign').disabled = true; return; }
     }
     const editable = master.blocks.filter(JAA.tailor.EDITABLE).length;
-    $('#masterInfo').textContent = `${resume.name} · ${master.kind === 'docx' ? 'Word' : 'PDF'} · ${master.blocks.length} lines, ${editable} can be tailored`;
+    $('#masterInfo').textContent = `${resume.name} · ${master.kind === 'docx' ? 'Word' : 'PDF'} · ${master.blocks.length} lines, ${editable} can be tailored · scored only on this computer`;
     $('#layoutNote').textContent = master.kind === 'docx'
       ? 'Word: your own file is edited in place, so fonts, spacing and layout stay exactly as you designed them. PDF: made with a clean built-in layout that follows your resume\'s structure (close, but not pixel-identical). For an exact PDF, open the Word file and choose Save as PDF.'
       : 'Your master is a PDF, so both files are rebuilt with a clean layout that follows its structure (sections, dates on the right, bullets). The layout is close to your original, not identical. Upload the Word version as your master to keep your exact design.';
+    renderDiff();
   }
+  $('#goAlign').addEventListener('click', () => {
+    setStep(2);
+    $('#masterCard').scrollIntoView({ behavior: 'smooth' });
+    $('#suggest').focus();
+  });
 
   /* ---------- suggestions ---------- */
   $('#suggest').addEventListener('click', async () => {
@@ -55,6 +123,7 @@
       const v = JAA.tailor.validate(r.data, master, rules);
       changes = v.changes;
       renderChanges();
+      setStep(2);
       $('#sugStatus').textContent = changes.length ? `${changes.filter(c => c.ok).length} suggestion(s) passed the fact check${changes.some(c => !c.ok) ? `, ${changes.filter(c => !c.ok).length} blocked` : ''}.` : 'No changes suggested: your resume already fits. You can still create files below.';
       $('#changesCard').classList.remove('hidden');
       $('#changesCard').scrollIntoView({ behavior: 'smooth' });
@@ -140,6 +209,7 @@
     files.forEach(f => $('#files').appendChild(h('a', { class: 'btn secondary', href: f.dataUrl, download: f.name }, (f.mime === 'application/pdf' ? '⬇ PDF · ' : '⬇ Word · ') + f.name)));
     $('#attach').disabled = !job.tabId;
     if (!job.tabId) $('#attachOut').textContent = 'Open this from the chat on an application page to attach it there.';
+    setStep(3);
     $('#resultCard').classList.remove('hidden');
     $('#resultCard').scrollIntoView({ behavior: 'smooth' });
   }

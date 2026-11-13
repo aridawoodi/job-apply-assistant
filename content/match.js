@@ -1,7 +1,7 @@
-/* Resume match on job posting pages (v0.5): a small dismissible card with a score ring,
- * "Matches X of Y keywords", missing keywords and "Improve my match" (opens tailoring).
- * Deterministic keywords first (lib/match.js); optional local-AI refinement. Lazy (idle callback),
- * cached per job + resume + description in chrome.storage.local. Nothing leaves the computer. */
+/* Resume match on job posting pages (v0.5+): dismissible card with score ring, STRONG/LOW MATCH
+ * checklist, keyword chips, and "Improve my match" (opens tailoring). Deterministic keywords first
+ * (lib/match.js); optional local-AI refinement. Lazy (idle callback), cached per job + resume +
+ * description in chrome.storage.local. Nothing leaves the computer. */
 (function () {
   'use strict';
   if (window.__JAA_MATCH__) return;
@@ -50,7 +50,7 @@
       const r = await send({ type: 'match:ai', text: text.slice(0, 6000) });
       if (r.ok && Array.isArray(r.keywords)) aiKeywords = r.keywords; else if (r.error) opts.aiError = r.error;
     } else if (hit && hit.rh === rh && hit.m && hit.m.aiKeywords) aiKeywords = hit.m.aiKeywords;
-    const m = lib().analyze(text, rt, { company: info.company || '', aiKeywords });
+    const m = lib().analyze(text, rt, { company: info.company || '', title: info.title || '', aiKeywords });
     if (aiKeywords) m.aiKeywords = aiKeywords;
     if (opts.aiError) m.aiError = opts.aiError;
     m.at = Date.now();
@@ -67,36 +67,69 @@
     const c = pct >= 70 ? '#16a34a' : pct >= 45 ? '#d97706' : '#dc2626';
     return h('div', { class: 'ring', style: `--p:${pct};--c:${c}`, role: 'img', 'aria-label': `Match ${pct}%` }, h('b', { text: pct + '%' }));
   }
+  function sidePanel(h, m) {
+    const band = m.band || (lib().band ? lib().band(m.score) : { label: 'Match', key: 'decent' });
+    const insights = m.insights || [];
+    return h('aside', { class: 'side ' + (band.key || '') },
+      h('div', { class: 'side-ring' }, ring(h, m.score)),
+      h('div', { class: 'side-lbl', text: band.label.toUpperCase() }),
+      h('ul', { class: 'insights' }, insights.map(i =>
+        h('li', { class: i.ok ? 'ok' : 'miss' }, h('span', { class: 'mark', text: i.ok ? '✓' : '·' }), h('span', { text: i.text }))
+      )));
+  }
   // shared with the panel's Resume tab
   function render(h, m, opts) {
     opts = opts || {};
     if (!m || m.none) return h('div', { class: 'muted', text: 'No job description found on this page.' });
     if (m.noResume) return h('div', { class: 'muted', text: 'Add your resume in Setup to see how well you match each job.' });
-    const lim = opts.full ? 30 : 6;
-    const box = h('div', { class: 'mres', 'data-score': String(m.score) },
-      h('div', { style: 'display:flex;gap:12px;align-items:center' }, ring(h, m.score),
-        h('div', {}, h('div', { style: 'font-weight:700;font-size:14px', text: `Matches ${m.matchedCount} of ${m.total} keywords` }),
-          h('div', { class: 'muted', style: 'font-size:12px', text: m.score >= 70 ? 'Strong match' : m.score >= 45 ? 'Decent match: tailoring can help' : 'Low match: tailor your resume for this one' }))));
-    if (m.missing.length) box.append(h('div', { style: 'margin-top:8px;font-size:12px;font-weight:600', text: 'Missing from your resume' }), h('div', { class: 'kw' }, m.missing.slice(0, lim).map(k => h('span', { class: 'miss', text: k })), m.missing.length > lim ? h('span', { class: 'miss', text: `+${m.missing.length - lim}` }) : null));
-    if (opts.full && m.matched.length) box.append(h('div', { style: 'margin-top:8px;font-size:12px;font-weight:600', text: 'Already in your resume' }), h('div', { class: 'kw' }, m.matched.slice(0, lim).map(k => h('span', { text: k }))));
-    if (m.aiKeywords) box.append(h('div', { class: 'muted', style: 'margin-top:6px;font-size:11px', text: '✦ Keywords refined by your local AI' }));
-    if (m.aiError) box.append(h('div', { class: 'muted', style: 'margin-top:6px;font-size:11px', text: 'Local AI refinement failed: ' + m.aiError }));
+    const lim = opts.full ? 30 : 8;
+    const band = m.band || { label: m.score >= 70 ? 'Strong match' : m.score >= 45 ? 'Decent match' : 'Low match' };
+    const box = h('div', { class: 'mres', 'data-score': String(m.score) });
+    if (opts.compactSide !== false) {
+      box.appendChild(h('div', { class: 'mwrap' },
+        h('div', { class: 'mbody' },
+          h('div', { class: 'mtitle', text: `Your resume is a ${band.label.toLowerCase()} for this job` }),
+          h('div', { class: 'muted', style: 'font-size:12px', text: `Matches ${m.matchedCount} of ${m.total} keywords · scored on your computer` }),
+          m.missing.length ? h('div', { style: 'margin-top:8px;font-size:12px;font-weight:600', text: 'Missing from your resume' }) : null,
+          m.missing.length ? h('div', { class: 'kw' }, m.missing.slice(0, lim).map(k => h('span', { class: 'miss', text: k })), m.missing.length > lim ? h('span', { class: 'miss', text: `+${m.missing.length - lim}` }) : null) : null,
+          opts.full && m.matched.length ? h('div', { style: 'margin-top:8px;font-size:12px;font-weight:600', text: 'Already in your resume' }) : null,
+          opts.full && m.matched.length ? h('div', { class: 'kw' }, m.matched.slice(0, lim).map(k => h('span', { text: k }))) : null),
+        sidePanel(h, m)));
+    } else {
+      box.append(
+        h('div', { style: 'display:flex;gap:12px;align-items:center' }, ring(h, m.score),
+          h('div', {}, h('div', { style: 'font-weight:700;font-size:14px', text: `Matches ${m.matchedCount} of ${m.total} keywords` }),
+            h('div', { class: 'muted', style: 'font-size:12px', text: band.label }))));
+    }
+    if (m.aiKeywords) box.appendChild(h('div', { class: 'muted', style: 'margin-top:6px;font-size:11px', text: '✦ Keywords refined by your local AI' }));
+    if (m.aiError) box.appendChild(h('div', { class: 'muted', style: 'margin-top:6px;font-size:11px', text: 'Local AI refinement failed: ' + m.aiError }));
     return box;
   }
 
   const CSS = `
     :host{all:initial}
-    .card{position:fixed;top:76px;right:20px;z-index:2147483645;width:300px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 12px 32px rgba(15,23,42,.18);padding:12px 14px;font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0f172a}
-    .hd{display:flex;align-items:center;gap:6px;font-weight:700;font-size:12px;color:#4338ca;margin-bottom:8px}
+    .card{position:fixed;top:76px;right:20px;z-index:2147483645;width:360px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 12px 32px rgba(15,23,42,.18);padding:0;overflow:hidden;font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#0f172a}
+    .hd{display:flex;align-items:center;gap:6px;font-weight:700;font-size:12px;color:#4338ca;padding:10px 14px 0}
     .x{margin-left:auto;border:0;background:none;font-size:18px;line-height:1;cursor:pointer;color:#64748b}
     .muted{color:#64748b}
+    .mres{padding:8px 14px 4px}
+    .mwrap{display:grid;grid-template-columns:1fr 108px;gap:10px;align-items:stretch}
+    .mtitle{font-weight:700;font-size:13px;color:#0f172a;margin-bottom:2px}
+    .side{background:#0f172a;color:#e2e8f0;border-radius:12px;padding:10px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+    .side.strong{background:#14532d}.side.decent{background:#1e3a5f}.side.low{background:#7f1d1d}
+    .side-ring .ring{width:56px;height:56px}.side-ring .ring b{width:42px;height:42px;font-size:13px;color:#0f172a}
+    .side-lbl{font:800 9px/1.2 inherit;letter-spacing:.04em;margin-top:2px}
+    .insights{list-style:none;margin:6px 0 0;padding:0;width:100%;text-align:left}
+    .insights li{display:flex;gap:4px;font-size:9.5px;line-height:1.25;margin:3px 0;color:#cbd5e1}
+    .insights li.ok{color:#bbf7d0}.insights li.miss{color:#fecaca}
+    .insights .mark{flex:none;font-weight:800}
     .ring{--p:0;width:64px;height:64px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:conic-gradient(var(--c,#6366f1) calc(var(--p)*1%),#e2e8f0 0)}
     .ring b{width:50px;height:50px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font:800 16px/1 inherit;color:#1e1b4b}
     .kw{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.kw span{border-radius:99px;padding:2px 8px;font-size:11px;background:#dcfce7;color:#166534}.kw span.miss{background:#fee2e2;color:#991b1b}
-    .row{display:flex;gap:6px;margin-top:10px}
-    button.p{flex:1;border:0;border-radius:9px;background:#4f46e5;color:#fff;font:700 12.5px/1 inherit;padding:9px 10px;cursor:pointer}
+    .row{display:flex;gap:6px;margin:8px 14px 0;padding-bottom:2px}
+    button.p{flex:1;border:0;border-radius:9px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font:700 12.5px/1 inherit;padding:9px 10px;cursor:pointer}
     button.s{border:1px solid #e2e8f0;border-radius:9px;background:#fff;color:#334155;font:600 12.5px/1 inherit;padding:9px 10px;cursor:pointer}
-    .ft{display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:#94a3b8}
+    .ft{display:flex;justify-content:space-between;margin:8px 14px 12px;font-size:11px;color:#94a3b8}
     .ft a{color:#64748b;cursor:pointer;text-decoration:underline}`;
   let host = null;
   function removeCard() { if (host) { host.remove(); host = null; } }
@@ -119,9 +152,9 @@
       } })),
       render(h, m),
       m.noResume ? null : h('div', { class: 'row' },
-        h('button', { class: 'p', type: 'button', 'data-act': 'improve', text: '✨ Improve my match', onclick: () => { if (JAA.chat) JAA.chat.tailorResume(); } }),
+        h('button', { class: 'p', type: 'button', 'data-act': 'improve', text: 'Improve my resume for this job', onclick: () => { if (JAA.chat) JAA.chat.tailorResume(); } }),
         h('button', { class: 's', type: 'button', 'data-act': 'details', text: 'Details', onclick: () => { if (JAA.chat) JAA.chat.openPanel('resume'); } })),
-      h('div', { class: 'ft' }, h('span', { text: '🔒 Scored on your computer' }), h('a', { 'data-act': 'never', text: 'Don\'t show match cards', onclick: async () => {
+      h('div', { class: 'ft' }, h('span', { text: 'Scored on your computer' }), h('a', { 'data-act': 'never', text: 'Don\'t show match cards', onclick: async () => {
         removeCard();
         if (JAA.demo) return;
         const r = await chrome.storage.local.get('settings');
@@ -137,7 +170,6 @@
     const { settings } = await JAA.loadAll();
     if (settings.showMatch === false && !force) return;
     if (!isPosting()) return;
-    // not on the application form itself (the panel's Resume tab has it there)
     if (!force && JAA.frameHasForm && JAA.frameHasForm()) return;
     const key = JAA.jobKey(location.href);
     if (!force && !JAA.demo) { const { matchDismissed = {} } = await chrome.storage.local.get('matchDismissed'); if (matchDismissed[key]) return; }
@@ -153,6 +185,5 @@
   let lastUrl = location.href;
   const run = () => setTimeout(() => idle(() => maybeShow().catch(() => {}), { timeout: 3000 }), 1200);
   run();
-  // SPA job boards (LinkedIn, Ashby): re-check when the URL changes
   setInterval(() => { if (location.href !== lastUrl) { lastUrl = location.href; removeCard(); run(); } }, 1500);
 })();

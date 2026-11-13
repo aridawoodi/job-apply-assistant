@@ -61,32 +61,62 @@
   function showDraft(text) {
     $('#letter').value = text;
     $('#draftCard').classList.remove('hidden');
+    $('#studio').classList.add('on');
+    setAiTab('rewrite');
     renderChecks();
   }
-  async function write(previous) {
-    $('#write').disabled = true; $('#regen').disabled = true;
+  function setBusy(on) {
+    $('#write').disabled = on; $('#regen').disabled = on; $('#tweakGo').disabled = on;
+    document.querySelectorAll('#rewriteChips button').forEach(b => { b.disabled = on; });
+  }
+  function setAiTab(name) {
+    const rewrite = name === 'rewrite';
+    $('#tabRewrite').classList.toggle('on', rewrite);
+    $('#tabEditor').classList.toggle('on', !rewrite);
+    $('#rewritePane').classList.toggle('hidden', !rewrite);
+    $('#checksPane').classList.toggle('hidden', rewrite);
+  }
+  async function write(previous, extraOverride) {
+    setBusy(true);
     $('#status').textContent = 'Your local AI is writing (this can take a minute)…';
+    $('#aiMsg').textContent = 'Rewriting with your local AI…';
     const description = $('#jd').value.trim();
-    if (description.length < 80) { $('#status').textContent = 'Please paste the job description first (open the box above).'; $('#jobCard details').open = true; $('#write').disabled = false; $('#regen').disabled = false; return; }
+    if (description.length < 80) { $('#status').textContent = 'Please paste the job description first (open the box above).'; $('#jobCard details').open = true; setBusy(false); return; }
     try {
-      const r = await task({ mode: 'cover', job: { title: job.title || '', company: job.company || '', description }, resumeText, length: $('#length').value, extra: $('#extra').value.trim(), previous: previous || '' },
+      const extra = [($('#extra').value || '').trim(), (extraOverride || '').trim()].filter(Boolean).join(' · ');
+      const r = await task({ mode: 'cover', job: { title: job.title || '', company: job.company || '', description }, resumeText, length: $('#length').value, extra, previous: previous || '' },
         m => { if (m.type === 'progress' && m.chars) $('#status').textContent = `Writing… (${m.chars} characters)`; });
       const text = JAA.cover.toText(r.data, name());
       if (!text || text.length < 80) throw new Error('The local AI returned an empty letter. Try again.');
       entry = null; $('#useCard').classList.add('hidden');
       showDraft(text);
-      $('#status').textContent = lastCheck.ok ? 'Done. Read it, edit anything, then approve.' : 'Done, but the fact check blocked something: see below.';
+      $('#aiMsg').textContent = lastCheck.ok
+        ? 'Your cover letter is ready. Want to tweak the tone, length, or any details? Pick a rewrite or type your own note.'
+        : 'Draft ready, but the fact check blocked something — open Checks and edit before you approve.';
+      $('#status').textContent = lastCheck.ok ? 'Done. Read it, tweak if you like, then approve.' : 'Done, but the fact check blocked something: see Checks.';
+      if (!lastCheck.ok) setAiTab('editor');
       $('#draftCard').scrollIntoView({ behavior: 'smooth' });
-    } catch (e) { $('#status').textContent = e.message; }
-    $('#write').disabled = false; $('#regen').disabled = false;
+    } catch (e) { $('#status').textContent = e.message; $('#aiMsg').textContent = e.message; }
+    setBusy(false);
   }
   $('#write').addEventListener('click', () => write(''));
   $('#regen').addEventListener('click', () => write($('#letter').value));
   $('#recheck').addEventListener('click', renderChecks);
+  $('#tabRewrite').addEventListener('click', () => setAiTab('rewrite'));
+  $('#tabEditor').addEventListener('click', () => setAiTab('editor'));
+  $('#editToggle').addEventListener('click', () => { $('#letter').focus(); setAiTab('editor'); });
+  $('#downloadHint').addEventListener('click', () => { $('#approve').click(); });
+  document.querySelectorAll('#rewriteChips button').forEach(b => b.addEventListener('click', () => write($('#letter').value, b.dataset.rewrite || b.textContent)));
+  $('#tweakGo').addEventListener('click', () => {
+    const note = ($('#tweak').value || '').trim();
+    if (!note) { $('#tweak').focus(); return; }
+    write($('#letter').value, note);
+  });
+  $('#tweak').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#tweakGo').click(); } });
   $('#letter').addEventListener('input', () => { $('#approve').disabled = true; $('#words').textContent = 'edited: press Check again'; });
   $('#approve').addEventListener('click', async () => {
     const c = renderChecks();
-    if (!c.ok) return;
+    if (!c.ok) { setAiTab('editor'); return; }
     entry = { id: 'c' + Date.now().toString(36), jobKey: job.key || '', company: job.company || '', title: job.title || '', url: job.url || '', createdAt: Date.now(), text: $('#letter').value.trim(), words: c.words, warnings: c.warnings, files: [] };
     if (!demo) await send({ type: 'cover:save', entry });
     showUse();

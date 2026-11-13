@@ -1,10 +1,43 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tailor my resume · AI Job Application Assistant</title>
-<link rel="stylesheet" href="../lib/pages.css"></head>
+<link rel="stylesheet" href="../lib/pages.css">
+<style>
+  .priv-pill{display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:99px;padding:4px 10px;font-size:11.5px;font-weight:600}
+  .stepper{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:0 0 16px;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff}
+  .stepper .st{padding:12px 10px;text-align:center;font:700 12px/1.3 inherit;color:#94a3b8;border-left:1px solid #f1f5f9;background:#f8fafc}
+  .stepper .st:first-child{border-left:0}
+  .stepper .st.on{color:#3730a3;background:#eef2ff}
+  .stepper .st.done{color:#15803d;background:#f0fdf4}
+  .stepper .st b{display:block;font-size:10px;font-weight:600;letter-spacing:.04em;margin-bottom:2px;opacity:.8}
+  .gauge-wrap{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+  .gauge{--p:45;--c:#dc2626;width:120px;height:70px;position:relative;flex:none}
+  .gauge .arc{width:120px;height:60px;border-radius:120px 120px 0 0;background:conic-gradient(from 270deg,var(--c) calc(var(--p)*0.5%),#e2e8f0 0);mask:radial-gradient(farthest-side,#0000 62%,#000 63%);-webkit-mask:radial-gradient(farthest-side,#0000 62%,#000 63%)}
+  .gauge .val{position:absolute;left:0;right:0;bottom:0;text-align:center;font:800 28px/1 inherit;color:#0f172a}
+  .band{display:inline-block;border-radius:99px;padding:3px 10px;font:700 11px/1 inherit}
+  .band.bad{background:#fee2e2;color:#991b1b}.band.warn{background:#fef3c7;color:#92400e}.band.ok{background:#dcfce7;color:#166534}
+  .alert{margin:10px 0;padding:10px 12px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;font-size:13px}
+  .alert.warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
+  .gap-table{width:100%;border-collapse:separate;border-spacing:0;margin-top:12px;font-size:13px}
+  .gap-table th,.gap-table td{border-bottom:1px solid #e2e8f0;padding:10px 8px;vertical-align:top;text-align:left}
+  .gap-table th{font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+  .gap-table .sticon{width:28px;text-align:center;font-weight:800}
+  .gap-table .sticon.ok{color:#16a34a}.gap-table .sticon.warn{color:#d97706}.gap-table .sticon.bad{color:#dc2626}
+  .kw{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+  .kw span{border-radius:99px;padding:2px 8px;font-size:11px;background:#dcfce7;color:#166534}
+  .kw span.miss{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0}
+  .kw span.hit{background:#dcfce7;color:#166534}
+</style>
+</head>
 <body>
-<div class="top"><img src="../icons/icon48.png" width="30" height="30" alt=""><strong>Tailor my resume</strong><span class="ver" id="ver"></span><span class="sp"></span><a href="../options/options.html#tailoring" target="_blank">Tailoring rules</a>&nbsp;&nbsp;<a href="../options/options.html#library" target="_blank">Saved resumes</a></div>
+<div class="top"><img src="../icons/icon48.png" width="30" height="30" alt=""><strong>Generate your custom resume</strong><span class="ver" id="ver"></span><span class="sp"></span><span class="priv-pill">Local · no credits</span>&nbsp;&nbsp;<a href="../options/options.html#tailoring" target="_blank">Tailoring rules</a>&nbsp;&nbsp;<a href="../options/options.html#library" target="_blank">Saved resumes</a></div>
 <main>
+  <nav class="stepper" aria-label="Tailor steps">
+    <div class="st on" data-step="1"><b>STEP 1</b>See your difference</div>
+    <div class="st" data-step="2"><b>STEP 2</b>Align your resume</div>
+    <div class="st" data-step="3"><b>STEP 3</b>Review your new resume</div>
+  </nav>
+
   <section class="card" id="jobCard">
     <h2 id="jobTitle">Loading…</h2>
     <div class="muted" id="jobMeta"></div>
@@ -12,13 +45,32 @@
       <textarea id="jd" rows="8" style="margin-top:6px"></textarea></details>
   </section>
 
+  <section class="card" id="diffCard">
+    <div class="gauge-wrap">
+      <div>
+        <h2 style="margin:0 0 6px" id="diffHeadline">See how your resume compares</h2>
+        <div id="diffAlert"></div>
+        <p class="muted small" id="masterInfo">Loading…</p>
+      </div>
+      <div style="text-align:center">
+        <div class="gauge" id="gauge" aria-label="Match score"><div class="arc"></div><div class="val" id="gaugeVal">—</div></div>
+        <div id="bandPill" class="band warn" style="margin-top:6px">—</div>
+        <div class="muted small" style="margin-top:4px">out of 10 · local score</div>
+      </div>
+    </div>
+    <table class="gap-table" id="gapTable">
+      <thead><tr><th></th><th>This job</th><th>Your resume</th></tr></thead>
+      <tbody id="gapBody"><tr><td colspan="3" class="muted">Paste or load a job description to compare.</td></tr></tbody>
+    </table>
+    <p class="row" style="margin-top:16px"><button class="primary big" id="goAlign" type="button">Improve my resume for this job</button></p>
+  </section>
+
   <section class="card" id="masterCard">
-    <h3 style="margin-top:0">Master resume</h3>
-    <div id="masterInfo" class="muted">Loading…</div>
+    <h3 style="margin-top:0">Align your resume</h3>
     <h3>Your tailoring rules</h3>
     <ul id="rules" class="muted"></ul>
     <div class="row"><input type="text" id="extraRule" class="grow" placeholder="Extra rule for this job only (optional), e.g. Lead with the data pipeline work"></div>
-    <p class="row" style="margin-top:14px"><button class="primary big" id="suggest" type="button">✨ Suggest changes for this job</button><span id="sugStatus" class="muted"></span></p>
+    <p class="row" style="margin-top:14px"><button class="primary big" id="suggest" type="button">Suggest changes for this job</button><span id="sugStatus" class="muted"></span></p>
     <p class="muted small">Only rewording, reordering and emphasis using facts already in your resume. Nothing is invented: every suggestion is checked against your master resume, and anything that adds a new employer, title, date, number or tool is blocked.</p>
   </section>
 
@@ -27,15 +79,15 @@
     <div id="changes"></div>
     <div class="row" style="margin-top:12px"><label class="row small">Format:
       <select id="format" style="width:auto"><option value="both">PDF + Word</option><option value="pdf">PDF</option><option value="docx">Word (.docx)</option></select></label>
-      <span class="grow"></span><button class="primary big" id="build" type="button">📄 Create my tailored resume</button></div>
+      <span class="grow"></span><button class="primary big" id="build" type="button">Create my tailored resume</button></div>
     <p class="muted small" id="layoutNote"></p>
   </section>
 
   <section class="card hidden" id="resultCard">
-    <h2>Your tailored resume</h2>
+    <h2>Review your new resume</h2>
     <div id="checks"></div>
     <div class="files" id="files" style="margin:12px 0"></div>
-    <div class="row"><button class="primary" id="attach" type="button">📎 Attach to the application</button><span id="attachOut" class="muted"></span></div>
+    <div class="row"><button class="primary" id="attach" type="button">Attach to the application</button><span id="attachOut" class="muted"></span></div>
     <p class="muted small">Saved in Settings → Saved resumes, linked to this job in your tracker.</p>
   </section>
 </main>
@@ -43,6 +95,7 @@
 <script src="../lib/pageutil.js"></script>
 <script src="../lib/resume.js"></script>
 <script src="../lib/tailor.js"></script>
+<script src="../lib/match.js"></script>
 <script src="../lib/docx.js"></script>
 <script src="../lib/pdfout.js"></script>
 <script src="tailor.js"></script>

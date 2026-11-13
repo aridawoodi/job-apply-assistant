@@ -64,6 +64,36 @@ tr.due td{background:#fffbeb}
 footer.about{max-width:980px;margin:-40px auto 0;padding:0 20px 40px;text-align:center;font-size:12px;color:#64748b}
 footer.about a{color:#4f46e5;font-weight:600;text-decoration:none}footer.about a:hover{color:#7c3aed;text-decoration:underline}
 
+/* Profile tabs + completion card (Jobright-inspired, Quiet Chrome) */
+.prof-layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:18px;align-items:start}
+@media (max-width:900px){.prof-layout{grid-template-columns:1fr}}
+.priv-banner{display:flex;align-items:center;gap:8px;margin:8px 0 12px;padding:8px 12px;border-radius:10px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:12.5px;font-weight:600}
+.prof-tabs{display:flex;gap:0;border-bottom:1px solid #e2e8f0;margin:0 0 14px;overflow-x:auto}
+.prof-tabs button{border:0;background:none;padding:10px 14px;font:700 13px/1 inherit;color:#64748b;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.prof-tabs button.on{color:#0f172a;border-bottom-color:#0f172a}
+.prof-tabs button:hover{color:#4f46e5}
+.ptab{display:none}.ptab.on{display:block}
+.prof-side .comp{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:14px;margin-bottom:12px}
+.prof-side .comp.incomplete{background:#fffbeb;border-color:#fde68a}
+.prof-side .comp h3{margin:0 0 6px;font-size:14px;color:#14532d}
+.prof-side .comp.incomplete h3{color:#92400e}
+.prof-side .comp p{margin:0 0 10px;font-size:12.5px;color:#166534}
+.prof-side .comp.incomplete p{color:#92400e}
+.prof-side .comp ul{margin:0 0 12px;padding-left:18px;font-size:12px;color:#334155}
+.prof-side .comp .primary{width:100%;text-align:center;box-sizing:border-box}
+.prof-side .qlink{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;text-decoration:none;color:#0f172a;font-weight:600;font-size:13px;margin-bottom:8px}
+.prof-side .qlink:hover{border-color:#a5b4fc;color:#3730a3}
+.prof-side .qlink span{flex:1}.prof-side .qlink .chev{color:#94a3b8}
+.contact-pills{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
+.contact-pills span{display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:999px;padding:5px 10px;font-size:12px;color:#334155;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.edu-timeline{position:relative;margin:10px 0 0;padding-left:18px}
+.edu-timeline::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:#c7d2fe}
+.edu-timeline .ed{position:relative;padding:0 0 14px 8px}
+.edu-timeline .ed::before{content:"";position:absolute;left:-16px;top:6px;width:10px;height:10px;border-radius:50%;background:#4f46e5;border:2px solid #eef2ff}
+.edu-timeline .when{font-size:11px;color:#64748b;font-weight:600}
+.edu-timeline .school{font-weight:700;font-size:13.5px;color:#0f172a}
+.edu-timeline .deg{font-size:12.5px;color:#475569}
+
 /* v0.6.7 Sites */
 .sites-h{font-size:13px;margin:16px 0 6px;color:#334155}
 .sites{list-style:none;margin:0;padding:0;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden}

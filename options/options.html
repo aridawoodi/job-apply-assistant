@@ -9,7 +9,23 @@
 </nav>
 <main>
   <div id="checklist" class="act act-options" hidden></div>
-  <section id="profile"><h2>Profile</h2><p class="muted">Stored only in this browser (chrome.storage.local). Blank fields are left for you to fill on each form.</p><div id="profileForm"></div></section>
+  <section id="profile">
+    <div class="prof-layout">
+      <div class="prof-main">
+        <h2>Profile</h2>
+        <p class="priv-banner"><span aria-hidden="true">🔒</span> Your profile data is kept private and secure — stored only in this browser.</p>
+        <nav class="prof-tabs" id="profTabs" role="tablist" aria-label="Profile sections">
+          <button type="button" class="on" role="tab" aria-selected="true" data-ptab="personal">Personal</button>
+          <button type="button" role="tab" aria-selected="false" data-ptab="education">Education</button>
+          <button type="button" role="tab" aria-selected="false" data-ptab="work">Work Experience</button>
+          <button type="button" role="tab" aria-selected="false" data-ptab="skills">Skills</button>
+          <button type="button" role="tab" aria-selected="false" data-ptab="eeo">Equal Employment</button>
+        </nav>
+        <div id="profileForm"></div>
+      </div>
+      <aside class="prof-side" id="profSide" aria-label="Profile status"></aside>
+    </div>
+  </section>
 
   <section id="resume"><h2>Resume</h2>
     <p class="muted">Your master resume: attached to resume/CV upload fields, used to fill your profile, and the starting point for tailored versions. PDF or Word (.docx). Word keeps your exact layout when tailoring.</p>

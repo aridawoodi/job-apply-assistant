@@ -15,6 +15,10 @@ We do **not** clone JobRight’s cloud product, analytics, or proprietary code.
 | Application tracker | ✅ cloud account | ✅ local tracker + success modal | Parity (local) |
 | Answer memory | ✅ | ✅ answer bank | Parity |
 | Guided Detect→Fill→Review→Submit UI | ✅ polished | ✅ Quiet Chrome flow | Close |
+| Match gauge + insight checklist | ✅ job cards | ✅ posting card + Resume tab | Close |
+| Cover letter studio (preview + rewrite chips) | ✅ credits | ✅ local, no credits | Close |
+| Resume customizer stepper + gap table | ✅ cloud | ✅ local 3-step tailor | Close |
+| Profile tabs + completion card | ✅ account | ✅ Options profile tabs | Close |
 | Field discovery (ARIA / modern ATS) | ✅ AI snapshot | ✅ improved local collectors | Close |
 | Cloud job recommendations feed | ✅ | ❌ by design | Skip (privacy) |
 | Account / sync / password helpers | ✅ | ❌ by design | Skip (privacy/security) |
@@ -22,8 +26,8 @@ We do **not** clone JobRight’s cloud product, analytics, or proprietary code.
 
 ## What “all features” means here
 
-**Included:** fill coverage, discovery quality, tracker UX, resume/cover AI — locally.  
-**Excluded:** anything that requires JobRight’s servers or handling passwords.
+**Included:** fill coverage, discovery quality, tracker UX, resume/cover AI, product polish for match/cover/tailor/profile — locally.  
+**Excluded:** anything that requires JobRight’s servers, job marketplace feed, or handling passwords.
 
 ## Next increments (if you want more)
 

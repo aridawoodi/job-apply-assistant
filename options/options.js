@@ -21,49 +21,185 @@ const get = (o, path) => path.split('.').reduce((a, k) => (a == null ? a : a[k])
 const set = (o, path, v) => { const ks = path.split('.'); let a = o; ks.slice(0, -1).forEach(k => { a[k] = a[k] || {}; a = a[k]; }); a[ks[ks.length - 1]] = v; };
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+const PROFILE_TABS = {
+  personal: ['Contact', 'Location', 'Links', 'Work authorization', 'Experience', 'Availability & preferences', 'Signature & summary'],
+  education: [],
+  work: [],
+  skills: [],
+  eeo: ['Voluntary self-identification (EEO, optional)']
+};
+
+function fieldInput(path, label, type, opts) {
+  const l = document.createElement('label');
+  l.textContent = label;
+  let input;
+  if (type === 'select') {
+    input = document.createElement('select');
+    opts.forEach(o => { const op = document.createElement('option'); op.value = o; op.textContent = o || '—'; input.appendChild(op); });
+  } else if (type === 'eeo') {
+    input = document.createElement('select');
+    input.dataset.eeo = '1';
+    const ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Choose… (not set)'; input.appendChild(ph);
+    opts.forEach(o => { const op = document.createElement('option'); op.value = op.textContent = o; input.appendChild(op); });
+  } else if (type === 'pronouns') {
+    input = document.createElement('input'); input.type = 'text'; input.placeholder = 'Not set';
+    const dl = document.createElement('datalist'); dl.id = 'dl-' + path.replace(/\W/g, '');
+    opts.forEach(o => { const op = document.createElement('option'); op.value = o; dl.appendChild(op); });
+    input.setAttribute('list', dl.id); l.appendChild(dl);
+  } else if (type === 'textarea') {
+    input = document.createElement('textarea');
+    l.style.gridColumn = '1 / -1';
+  } else {
+    input = document.createElement('input'); input.type = type || 'text';
+  }
+  input.dataset.path = path;
+  input.value = get(state.profile, path) || '';
+  if ((type === 'select' || type === 'eeo') && get(state.profile, path) && !opts.includes(get(state.profile, path))) {
+    const own = get(state.profile, path); const op = document.createElement('option'); op.value = op.textContent = own; input.appendChild(op); input.value = own;
+  }
+  l.appendChild(input);
+  return l;
+}
+
+function appendSections(pane, titles) {
+  for (const [title, fields] of SECTIONS) {
+    if (!titles.includes(title)) continue;
+    const h = document.createElement('h3'); h.textContent = title; pane.appendChild(h);
+    const grid = document.createElement('div'); grid.className = 'grid';
+    for (const [path, label, type, opts] of fields) grid.appendChild(fieldInput(path, label, type, opts));
+    pane.appendChild(grid);
+    if (title === 'Contact') appendContactPills(pane);
+  }
+}
+
+function appendContactPills(pane) {
+  const p = state.profile || {};
+  const bits = [
+    [p.location || [p.city, p.state, p.zip].filter(Boolean).join(', '), '📍'],
+    [p.email, '✉'],
+    [p.phone, '☎'],
+    [p.linkedin, 'in'],
+    [p.github, 'gh']
+  ].filter(x => x[0]);
+  if (!bits.length) return;
+  const row = document.createElement('div'); row.className = 'contact-pills';
+  bits.forEach(([t, ic]) => { const s = document.createElement('span'); s.textContent = ic + ' ' + t; s.title = t; row.appendChild(s); });
+  pane.appendChild(row);
+}
+
+function profileCompletion() {
+  const p = state.profile || {};
+  const missing = [];
+  if (!(p.firstName && p.lastName)) missing.push('Add your name');
+  if (!p.email) missing.push('Add your email');
+  if (!p.phone) missing.push('Add your phone');
+  if (!JAA.educationListOf(p).some(e => e.school)) missing.push('Add education');
+  if (!(p.workHistory || []).some(j => j.company || j.title)) missing.push('Add work experience');
+  if (!(p.skills || []).length) missing.push('Add skills');
+  if (!state.resume) missing.push('Upload a resume');
+  return { ok: !missing.length, missing };
+}
+
+function renderProfileSide() {
+  const side = $('profSide');
+  if (!side) return;
+  side.innerHTML = '';
+  const c = profileCompletion();
+  const card = document.createElement('div');
+  card.className = 'comp' + (c.ok ? '' : ' incomplete');
+  card.innerHTML = c.ok
+    ? '<h3>✓ Profile ready</h3><p>Great job! Your profile looks complete. Start applying — Fill never presses Submit for you.</p>'
+    : '<h3>Finish your profile</h3><p>A few details still help autofill work better.</p>';
+  if (!c.ok) {
+    const ul = document.createElement('ul');
+    c.missing.forEach(m => { const li = document.createElement('li'); li.textContent = m; ul.appendChild(li); });
+    card.appendChild(ul);
+  }
+  const go = document.createElement('a');
+  go.className = 'primary'; go.href = '#resume'; go.textContent = c.ok ? 'Manage resume' : 'Add resume';
+  go.style.display = 'block'; go.style.textDecoration = 'none';
+  card.appendChild(go);
+  side.appendChild(card);
+  const links = [
+    ['#resume', '📄', 'Manage my resume'],
+    ['#tracker', '📋', 'Open tracker'],
+    ['#style', '✍️', 'Writing style']
+  ];
+  links.forEach(([href, ic, label]) => {
+    const a = document.createElement('a'); a.className = 'qlink'; a.href = href;
+    a.innerHTML = `<span>${ic}</span><span>${label}</span><span class="chev">›</span>`;
+    side.appendChild(a);
+  });
+}
+
+function setProfileTab(name) {
+  state.profileTab = name;
+  document.querySelectorAll('#profTabs [data-ptab]').forEach(b => {
+    const on = b.dataset.ptab === name;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  document.querySelectorAll('#profileForm .ptab').forEach(p => p.classList.toggle('on', p.dataset.ptab === name));
+}
+
 function renderProfile() {
   const root = $('profileForm');
   root.innerHTML = '';
   $('styleForm').innerHTML = '';
-  for (const [title, fields] of SECTIONS.concat([['__style', STYLE_FIELDS]])) {
-    const isStyle = title === '__style';
-    if (!isStyle) { const h = document.createElement('h3'); h.textContent = title; root.appendChild(h); }
-    const grid = isStyle ? $('styleForm') : document.createElement('div'); grid.className = 'grid';
-    for (const [path, label, type, opts] of fields) {
-      const l = document.createElement('label');
-      l.textContent = label;
-      let input;
-      if (type === 'select') {
-        input = document.createElement('select');
-        opts.forEach(o => { const op = document.createElement('option'); op.value = o; op.textContent = o || '—'; input.appendChild(op); });
-      } else if (type === 'eeo') {
-        // explicit choices only; the empty "Choose…" placeholder means "Not set" (never a default answer)
-        input = document.createElement('select');
-        input.dataset.eeo = '1';
-        const ph = document.createElement('option'); ph.value = ''; ph.textContent = 'Choose… (not set)'; input.appendChild(ph);
-        opts.forEach(o => { const op = document.createElement('option'); op.value = op.textContent = o; input.appendChild(op); });
-      } else if (type === 'pronouns') {
-        input = document.createElement('input'); input.type = 'text'; input.placeholder = 'Not set';
-        const dl = document.createElement('datalist'); dl.id = 'dl-' + path.replace(/\W/g, '');
-        opts.forEach(o => { const op = document.createElement('option'); op.value = o; dl.appendChild(op); });
-        input.setAttribute('list', dl.id); l.appendChild(dl);
-      } else if (type === 'textarea') {
-        input = document.createElement('textarea');
-        l.style.gridColumn = '1 / -1';
-      } else {
-        input = document.createElement('input'); input.type = type || 'text';
-      }
-      input.dataset.path = path;
-      input.value = get(state.profile, path) || '';
-      if ((type === 'select' || type === 'eeo') && get(state.profile, path) && !opts.includes(get(state.profile, path))) { // keep the user's own saved wording
-        const own = get(state.profile, path); const op = document.createElement('option'); op.value = op.textContent = own; input.appendChild(op); input.value = own;
-      }
-      l.appendChild(input); grid.appendChild(l);
-    }
-    if (!isStyle) root.appendChild(grid);
-    if (title === 'Experience') renderJobs(root);
-  }
+  const panes = {
+    personal: Object.assign(document.createElement('div'), { className: 'ptab', id: 'ptab-personal' }),
+    education: Object.assign(document.createElement('div'), { className: 'ptab', id: 'ptab-education' }),
+    work: Object.assign(document.createElement('div'), { className: 'ptab', id: 'ptab-work' }),
+    skills: Object.assign(document.createElement('div'), { className: 'ptab', id: 'ptab-skills' }),
+    eeo: Object.assign(document.createElement('div'), { className: 'ptab', id: 'ptab-eeo' })
+  };
+  Object.entries(panes).forEach(([k, el]) => { el.dataset.ptab = k; root.appendChild(el); });
+
+  appendSections(panes.personal, PROFILE_TABS.personal);
+  appendSections(panes.eeo, PROFILE_TABS.eeo);
+
+  // Work experience editor
+  const workBox = document.createElement('div'); workBox.id = 'jobsBox'; panes.work.appendChild(workBox);
+  if (state.expEd) state.expEd.cancel();
+  state.expEd = JAA.expEditor.mount(workBox, state.profile.workHistory || [], { mode: 'profile', debounceMs: 600, onChange: saveExperience });
+
+  renderEducation(panes.education);
+  // compact timeline preview above the editor
+  const eduPrev = document.createElement('div'); eduPrev.className = 'edu-timeline';
+  JAA.educationListOf(state.profile).filter(e => e.school).forEach(e => {
+    const d = document.createElement('div'); d.className = 'ed';
+    d.innerHTML = `<div class="when">${esc([e.start, e.end].filter(Boolean).join(' – ') || 'Dates TBD')}</div><div class="school">${esc(e.school)}</div><div class="deg">${esc([e.degree, e.field].filter(Boolean).join(' · '))}</div>`;
+    eduPrev.appendChild(d);
+  });
+  if (eduPrev.childNodes.length) panes.education.insertBefore(eduPrev, panes.education.firstChild);
+
+  renderProjects(panes.skills);
+  const h3b = document.createElement('h3'); h3b.textContent = 'Skills, certifications & languages'; panes.skills.appendChild(h3b);
+  const note = document.createElement('p'); note.className = 'muted small'; note.textContent = 'Skills and languages comma-separated (commas inside brackets kept); one certification per line.'; panes.skills.appendChild(note);
+  const g = document.createElement('div'); g.className = 'grid';
+  [['skills', 'Skills'], ['certifications', 'Certifications'], ['languages', 'Languages']].forEach(([k, l]) => {
+    const lab = document.createElement('label'); lab.textContent = l; lab.style.gridColumn = '1 / -1';
+    const ta = document.createElement('textarea'); ta.dataset.list = k; ta.value = k === 'certifications' ? JAA.splitLines((state.profile[k] || []).join('\n')).join('\n') : (state.profile[k] || []).join(', ');
+    lab.appendChild(ta); g.appendChild(lab);
+  });
+  panes.skills.appendChild(g);
+
+  // Writing style still lives under #style
+  for (const [path, label, type] of STYLE_FIELDS) $('styleForm').appendChild(fieldInput(path, label, type));
   const ws = document.querySelector('[data-path="writingSamples"]'); if (ws) ws.rows = 8;
+
+  if (!$('profTabs').dataset.bound) {
+    $('profTabs').dataset.bound = '1';
+    $('profTabs').addEventListener('click', e => {
+      const b = e.target.closest('[data-ptab]');
+      if (!b) return;
+      readProfile();
+      setProfileTab(b.dataset.ptab);
+      renderProfileSide();
+    });
+  }
+  setProfileTab(state.profileTab || 'personal');
+  renderProfileSide();
 }
 
 /* v0.6: education is a list (one entry is the highest degree, used for single "Degree" questions) */
