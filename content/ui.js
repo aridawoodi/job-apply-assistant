@@ -35,6 +35,9 @@
     .panel.open{display:flex}
     .panel.min .body,.panel.min .composer,.panel.min .grip{display:none}
     .panel::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#4f46e5,#7c3aed);z-index:1}
+    .guide{flex:none;display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #f1f5f9;background:#fff;font-size:10px;font-weight:600;text-align:center;color:#94a3b8}
+    .guide span{padding:6px 2px;border-left:1px solid #f1f5f9}.guide span:first-child{border-left:0}
+    .guide span.on{color:#3730a3;background:#eef2ff}.guide span.done{color:#15803d;background:#f0fdf4}
     .head{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 12px;background:#fff;color:#0f172a;cursor:default;flex:none;border-bottom:1px solid #f1f5f9;margin-top:3px}
     .head .ic{display:flex}
     .head .tt{flex:1;min-width:0}
@@ -179,6 +182,7 @@
           <button class="hb" data-h="settings" type="button" title="Settings">${GEAR}</button>
           <button class="hb" data-h="min" type="button" title="Minimize">–</button>
           <button class="hb x" data-h="close" type="button" title="Close">×</button></div>
+        <div class="guide" aria-label="Application flow"><span data-g="1" class="on">1 Detect</span><span data-g="2">2 Fill</span><span data-g="3">3 Review</span><span data-g="4">4 You submit</span></div>
         <div class="tabs" role="tablist">
           <button class="tab on" data-tab="assistant" role="tab" type="button">Assistant<span class="tc"></span></button>
           <button class="tab" data-tab="resume" role="tab" type="button">Resume</button>
@@ -287,6 +291,8 @@
       ensure();
       btn.querySelector('.lb').textContent = text || (JAA.chat && JAA.chat.hasRun() ? '⚡ Assistant' : '⚡ Fill application');
       busyEl.textContent = text || '';
+      if (text && /fill/i.test(text)) JAA.ui.setGuide(2);
+      else if (!text && JAA.chat && JAA.chat.hasRun()) JAA.ui.setGuide(3);
     },
     setCount(n) {
       ensure();
@@ -301,6 +307,16 @@
     close() { if (panel) panel.classList.remove('open'); },
     isOpen() { return !!(panel && panel.classList.contains('open')); },
     header(title, sub) { ensure(); titleEl.textContent = title || 'AI Job Application Assistant'; subEl.textContent = sub || ''; },
+    setGuide(step) {
+      ensure();
+      const g = root.querySelector('.guide');
+      if (!g) return;
+      g.querySelectorAll('span').forEach(el => {
+        const n = +el.dataset.g;
+        el.classList.toggle('on', n === step);
+        el.classList.toggle('done', n < step);
+      });
+    },
     setStep(st) {
       ensure();
       if (!st || (!st.total && st.pct == null && !st.n)) { stepEl.hidden = true; return; }

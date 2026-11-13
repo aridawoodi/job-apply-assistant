@@ -2,16 +2,43 @@
 const $ = id => document.getElementById(id);
 const CONTENT_FILES = ['lib/defaults.js', 'lib/match.js', 'content/core.js', 'content/sites.js', 'content/ui.js', 'content/learn.js', 'content/chat.js', 'content/panel.js', 'content/refine.js', 'content/steps.js', 'content/track.js', 'content/main.js', 'content/match.js'];
 
+// Keep in sync with content/sites.js (popup can't import content scripts).
+const DETECT_ONLY = [
+  { re: /(^|\.)taleo\.net$/, name: 'Taleo' },
+  { re: /(^|\.)bamboohr\.com$/, name: 'BambooHR', path: /\/careers\//i },
+  { re: /(^|\.)workable\.com$/, name: 'Workable' },
+  { re: /(^|\.)rippling\.com$|(^|\.)rippling-ats\.com$/, name: 'Rippling' },
+  { re: /(^|\.)applytojob\.com$|(^|\.)jazz\.co$/, name: 'JazzHR' },
+  { re: /(^|\.)smartrecruiters\.com$/, name: 'SmartRecruiters' },
+  { re: /(^|\.)icims\.com$/, name: 'iCIMS' },
+  { re: /(^|\.)eightfold\.ai$/, name: 'Eightfold' },
+  { re: /(^|\.)successfactors\.com$|(^|\.)successfactors\.eu$|(^|\.)sapsf\.com$/, name: 'SuccessFactors' },
+  { re: /(^|\.)oraclecloud\.com$/, name: 'Oracle Cloud HCM', path: /CandidateExperience|hcmUI/i }
+];
+
 function siteOf(url) {
   let u; try { u = new URL(url); } catch (_) { return { name: 'Unknown' }; }
   const h = u.hostname;
-  if (/(^|\.)greenhouse\.io$/.test(h)) return { name: 'Greenhouse', supported: true };
-  if (/(^|\.)lever\.co$/.test(h)) return { name: 'Lever', supported: true };
-  if (/(^|\.)ashbyhq\.com$/.test(h)) return { name: 'Ashby', supported: true };
-  if (/myworkdayjobs\.com$|myworkday\.com$|myworkdaysite\.com$/.test(h)) return { name: 'Workday (basic)', supported: true, wizard: true };
-  if (/(^|\.)linkedin\.com$/.test(h)) return { name: 'LinkedIn Easy Apply', supported: true, wizard: true };
-  if (!/^https?:$/.test(u.protocol)) return { name: 'Not a web page', blocked: true };
-  return { name: 'Other site' };
+  if (/(^|\.)greenhouse\.io$/.test(h)) return { name: 'Greenhouse', supported: true, level: 'full' };
+  if (/(^|\.)lever\.co$/.test(h)) return { name: 'Lever', supported: true, level: 'full' };
+  if (/(^|\.)ashbyhq\.com$/.test(h)) return { name: 'Ashby', supported: true, level: 'full' };
+  if (/myworkdayjobs\.com$|myworkday\.com$|myworkdaysite\.com$/.test(h)) return { name: 'Workday (basic)', supported: true, wizard: true, level: 'full' };
+  if (/(^|\.)linkedin\.com$/.test(h)) return { name: 'LinkedIn Easy Apply', supported: true, wizard: true, level: 'full' };
+  for (const d of DETECT_ONLY) {
+    if (d.re.test(h) && (!d.path || d.path.test(u.pathname + u.search))) {
+      return { name: d.name, stub: true, level: 'detect' };
+    }
+  }
+  if (!/^https?:$/.test(u.protocol)) return { name: 'Not a web page', blocked: true, level: 'blocked' };
+  return { name: 'Other site', level: 'other' };
+}
+
+function setFlow(step) {
+  document.querySelectorAll('.flow .fs').forEach(el => {
+    const n = +el.dataset.step;
+    el.classList.toggle('on', n === step);
+    el.classList.toggle('done', n < step);
+  });
 }
 
 function sendToTab(tabId, msg) {
@@ -30,11 +57,17 @@ async function inject(tabId) {
 
 function showResult(r) {
   const box = $('result');
-  if (!r) { box.innerHTML = '<span class="bad">No reply from the page.</span>'; return; }
-  if (r.ok === false) { box.innerHTML = ''; const s = document.createElement('div'); s.className = 'bad'; s.textContent = r.error || 'Failed.'; box.appendChild(s); return; }
+  const next = $('nextHint');
+  if (!r) { box.innerHTML = '<span class="bad">No reply from the page.</span>'; next.hidden = true; return; }
+  if (r.ok === false) { box.innerHTML = ''; const s = document.createElement('div'); s.className = 'bad'; s.textContent = r.error || 'Failed.'; box.appendChild(s); next.hidden = true; setFlow(2); return; }
   box.innerHTML = `<div><span class="pill ok">${r.filled} filled</span><span class="pill ai">${r.ai} AI</span><span class="pill todo">${r.todo} need you</span></div>`;
   if (r.llmError) { const s = document.createElement('div'); s.className = 'bad'; s.textContent = 'Local AI: ' + r.llmError; box.appendChild(s); }
   const n = document.createElement('div'); n.className = 'muted'; n.textContent = 'Details are on the page. Review everything, then press Submit yourself.'; box.appendChild(n);
+  setFlow(3);
+  next.hidden = false;
+  $('nextTxt').textContent = (r.todo > 0)
+    ? `${r.todo} field${r.todo > 1 ? 's' : ''} still need you — finish those in the assistant, then you submit.`
+    : 'Looks filled. Skim the form once, then press the site’s Submit yourself.';
 }
 
 // open the in-page panel on a tab (Profile works on any normal web page; it's injected on demand)
@@ -53,6 +86,7 @@ async function fill(generic) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const btn = generic ? $('generic') : $('fill');
   btn.disabled = true; const old = btn.textContent; btn.textContent = 'Filling…';
+  setFlow(2);
   try {
     let r = await sendToTab(tab.id, { type: 'jaa:fill', generic });
     if (r && r.noReceiver) {
@@ -72,18 +106,32 @@ async function fill(generic) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const s = siteOf(tab && tab.url);
   $('site').textContent = s.name;
+  const cap = $('cap');
+  cap.hidden = false;
+  if (s.level === 'full') { cap.textContent = 'Full fill'; cap.className = 'cap full'; }
+  else if (s.level === 'detect') { cap.textContent = 'Detected · generic fill'; cap.className = 'cap detect'; }
+  else if (s.blocked) { cap.hidden = true; }
+  else { cap.textContent = 'Try generic fill'; cap.className = 'cap other'; }
+
+  setFlow(1);
   if (s.blocked) { $('fill').disabled = true; $('note').textContent = 'Open a job application page first.'; }
-  else if (s.stub) { $('note').textContent = `${s.name} support is planned next. Generic fill may get some fields.`; $('fill').hidden = true; $('generic').hidden = false; }
-  else if (!s.supported) { $('note').textContent = 'Not a Greenhouse/Lever/Ashby page. If the form is embedded from Greenhouse, Fill still works; otherwise try generic fill.'; $('generic').hidden = false; }
-  else if (s.wizard) $('note').textContent = 'Fills the step that\'s open, then each next step after you press Next yourself. Never presses Next or Submit.';
-  else $('note').textContent = 'Fills from your saved profile and opens the assistant chat. It never presses Submit.';
+  else if (s.stub) {
+    $('note').textContent = `${s.name} detected. Full adapter is next — try fill now with careful generic matching. You still review and submit.`;
+    $('fill').textContent = '⚡ Try fill on this page';
+    $('generic').hidden = true;
+  }
+  else if (!s.supported) { $('note').textContent = 'Not a known ATS page. If the form is embedded from Greenhouse, Fill still works; otherwise try generic fill.'; $('generic').hidden = false; }
+  else if (s.wizard) $('note').textContent = 'Fills the open step. You press Next yourself; I never press Submit.';
+  else $('note').textContent = 'Ready — fill from your profile, review on the page, then you submit.';
+
   $('ver').textContent = 'v' + chrome.runtime.getManifest().version + ' · local AI';
   const openSection = section => chrome.runtime.sendMessage({ type: 'options:open', section }, () => { void chrome.runtime.lastError; window.close(); });
   $('gear').onclick = () => openSection('profile');
   $('backup').onclick = e => { e.preventDefault(); openSection('backups'); };
 
-  $('fill').onclick = () => fill(false);
+  $('fill').onclick = () => fill(!!s.stub);
   $('profile').onclick = () => openPanel('profile');
+  $('openPanel').onclick = () => openPanel('assistant');
   const tour = e => { if (e) e.preventDefault(); chrome.runtime.sendMessage({ type: 'tour:open' }, () => { void chrome.runtime.lastError; window.close(); }); };
   $('tourLink').onclick = tour;
   $('wntour').onclick = e => { chrome.runtime.sendMessage({ type: 'whatsnew:seen' }); tour(e); };
